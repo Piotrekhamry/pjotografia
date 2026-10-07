@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Piotr Hamryszczak — Pjotografia | Fotografia Przyrody i Krajobrazu</title>
-    <!-- Nowoczesne czcionki: Montserrat oraz Inter -->
+    <!-- Czcionki Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
@@ -32,30 +32,45 @@
             line-height: 1.6;
         }
 
+        /* Profesjonalny nagłówek wzorowany na profesjonalistach */
         header {
             background-color: rgba(11, 11, 11, 0.95);
             backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+            border-bottom: 1px solid rgba(212, 175, 55, 0.15);
             position: sticky;
             top: 0;
             z-index: 1000;
-            padding: 20px 40px;
+            padding: 15px 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
         }
 
-        .logo h1 {
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            text-decoration: none;
+        }
+
+        .brand-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 4px;
+            object-fit: cover;
+            border: 1px solid var(--gold);
+        }
+
+        .brand-text h1 {
             font-family: 'Montserrat', sans-serif;
             font-weight: 700;
-            font-size: 1.5rem;
-            color: var(--gold);
-            letter-spacing: 2px;
+            font-size: 1.1rem;
+            color: var(--white);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
         }
 
-        .logo p {
+        .brand-text p {
             font-size: 0.7rem;
             color: var(--orange);
             letter-spacing: 2px;
@@ -63,32 +78,72 @@
             font-weight: 500;
         }
 
+        /* Menu nawigacyjne */
         nav ul {
             list-style: none;
             display: flex;
-            gap: 30px;
+            gap: 22px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        nav ul li {
+            position: relative;
         }
 
         nav ul li a {
-            color: var(--white);
+            color: var(--text-gray);
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             letter-spacing: 1px;
             transition: color 0.3s ease;
             text-transform: uppercase;
             font-weight: 500;
+            padding: 10px 0;
+            display: block;
         }
 
         nav ul li a:hover {
             color: var(--yellow);
         }
 
+        /* Styl dla rozwijanych podmenu (Dropdown) */
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: #121212;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            list-style: none;
+            display: none;
+            min-width: 180px;
+            padding: 10px 0;
+            z-index: 100;
+        }
+
+        .dropdown-menu li a {
+            padding: 8px 20px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+
+        .dropdown-menu li a:hover {
+            background-color: rgba(212, 175, 55, 0.1);
+            color: var(--gold);
+        }
+
+        /* Pokazywanie podmenu po najechaniu myszką */
+        nav ul li.has-dropdown:hover .dropdown-menu {
+            display: block;
+        }
+
         /* Sekcja HERO z Twoim zdjęciem w tle */
         .hero {
             position: relative;
             text-align: center;
-            padding: 120px 20px 100px 20px;
-            background-image: linear-gradient(rgba(11, 11, 11, 0.8), rgba(11, 11, 11, 0.9)), url('tlo.jpg'); /* Zmień 'tlo.jpg' na nazwę swojego pliku tła */
+            padding: 140px 20px 120px 20px;
+            background-image: linear-gradient(rgba(11, 11, 11, 0.75), rgba(11, 11, 11, 0.9)), url('tlo.jpg');
             background-size: cover;
             background-position: center;
             border-bottom: 1px solid rgba(212, 175, 55, 0.1);
@@ -104,7 +159,7 @@
         .hero h2 {
             font-family: 'Montserrat', sans-serif;
             font-weight: 700;
-            font-size: 2.6rem;
+            font-size: 2.8rem;
             color: var(--yellow);
             margin-bottom: 15px;
             letter-spacing: -0.5px;
@@ -116,10 +171,23 @@
             font-weight: 300;
         }
 
+        /* Główna zawartość / Galeria */
         .container {
             max-width: 1300px;
             margin: 0 auto;
-            padding: 40px 30px 80px 30px;
+            padding: 50px 30px 90px 30px;
+        }
+
+        .section-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 30px;
+            color: var(--white);
+            border-left: 3px solid var(--orange);
+            padding-left: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
         .gallery-grid {
@@ -130,7 +198,7 @@
 
         .gallery-card {
             background-color: var(--card-bg);
-            border-radius: 8px;
+            border-radius: 6px;
             overflow: hidden;
             border: 1px solid rgba(212, 175, 55, 0.1);
             transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
@@ -186,6 +254,7 @@
             color: var(--orange);
         }
 
+        /* Stopka */
         footer {
             text-align: center;
             padding: 50px 20px;
@@ -204,37 +273,74 @@
             color: var(--orange);
         }
 
-        @media (max-width: 768px) {
+        /* Responsywność dla urządzeń mobilnych */
+        @media (max-width: 1024px) {
             header {
                 flex-direction: column;
-                text-align: center;
+                gap: 15px;
+                padding: 15px;
             }
             nav ul {
                 justify-content: center;
-            }
-            .hero h2 {
-                font-size: 1.9rem;
+                gap: 15px;
             }
         }
     </style>
 </head>
 <body>
 
+    <!-- Górny panel nawigacyjny z Twoim brandingiem -->
     <header>
-        <div class="logo">
-            <h1>PJOTOGRAFIA</h1>
-            <p>Piotr Hamryszczak</p>
-        </div>
+        <a href="#" class="brand">
+            <!-- Wrzuć swoje małe zdjęcie profilowe do repozytorium jako 'avatar.jpg' -->
+            <img src="avatar.jpg" alt="Piotr Hamryszczak" class="brand-avatar">
+            <div class="brand-text">
+                <h1>Piotr Hamryszczak</h1>
+                <p>Mountain Photographer</p>
+            </div>
+        </a>
         <nav>
             <ul>
-                <li><a href="#">Portfolio</a></li>
-                <li><a href="#">O mnie</a></li>
-                <li><a href="#">Blog</a></li>
+                <li class="has-dropdown">
+                    <a href="#">O mnie &triangledown;</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#">Biografia</a></li>
+                        <li><a href="#">Sprzęt</a></li>
+                        <li><a href="#">Osiągnięcia</a></li>
+                    </ul>
+                </li>
+                <li class="has-dropdown">
+                    <a href="#">Galerie &triangledown;</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#">Tatry i Karkonosze</a></li>
+                        <li><a href="#">Norwegia i Islandia</a></li>
+                        <li><a href="#">Złota Godzina</a></li>
+                    </ul>
+                </li>
+                <li class="has-dropdown">
+                    <a href="#">Blog &triangledown;</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#">Relacje z wypraw</a></li>
+                        <li><a href="#">Poradniki foto</a></li>
+                    </ul>
+                </li>
+                <li><a href="#">Warsztaty</a></li>
+                <li><a href="#">Sklep</a></li>
+                <li class="has-dropdown">
+                    <a href="#">Ebooki &triangledown;</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#">Kompozycja w terenie</a></li>
+                        <li><a href="#">Obróbka RAW</a></li>
+                    </ul>
+                </li>
+                <li><a href="#">Wydruki zdjęć</a></li>
+                <li><a href="#">Współpraca</a></li>
                 <li><a href="#">Kontakt</a></li>
             </ul>
         </nav>
     </header>
 
+    <!-- Sekcja powitalna z Twoim tłem -->
     <section class="hero">
         <div class="hero-content">
             <h2>Światło, Przestrzeń i Góry</h2>
@@ -242,46 +348,12 @@
         </div>
     </section>
 
+    <!-- Główna zawartość -->
     <div class="container">
+        <h3 class="section-title">Wyróżnione Kadry</h3>
         <div class="gallery-grid">
             
-            <!-- Kafel 1 - Zmień 'zdjecie1.jpg' na nazwę swojego pliku -->
+            <!-- Kafel 1 -->
             <div class="gallery-card">
                 <img src="zdjecie1.jpg" alt="Górskie Szczyty" class="card-image">
-                <div class="card-content">
-                    <h3>Górskie Szczyty</h3>
-                    <p>Wędrówki po graniach, surowe skały i spektakularne wschody słońca nad chmurami.</p>
-                    <a href="#" class="card-link">Zobacz galerię &rarr;</a>
-                </div>
-            </div>
-
-            <!-- Kafel 2 - Zmień 'zdjecie2.jpg' na nazwę swojego pliku -->
-            <div class="gallery-card">
-                <img src="zdjecie2.jpg" alt="Dzika Przyroda i Las" class="card-image">
-                <div class="card-content">
-                    <h3>Dzika Przyroda i Las</h3>
-                    <p>Magiczne, mgliste poranki w leśnych ostępach i detale tętniącej życiem natury.</p>
-                    <a href="#" class="card-link">Zobacz galerię &rarr;</a>
-                </div>
-            </div>
-
-            <!-- Kafel 3 - Zmień 'zdjecie3.jpg' na nazwę swojego pliku -->
-            <div class="gallery-card">
-                <img src="zdjecie3.jpg" alt="Złota Godzina" class="card-image">
-                <div class="card-content">
-                    <h3>Złota Godzina</h3>
-                    <p>Spektakularne palety barw: od głębokich pomarańczy po ognistą czerwień i złoto.</p>
-                    <a href="#" class="card-link">Zobacz galerię &rarr;</a>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <footer>
-        <p>&copy; 2026 Piotr Hamryszczak (Pjotografia). Wszelkie prawa zastrzeżone.<br>
-        Instagram: <a href="https://instagram.com" target="_blank">@pjotografia</a></p>
-    </footer>
-
-</body>
-</html>
+                <div class
