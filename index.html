@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Piotr Hamryszczak — Pjotografia | Fotografia Przyrody i Krajobrazu</title>
-    <!-- Czcionki Google Fonts: Cinzel (eleganckie nagłówki) oraz Inter -->
+    <!-- Czcionki Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -30,7 +30,6 @@
             line-height: 1.6;
         }
 
-        /* Górne menu / Nagłówek w stylu profesjonalnego portfolio */
         header {
             background-color: rgba(8, 8, 8, 0.95);
             border-bottom: 1px solid rgba(212, 175, 55, 0.15);
@@ -79,7 +78,6 @@
             color: var(--yellow);
         }
 
-        /* Główny baner powitalny (Hero) */
         .hero {
             text-align: center;
             padding: 90px 20px 60px 20px;
@@ -101,7 +99,6 @@
             font-weight: 300;
         }
 
-        /* Siatka galerii (układ portfolio jak u profesjonalistów) */
         .container {
             max-width: 1300px;
             margin: 0 auto;
@@ -122,3 +119,162 @@
             transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
             cursor: pointer;
         }
+
+        .gallery-card:hover {
+            transform: translateY(-7px);
+            border-color: var(--orange);
+            box-shadow: 0 12px 35px rgba(230, 126, 34, 0.15);
+        }
+
+        .card-image-placeholder {
+            height: 280px;
+            background: linear-gradient(135deg, #181818, #050505);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--gold);
+            border-bottom: 2px solid var(--orange);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .card-image-placeholder span {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--orange);
+            margin-bottom: 8px;
+        }
+
+        .card-image-placeholder h3 {
+            font-family: 'Cinzel', serif;
+            font-size: 1.4rem;
+            color: var(--white);
+        }
+
+        .card-content {
+            padding: 25px;
+        }
+
+        .card-content p {
+            color: var(--text-gray);
+            font-size: 0.95rem;
+            margin-bottom: 15px;
+        }
+
+        .card-link {
+            color: var(--yellow);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: color 0.3s;
+        }
+
+        .card-link:hover {
+            color: var(--orange);
+        }
+
+        footer {
+            text-align: center;
+            padding: 50px 20px;
+            border-top: 1px solid rgba(212, 175, 55, 0.15);
+            color: var(--text-gray);
+            font-size: 0.9rem;
+            background-color: #050505;
+        }
+
+        footer a {
+            color: var(--gold);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            color: var(--orange);
+        }
+
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                text-align: center;
+            }
+            nav ul {
+                justify-content: center;
+            }
+            .hero h2 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <h1>PJOTOGRAFIA</h1>
+            <p>Piotr Hamryszczak — Fotografia Krajobrazu</p>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#">Portfolio</a></li>
+                <li><a href="#">O mnie</a></li>
+                <li><a href="#">Blog</a></li>
+                <li><a href="#">Kontakt</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <h2>Światło, Przestrzeń i Góry</h2>
+        <p>Witaj w moim wizualnym dzienniku. Poluję na ulotne chwile, złote godziny i niezwykłe formy natury w najpiękniejszych zakątkach.</p>
+    </section>
+
+    <div class="container">
+        <div class="gallery-grid">
+            <div class="gallery-card">
+                <div class="card-image-placeholder">
+                    <span>Galeria I</span>
+                    <h3>Górskie Szczyty</h3>
+                </div>
+                <div class="card-content">
+                    <p>Wędrówki po graniach, surowe skały i spektakularne wschody słońca nad chmurami.</p>
+                    <a href="#" class="card-link">Zobacz galerię &rarr;</a>
+                </div>
+            </div>
+
+            <div class="gallery-card">
+                <div class="card-image-placeholder">
+                    <span>Galeria II</span>
+                    <h3>Dzika Przyroda i Las</h3>
+                </div>
+                <div class="card-content">
+                    <p>Magiczne, mgliste poranki w leśnych ostępach i detale tętniącej życiem natury.</p>
+                    <a href="#" class="card-link">Zobacz galerię &rarr;</a>
+                </div>
+            </div>
+
+            <div class="gallery-card">
+                <div class="card-image-placeholder">
+                    <span>Galeria III</span>
+                    <h3>Złota Godzina</h3>
+                </div>
+                <div class="card-content">
+                    <p>Spektakularne palety barw: od głębokich pomarańczy po ognistą czerwień i złoto.</p>
+                    <a href="#" class="card-link">Zobacz galerię &rarr;</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Piotr Hamryszczak (Pjotografia). Wszelkie prawa zastrzeżone.<br>
+        Instagram: <a href="https://instagram.com" target="_blank">@pjotografi a</a></p>
+    </footer>
+
+</body>
+</html>
