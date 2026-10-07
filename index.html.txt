@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piotr Hamryszczak — Pjotografia | Fotografia Przyrody i Krajobrazu</title>
+    <!-- Czcionka Google Fonts: Cinzel (elegancka, idealna do fotografii) oraz Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0b0b;
+            --card-bg: #141414;
+            --gold: #d4af37;
+            --yellow: #f1c40f;
+            --orange: #e67e22;
+            --white: #ffffff;
+            --text-gray: #b0b0b0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--white);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+        }
+
+        header {
+            padding: 40px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+            background: linear-gradient(to bottom, #111, var(--bg-color));
+        }
+
+        header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2.8rem;
+            color: var(--gold);
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--orange);
+            font-size: 1.1rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .bio-section {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 60px auto;
+        }
+
+        .bio-section h2 {
+            font-family: 'Cinzel', serif;
+            color: var(--yellow);
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+        }
+
+        .bio-section p {
+            color: var(--text-gray);
+            font-size: 1.05rem;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+        }
+
+        .gallery-item {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid rgba(212, 175, 55, 0.1);
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(230, 126, 34, 0.2);
+            border-color: var(--orange);
+        }
+
+        .image-placeholder {
+            height: 250px;
+            background: linear-gradient(135deg, #222, #000);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gold);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid var(--orange);
+        }
+
+        .item-info {
+            padding: 20px;
+        }
+
+        .item-info h3 {
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            color: var(--white);
+            margin-bottom: 8px;
+        }
+
+        .item-info p {
+            color: var(--text-gray);
+            font-size: 0.9rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            margin-top: 60px;
+            border-top: 1px solid rgba(212, 175, 55, 0.2);
+            color: var(--text-gray);
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: var(--gold);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            color: var(--orange);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>PJOTOGRAFIA</h1>
+        <p>Piotr Hamryszczak — Fotografia Przyrody i Krajobrazu</p>
+    </header>
+
+    <div class="container">
+        <section class="bio-section">
+            <h2>Świat zatrzymany w kadrze</h2>
+            <p>Witaj w moim świecie. Specjalizuję się w fotografii krajobrazowej i przyrodniczej, polując na unikalne światło, złote godziny oraz nienaruszone ludzką ręką zakątki natury.</p>
+        </section>
+
+        <div class="gallery-grid">
+            <!-- Kafel 1 -->
+            <div class="gallery-item">
+                <div class="image-placeholder">Złota Godzina w Górach</div>
+                <div class="item-info">
+                    <h3>Poranek na szczycie</h3>
+                    <p>Promienie słońca przebijające się przez mgły doliny.</p>
+                </div>
+            </div>
+
+            <!-- Kafel 2 -->
+            <div class="gallery-item">
+                <div class="image-placeholder">Dzika Przyroda</div>
+                <div class="item-info">
+                    <h3>W królestwie lasu</h3>
+                    <p>Subtelnymi ścieżkami dzikiej zwierzyny.</p>
+                </div>
+            </div>
+
+            <!-- Kafel 3 -->
+            <div class="gallery-item">
+                <div class="image-placeholder">Jesienne Barwy</div>
+                <div class="item-info">
+                    <h3>Ogień jesieni</h3>
+                    <p>Kontrast pomarańczowych liści i ciemnych skał.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Piotr Hamryszczak (Pjotografia). Wszelkie prawa zastrzeżone. <br>Odwiedź mój Instagram: <a href="https://instagram.com" target="_blank">@pjotografi a</a></p>
+    </footer>
+
+</body>
+</html>
