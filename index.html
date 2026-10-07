@@ -25,6 +25,11 @@
             box-sizing: border-box;
         }
 
+        /* Płynne przewijanie strony po kliknięciu w menu */
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
             background-color: var(--bg-color);
             color: var(--white);
@@ -32,7 +37,7 @@
             line-height: 1.6;
         }
 
-        /* Profesjonalny nagłówek wzorowany na profesjonalistach */
+        /* Profesjonalny nagłówek */
         header {
             background-color: rgba(11, 11, 11, 0.95);
             backdrop-filter: blur(10px);
@@ -117,7 +122,7 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
             list-style: none;
             display: none;
-            min-width: 180px;
+            min-width: 190px;
             padding: 10px 0;
             z-index: 100;
         }
@@ -133,17 +138,16 @@
             color: var(--gold);
         }
 
-        /* Pokazywanie podmenu po najechaniu myszką */
         nav ul li.has-dropdown:hover .dropdown-menu {
             display: block;
         }
 
-        /* Sekcja HERO z Twoim zdjęciem w tle */
+        /* Sekcja HERO */
         .hero {
             position: relative;
             text-align: center;
             padding: 140px 20px 120px 20px;
-            background-image: linear-gradient(rgba(11, 11, 11, 0.75), rgba(11, 11, 11, 0.9)), url('tlo.jpg');
+            background-image: linear-gradient(rgba(11, 11, 11, 0.75), rgba(11, 11, 11, 0.9)), url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1600&q=80');
             background-size: cover;
             background-position: center;
             border-bottom: 1px solid rgba(212, 175, 55, 0.1);
@@ -171,16 +175,16 @@
             font-weight: 300;
         }
 
-        /* Główna zawartość / Galeria */
+        /* Kontener główny */
         .container {
             max-width: 1300px;
             margin: 0 auto;
-            padding: 50px 30px 90px 30px;
+            padding: 60px 30px;
         }
 
         .section-title {
             font-family: 'Montserrat', sans-serif;
-            font-size: 1.5rem;
+            font-size: 1.6rem;
             font-weight: 600;
             margin-bottom: 30px;
             color: var(--white);
@@ -190,10 +194,12 @@
             text-transform: uppercase;
         }
 
+        /* Siatka galerii */
         .gallery-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
             gap: 30px;
+            margin-bottom: 60px;
         }
 
         .gallery-card {
@@ -254,6 +260,81 @@
             color: var(--orange);
         }
 
+        /* Sekcja O Mnie */
+        .about-section {
+            background-color: var(--card-bg);
+            border: 1px solid rgba(212, 175, 55, 0.1);
+            border-radius: 8px;
+            padding: 40px;
+            margin-bottom: 60px;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .about-img {
+            width: 100%;
+            height: 350px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--gold);
+        }
+
+        .about-text h3 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.8rem;
+            color: var(--gold);
+            margin-bottom: 15px;
+        }
+
+        .about-text p {
+            color: var(--text-gray);
+            margin-bottom: 15px;
+            font-weight: 300;
+        }
+
+        /* Sekcja Kontakt */
+        .contact-section {
+            background-color: var(--card-bg);
+            border: 1px solid rgba(212, 175, 55, 0.1);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 60px auto;
+        }
+
+        .contact-section h3 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.8rem;
+            color: var(--yellow);
+            margin-bottom: 15px;
+        }
+
+        .contact-section p {
+            color: var(--text-gray);
+            margin-bottom: 25px;
+        }
+
+        .contact-btn {
+            display: inline-block;
+            background-color: var(--orange);
+            color: var(--white);
+            padding: 12px 30px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: background 0.3s;
+        }
+
+        .contact-btn:hover {
+            background-color: var(--gold);
+            color: #000;
+        }
+
         /* Stopka */
         footer {
             text-align: center;
@@ -273,8 +354,8 @@
             color: var(--orange);
         }
 
-        /* Responsywność dla urządzeń mobilnych */
-        @media (max-width: 1024px) {
+        /* Responsywność */
+        @media (max-width: 900px) {
             header {
                 flex-direction: column;
                 gap: 15px;
@@ -282,18 +363,20 @@
             }
             nav ul {
                 justify-content: center;
-                gap: 15px;
+                gap: 12px;
+            }
+            .about-section {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
 
-    <!-- Górny panel nawigacyjny z Twoim brandingiem -->
+    <!-- Górne menu z podfolderami działającymi na stronie -->
     <header>
         <a href="#" class="brand">
-            <!-- Wrzuć swoje małe zdjęcie profilowe do repozytorium jako 'avatar.jpg' -->
-            <img src="avatar.jpg" alt="Piotr Hamryszczak" class="brand-avatar">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80" alt="Piotr Hamryszczak" class="brand-avatar">
             <div class="brand-text">
                 <h1>Piotr Hamryszczak</h1>
                 <p>Mountain Photographer</p>
@@ -302,45 +385,32 @@
         <nav>
             <ul>
                 <li class="has-dropdown">
-                    <a href="#">O mnie &triangledown;</a>
+                    <a href="#o-mnie">O mnie &triangledown;</a>
                     <ul class="dropdown-menu">
-                        <li><a href="#">Biografia</a></li>
-                        <li><a href="#">Sprzęt</a></li>
-                        <li><a href="#">Osiągnięcia</a></li>
+                        <li><a href="#o-mnie">Biografia</a></li>
+                        <li><a href="#o-mnie">Sprzęt fotograficzny</a></li>
+                        <li><a href="#o-mnie">Osiągnięcia</a></li>
                     </ul>
                 </li>
                 <li class="has-dropdown">
-                    <a href="#">Galerie &triangledown;</a>
+                    <a href="#galerie">Galerie &triangledown;</a>
                     <ul class="dropdown-menu">
-                        <li><a href="#">Tatry i Karkonosze</a></li>
-                        <li><a href="#">Norwegia i Islandia</a></li>
-                        <li><a href="#">Złota Godzina</a></li>
+                        <li><a href="#galerie">Tatry i Karkonosze</a></li>
+                        <li><a href="#galerie">Norwegia i Islandia</a></li>
+                        <li><a href="#galerie">Złota Godzina</a></li>
                     </ul>
                 </li>
-                <li class="has-dropdown">
-                    <a href="#">Blog &triangledown;</a>
-                    <ul class="dropdown-menu">
-                        <li><a href="#">Relacje z wypraw</a></li>
-                        <li><a href="#">Poradniki foto</a></li>
-                    </ul>
-                </li>
-                <li><a href="#">Warsztaty</a></li>
-                <li><a href="#">Sklep</a></li>
-                <li class="has-dropdown">
-                    <a href="#">Ebooki &triangledown;</a>
-                    <ul class="dropdown-menu">
-                        <li><a href="#">Kompozycja w terenie</a></li>
-                        <li><a href="#">Obróbka RAW</a></li>
-                    </ul>
-                </li>
-                <li><a href="#">Wydruki zdjęć</a></li>
-                <li><a href="#">Współpraca</a></li>
-                <li><a href="#">Kontakt</a></li>
+                <li><a href="#galerie">Blog</a></li>
+                <li><a href="#galerie">Warsztaty</a></li>
+                <li><a href="#kontakt">Sklep</a></li>
+                <li><a href="#kontakt">Wydruki zdjęć</a></li>
+                <li><a href="#kontakt">Współpraca</a></li>
+                <li><a href="#kontakt">Kontakt</a></li>
             </ul>
         </nav>
     </header>
 
-    <!-- Sekcja powitalna z Twoim tłem -->
+    <!-- Sekcja powitalna -->
     <section class="hero">
         <div class="hero-content">
             <h2>Światło, Przestrzeń i Góry</h2>
@@ -350,10 +420,79 @@
 
     <!-- Główna zawartość -->
     <div class="container">
-        <h3 class="section-title">Wyróżnione Kadry</h3>
-        <div class="gallery-grid">
-            
-            <!-- Kafel 1 -->
-            <div class="gallery-card">
-                <img src="zdjecie1.jpg" alt="Górskie Szczyty" class="card-image">
-                <div class
+        
+        <!-- Sekcja Galerii (podzielona na podkategorie z menu) -->
+        <div id="galerie">
+            <h3 class="section-title">Tatry i Karkonosze</h3>
+            <div class="gallery-grid">
+                <div class="gallery-card">
+                    <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80" alt="Szczyty" class="card-image">
+                    <div class="card-content">
+                        <h3>Surowe Granie</h3>
+                        <p>Wędrówki po taturskich szlakach w poszukiwaniu idealnego światła o poranku.</p>
+                        <a href="#" class="card-link">Pełny kadry &rarr;</a>
+                    </div>
+                </div>
+                <div class="gallery-card">
+                    <img src="https://images.unsplash.com/photo-1511497584788-876761142212?auto=format&fit=crop&w=800&q=80" alt="Las" class="card-image">
+                    <div class="card-content">
+                        <h3>Leśne Ostępy</h3>
+                        <p>Magiczne, mgliste poranki w dolinach i leśnych rezerwatach przyrody.</p>
+                        <a href="#" class="card-link">Pełny kadry &rarr;</a>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="section-title">Norwegia i Islandia</h3>
+            <div class="gallery-grid">
+                <div class="gallery-card">
+                    <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80" alt="Fiordy" class="card-image">
+                    <div class="card-content">
+                        <h3>Fiordy i Północ</h3>
+                        <p>Niezwykłe formy geologiczne, surowa północna natura i arktyczne światło.</p>
+                        <a href="#" class="card-link">Pełny kadry &rarr;</a>
+                    </div>
+                </div>
+                <div class="gallery-card">
+                    <img src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80" alt="Złota Godzina" class="card-image">
+                    <div class="card-content">
+                        <h3>Złota Godzina</h3>
+                        <p>Spektakularne palety barw: od głębokich pomarańczy po ognistą czerwień.</p>
+                        <a href="#" class="card-link">Pełny kadry &rarr;</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sekcja O Mnie -->
+        <div id="o-mnie">
+            <h3 class="section-title">O mnie</h3>
+            <div class="about-section">
+                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80" alt="Piotr Hamryszczak" class="about-img">
+                <div class="about-text">
+                    <h3>Cześć, tu Piotr!</h3>
+                    <p>Fotografia krajobrazowa to dla mnie coś więcej niż tylko obraz – to sposób na zatrzymanie czasu, ciszy i potęgi natury, którą spotykam na szlaku.</p>
+                    <p>Wyruszam w góry przed świtem, często w trudnych warunkach, by uchwycić to jedno, idealne ujęcie, gdy pierwsze promienie słońca dotykają szczytów. Przez lata pracy wypracowałem swój styl oparty na naturalnych barwach i kinowej głębi.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sekcja Kontakt -->
+        <div id="kontakt">
+            <div class="contact-section">
+                <h3>Zainteresowany współpracą lub odbitką?</h3>
+                <p>Napisz do mnie wiadomość w sprawie zakupu licencjonowanych zdjęć, wydruków w dużym formacie lub wspólnego pleneru fotograficznego.</p>
+                <a href="mailto:kontakt@pjotografia.pl" class="contact-btn">Napisz e-mail</a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Stopka -->
+    <footer>
+        <p>&copy; 2026 Piotr Hamryszczak (Pjotografia). Wszelkie prawa zastrzeżone.<br>
+        Instagram: <a href="https://instagram.com" target="_blank">@pjotografia</a></p>
+    </footer>
+
+</body>
+</html>
