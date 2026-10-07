@@ -11,12 +11,12 @@
     <style>
         :root {
             --bg-color: #0b0b0b;
-            --card-bg: #161616;
+            --card-bg: #141414;
             --gold: #d4af37;
             --yellow: #f1c40f;
             --orange: #e67e22;
             --white: #ffffff;
-            --text-gray: #a0a0a0;
+            --text-gray: #b0b0b0;
         }
 
         * {
@@ -83,17 +83,28 @@
             color: var(--yellow);
         }
 
+        /* Sekcja HERO z Twoim zdjęciem w tle */
         .hero {
+            position: relative;
             text-align: center;
-            padding: 80px 20px 40px 20px;
+            padding: 120px 20px 100px 20px;
+            background-image: linear-gradient(rgba(11, 11, 11, 0.8), rgba(11, 11, 11, 0.9)), url('tlo.jpg'); /* Zmień 'tlo.jpg' na nazwę swojego pliku tła */
+            background-size: cover;
+            background-position: center;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+        }
+
+        .hero-content {
             max-width: 800px;
             margin: 0 auto;
+            position: relative;
+            z-index: 2;
         }
 
         .hero h2 {
             font-family: 'Montserrat', sans-serif;
             font-weight: 700;
-            font-size: 2.4rem;
+            font-size: 2.6rem;
             color: var(--yellow);
             margin-bottom: 15px;
             letter-spacing: -0.5px;
@@ -101,14 +112,14 @@
 
         .hero p {
             color: var(--text-gray);
-            font-size: 1.1rem;
+            font-size: 1.15rem;
             font-weight: 300;
         }
 
         .container {
             max-width: 1300px;
             margin: 0 auto;
-            padding: 20px 30px 60px 30px;
+            padding: 40px 30px 80px 30px;
         }
 
         .gallery-grid {
@@ -123,7 +134,6 @@
             overflow: hidden;
             border: 1px solid rgba(212, 175, 55, 0.1);
             transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-            cursor: pointer;
         }
 
         .gallery-card:hover {
@@ -203,7 +213,7 @@
                 justify-content: center;
             }
             .hero h2 {
-                font-size: 1.8rem;
+                font-size: 1.9rem;
             }
         }
     </style>
@@ -226,15 +236,18 @@
     </header>
 
     <section class="hero">
-        <h2>Światło, Przestrzeń i Góry</h2>
-        <p>Witaj w moim wizualnym dzienniku. Poluję na ulotne chwile, złote godziny i niezwykłe formy natury.</p>
+        <div class="hero-content">
+            <h2>Światło, Przestrzeń i Góry</h2>
+            <p>Witaj w moim wizualnym dzienniku. Poluję na ulotne chwile, złote godziny i niezwykłe formy natury.</p>
+        </div>
     </section>
 
     <div class="container">
         <div class="gallery-grid">
             
+            <!-- Kafel 1 - Zmień 'zdjecie1.jpg' na nazwę swojego pliku -->
             <div class="gallery-card">
-                <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80" alt="Górskie Szczyty" class="card-image">
+                <img src="zdjecie1.jpg" alt="Górskie Szczyty" class="card-image">
                 <div class="card-content">
                     <h3>Górskie Szczyty</h3>
                     <p>Wędrówki po graniach, surowe skały i spektakularne wschody słońca nad chmurami.</p>
@@ -242,8 +255,9 @@
                 </div>
             </div>
 
+            <!-- Kafel 2 - Zmień 'zdjecie2.jpg' na nazwę swojego pliku -->
             <div class="gallery-card">
-                <img src="https://images.unsplash.com/photo-1511497584788-876761142212?auto=format&fit=crop&w=800&q=80" alt="Dzika Przyroda i Las" class="card-image">
+                <img src="zdjecie2.jpg" alt="Dzika Przyroda i Las" class="card-image">
                 <div class="card-content">
                     <h3>Dzika Przyroda i Las</h3>
                     <p>Magiczne, mgliste poranki w leśnych ostępach i detale tętniącej życiem natury.</p>
@@ -251,8 +265,9 @@
                 </div>
             </div>
 
+            <!-- Kafel 3 - Zmień 'zdjecie3.jpg' na nazwę swojego pliku -->
             <div class="gallery-card">
-                <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80" alt="Złota Godzina" class="card-image">
+                <img src="zdjecie3.jpg" alt="Złota Godzina" class="card-image">
                 <div class="card-content">
                     <h3>Złota Godzina</h3>
                     <p>Spektakularne palety barw: od głębokich pomarańczy po ognistą czerwień i złoto.</p>
