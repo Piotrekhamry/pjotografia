@@ -6,7 +6,7 @@
     <title>Galerie — Piotr Hamryszczak | Pjotografia</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Montserrat:wght@400;600;700&display=swap">
     <style>
         :root {
             --bg-color: #0b0b0b;
@@ -133,7 +133,6 @@
             display: block;
         }
 
-        /* Treść podstrony galeriowej */
         .container {
             max-width: 1300px;
             margin: 0 auto;
@@ -241,10 +240,9 @@
 </head>
 <body>
 
-    <!-- Identyczne menu nawigacyjne -->
     <header>
         <a href="index.html" class="brand">
-            <img src="avatar.jpg" alt="Piotr Hamryszczak" class="brand-avatar" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80" alt="Piotr Hamryszczak" class="brand-avatar">
             <div class="brand-text">
                 <h1>Piotr Hamryszczak</h1>
                 <p>Mountain Photographer</p>
@@ -255,45 +253,38 @@
                 <li class="has-dropdown">
                     <a href="o-mnie.html">O mnie &triangledown;</a>
                     <ul class="dropdown-menu">
-                        <li><a href="o-mnie.html">Biografia</a></li>
-                        <li><a href="o-mnie.html">Sprzęt fotograficzny</a></li>
-                        <li><a href="o-mnie.html">Osiągnięcia</a></li>
+                        <li><a href="o-mnie.html#biografia">Biografia</a></li>
+                        <li><a href="o-mnie.html#sprzet">Sprzęt fotograficzny</a></li>
+                        <li><a href="o-mnie.html#osiagniecia">Osiągnięcia</a></li>
                     </ul>
                 </li>
                 <li class="has-dropdown">
                     <a href="galerie.html">Galerie &triangledown;</a>
                     <ul class="dropdown-menu">
-                        <li><a href="galerie.html">Tatry i Karkonosze</a></li>
-                        <li><a href="galerie.html">Norwegia i Islandia</a></li>
-                        <li><a href="galerie.html">Złota Godzina</a></li>
+                        <li><a href="galerie.html#tatry">Tatry i Karkonosze</a></li>
+                        <li><a href="galerie.html#norwegia">Norwegia i Islandia</a></li>
+                        <li><a href="galerie.html#zlota-godzina">Złota Godzina</a></li>
                     </ul>
                 </li>
-                <li><a href="blog.html">Blog</a></li>
-                <li><a href="warsztaty.html">Warsztaty</a></li>
-                <li><a href="sklep.html">Sklep</a></li>
-                <li><a href="ebooki.html">Ebooki</a></li>
-                <li><a href="wydruki.html">Wydruki zdjęć</a></li>
-                <li><a href="wspolpraca.html">Współpraca</a></li>
                 <li><a href="kontakt.html">Kontakt</a></li>
             </ul>
         </nav>
     </header>
 
-    <!-- Główna treść galerii -->
     <div class="container">
         <h2 class="page-title">Wszystkie Galerie</h2>
 
         <h3 class="section-title" id="tatry">Tatry i Karkonosze</h3>
         <div class="gallery-grid">
             <div class="gallery-card">
-                <img src="zdjecie1.jpg" alt="Tatry" class="card-image" onerror="this.src='https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80'">
+                <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80" alt="Tatry" class="card-image">
                 <div class="card-content">
                     <h3>Surowe Granie</h3>
                     <p>Wędrówki po tatrzańskich szlakach w poszukiwaniu idealnego światła.</p>
                 </div>
             </div>
             <div class="gallery-card">
-                <img src="zdjecie2.jpg" alt="Las" class="card-image" onerror="this.src='https://images.unsplash.com/photo-1511497584788-876761142212?auto=format&fit=crop&w=800&q=80'">
+                <img src="https://images.unsplash.com/photo-1511497584788-876761142212?auto=format&fit=crop&w=800&q=80" alt="Las" class="card-image">
                 <div class="card-content">
                     <h3>Leśne Ostępy</h3>
                     <p>Magiczne, mgliste poranki w dolinach i leśnych rezerwatach.</p>
@@ -304,10 +295,17 @@
         <h3 class="section-title" id="norwegia">Norwegia i Islandia</h3>
         <div class="gallery-grid">
             <div class="gallery-card">
-                <img src="zdjecie3.jpg" alt="Fiordy" class="card-image" onerror="this.src='https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80'">
+                <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80" alt="Fiordy" class="card-image">
                 <div class="card-content">
                     <h3>Fiordy i Północ</h3>
                     <p>Niezwykłe formy geologiczne i arktyczne światło.</p>
+                </div>
+            </div>
+            <div class="gallery-card">
+                <img src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80" alt="Złota Godzina" class="card-image">
+                <div class="card-content">
+                    <h3>Złota Godzina</h3>
+                    <p>Spektakularne palety barw o wschodzie i zachodzie słońca.</p>
                 </div>
             </div>
         </div>
