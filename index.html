@@ -6,7 +6,7 @@
     <title>Piotr Hamryszczak — Pjotografia | Fotografia Przyrody i Krajobrazu</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Montserrat:wght@400;600;700&display=swap">
     <style>
         :root {
             --bg-color: #0b0b0b;
@@ -76,12 +76,33 @@
             font-weight: 500;
         }
 
+        /* Przycisk hamburgera (widoczny tylko na telefonach) */
+        .menu-toggle {
+            display: none;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 30px;
+            height: 21px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .menu-toggle span {
+            width: 100%;
+            height: 3px;
+            background-color: var(--white);
+            border-radius: 3px;
+            transition: 0.3s;
+        }
+
+        /* Nawigacja standardowa */
         nav ul {
             list-style: none;
             display: flex;
             gap: 22px;
             align-items: center;
-            flex-wrap: wrap;
         }
 
         nav ul li {
@@ -137,7 +158,7 @@
             position: relative;
             text-align: center;
             padding: 160px 20px 140px 20px;
-            background-image: linear-gradient(rgba(11, 11, 11, 0.75), rgba(11, 11, 11, 0.9)), url('tlo.jpg');
+            background-image: linear-gradient(rgba(11, 11, 11, 0.75), rgba(11, 11, 11, 0.9)), url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1600&q=80');
             background-size: cover;
             background-position: center;
             border-bottom: 1px solid rgba(212, 175, 55, 0.1);
@@ -201,15 +222,51 @@
             color: var(--orange);
         }
 
-        @media (max-width: 1024px) {
-            header {
-                flex-direction: column;
-                gap: 15px;
-                padding: 15px;
+        /* Styl dla urządzeńmobilnych (ekrany poniżej 900px) */
+        @media (max-width: 900px) {
+            .menu-toggle {
+                display: flex;
             }
+
+            nav {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                background-color: rgba(11, 11, 11, 0.98);
+                backdrop-filter: blur(10px);
+                border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.4s ease-in-out;
+            }
+
+            /* Po aktywacji skryptem menu się rozwija */
+            nav.active {
+                max-height: 400px; 
+            }
+
             nav ul {
-                justify-content: center;
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 20px 30px;
                 gap: 15px;
+            }
+
+            /* Na telefonie podmenu pokazujemy od razu pod kategorią, bez najeżdżania myszką */
+            .dropdown-menu {
+                position: static;
+                display: block;
+                box-shadow: none;
+                border: none;
+                background: transparent;
+                padding-left: 15px;
+                margin-top: 5px;
+                min-width: unset;
+            }
+
+            nav ul li.has-dropdown:hover .dropdown-menu {
+                display: block;
             }
         }
     </style>
@@ -218,13 +275,21 @@
 
     <header>
         <a href="index.html" class="brand">
-            <img src="avatar.jpg" alt="Piotr Hamryszczak" class="brand-avatar" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80" alt="Piotr Hamryszczak" class="brand-avatar">
             <div class="brand-text">
                 <h1>Piotr Hamryszczak</h1>
                 <p>Mountain Photographer</p>
             </div>
         </a>
-        <nav>
+
+        <!-- Przycisk z trzema paskami (hamburger) -->
+        <button class="menu-toggle" id="mobile-menu" aria-label="Menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <nav id="nav-menu">
             <ul>
                 <li class="has-dropdown">
                     <a href="o-mnie.html">O mnie &triangledown;</a>
@@ -242,12 +307,6 @@
                         <li><a href="galerie.html#zlota-godzina">Złota Godzina</a></li>
                     </ul>
                 </li>
-                <li><a href="blog.html">Blog</a></li>
-                <li><a href="warsztaty.html">Warsztaty</a></li>
-                <li><a href="sklep.html">Sklep</a></li>
-                <li><a href="ebooki.html">Ebooki</a></li>
-                <li><a href="wydruki.html">Wydruki zdjęć</a></li>
-                <li><a href="wspolpraca.html">Współpraca</a></li>
                 <li><a href="kontakt.html">Kontakt</a></li>
             </ul>
         </nav>
@@ -266,5 +325,14 @@
         Instagram: <a href="https://instagram.com" target="_blank">@pjotografia</a></p>
     </footer>
 
+    <!-- Skrypt obsługujący kliknięcie w trzy paski na telefonie -->
+    <script>
+        const mobileMenu = document.getElementById('mobile-menu');
+        const navMenu = document.getElementById('nav-menu');
+
+        mobileMenu.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+        });
+    </script>
 </body>
 </html>
