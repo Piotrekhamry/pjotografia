@@ -16,7 +16,7 @@ window.SITE = {
   avatar: "",
 
   // Zdjęcie w tle strony głównej (podmień na własne, np. z Cloudinary)
-  hero: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80",
+  hero: "https://res.cloudinary.com/sivhxknj/image/upload/v1793259284/Babia%20g%C3%B3ra.jpg",
 
   // Nazwa Twojego konta w Cloudinary (Dashboard → "Cloud name").
   // Dopóki jest puste, strona pokazuje zdjęcia zastępcze z data/photos.json.
