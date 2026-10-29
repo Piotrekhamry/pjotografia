@@ -1,87 +1,45 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Piotr Hamryszczak — Pjotografia | Fotografia Przyrody i Krajobrazu</title>
-    <meta name="description" content="Fotografia przyrody i krajobrazu: góry, złote godziny, Skandynawia. Galerie, blog, warsztaty i wydruki zdjęć.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Montserrat:wght@400;600;700&display=swap">
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body class="home">
-<main>
+/*
+ * USTAWIENIA STRONY — to jedyny plik, który zwykle musisz edytować.
+ * Zdjęcia dodajesz w panelu Cloudinary (patrz README.md), a strona pobiera je sama.
+ */
+window.SITE = {
+  name: "Piotr Hamryszczak",
+  tagline: "Mountain Photographer",
 
-    <section class="hero" id="hero">
-        <div class="hero-content">
-            <h2>Światło, Przestrzeń i Góry</h2>
-            <p>Witaj w moim wizualnym dzienniku. Poluję na ulotne chwile, złote godziny i niezwykłe formy natury.</p>
-            <a href="galerie.html" class="btn">Zobacz galerie</a>
-        </div>
-        <a href="#najnowsze" class="scroll-hint">Przewiń &#8595;</a>
-    </section>
+  email: "",
+  instagram: "https://instagram.com/pjotografia",
+  facebook: "",
+  px500: "",
 
-    <section class="container" id="najnowsze">
-        <div class="section-head">
-            <h2>Najnowsze prace</h2>
-            <p>Wybrane kadry z ostatnich wypraw</p>
-        </div>
-        <div data-gallery="wyrozniane" data-limit="9"></div>
-        <div class="center"><a href="galerie.html" class="btn ghost">Wszystkie galerie</a></div>
-    </section>
+  // Zdjęcie profilowe (nagłówek i sekcja "Cześć, jestem Piotr"). Wklej adres z Cloudinary.
+  avatar: "",
 
-    <section class="band">
-        <div class="container">
-            <div class="section-head">
-                <h2>Galerie</h2>
-                <p>Wybierz miejsce, w które chcesz się wybrać</p>
-            </div>
-            <div class="cards" data-gallery-cards></div>
-        </div>
-    </section>
+  // Zdjęcie w tle strony głównej
+  hero: "https://res.cloudinary.com/sivhxknj/image/upload/v1793259284/Babia%20g%C3%B3ra.jpg",
 
-    <section class="container">
-        <div class="split">
-            <div class="pic" id="about-pic"></div>
-            <div>
-                <h2>Cześć, jestem Piotr</h2>
-                <p>Fotografuję góry, przyrodę i światło, które pojawia się tylko na chwilę. Zapraszam do mojej galerii oraz do poznania historii stojących za zdjęciami.</p>
-                <a href="o-mnie.html" class="btn ghost">Poznaj mnie</a>
-            </div>
-        </div>
-    </section>
+  // Nazwa konta Cloudinary
+  cloudName: "sivhxknj",
 
-    <section class="band">
-        <div class="container">
-            <div class="cards">
-                <a class="card" href="sesje-plenerowe.html"><div class="body"><h3>Sesje plenerowe</h3><p>Zdjęcia dla par w górach i w pięknym świetle.</p></div></a>
-                <a class="card" href="warsztaty.html"><div class="body"><h3>Warsztaty</h3><p>Wspólne wyjścia w teren i nauka fotografii krajobrazu.</p></div></a>
-                <a class="card" href="ebooki.html"><div class="body"><h3>Ebooki</h3><p>Przewodniki fotograficzne po miejscach, które warto zobaczyć.</p></div></a>
-                <a class="card" href="wydruki.html"><div class="body"><h3>Wydruki zdjęć</h3><p>Moje fotografie na ścianie Twojego domu.</p></div></a>
-            </div>
-        </div>
-    </section>
+  featuredTag: "wyrozniane",
 
-</main>
-
-<script src="js/config.js"></script>
-<script>
-    // Tło sekcji hero i zdjęcie "O mnie" pochodzą z config.js
-    document.getElementById('hero').style.backgroundImage = "url('" + SITE.hero + "')";
-    // Zdjęcie w sekcji "Cześć, jestem Piotr": pole aboutPhoto w config.js, a jeśli go nie ma, to avatar. Bez obu sekcja jest sam tekst.
-    var pic = document.getElementById('about-pic');
-    var aboutSrc = SITE.aboutPhoto || SITE.avatar;
-    if (aboutSrc) {
-        pic.style.backgroundImage = "url('" + aboutSrc + "')";
-    } else {
-        pic.style.display = 'none';
-        pic.parentElement.style.gridTemplateColumns = '1fr';
-        pic.parentElement.style.maxWidth = '760px';
-        pic.parentElement.style.margin = '0 auto';
-        pic.parentElement.style.textAlign = 'center';
+  galleries: [
+    {
+      id: "tatry",
+      title: "Tatry i Karkonosze",
+      tag: "tatry",
+      description: "Wędrówki po górskich szlakach w poszukiwaniu idealnego światła."
+    },
+    {
+      id: "norwegia",
+      title: "Norwegia i Islandia",
+      tag: "norwegia",
+      description: "Niezwykłe formy geologiczne i arktyczne światło."
+    },
+    {
+      id: "zlota-godzina",
+      title: "Złota Godzina",
+      tag: "zlota-godzina",
+      description: "Palety barw o wschodzie i zachodzie słońca."
     }
-</script>
-<script src="js/site.js"></script>
-</body>
-</html>
+  ]
+};
