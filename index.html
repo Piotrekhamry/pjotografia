@@ -69,7 +69,17 @@
 <script>
     // Tło sekcji hero i zdjęcie "O mnie" pochodzą z config.js
     document.getElementById('hero').style.backgroundImage = "url('" + SITE.hero + "')";
-    document.getElementById('about-pic').style.backgroundImage = "url('" + SITE.hero + "')";
+    // Zdjęcie w sekcji "Cześć, jestem Piotr": pole aboutPhoto w config.js. Bez niego sekcja jest sam tekst.
+    var pic = document.getElementById('about-pic');
+    if (SITE.aboutPhoto) {
+        pic.style.backgroundImage = "url('" + SITE.aboutPhoto + "')";
+    } else {
+        pic.style.display = 'none';
+        pic.parentElement.style.gridTemplateColumns = '1fr';
+        pic.parentElement.style.maxWidth = '760px';
+        pic.parentElement.style.margin = '0 auto';
+        pic.parentElement.style.textAlign = 'center';
+    }
 </script>
 <script src="js/site.js"></script>
 </body>
