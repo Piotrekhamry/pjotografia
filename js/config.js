@@ -20,7 +20,7 @@ window.SITE = {
 
   // Nazwa Twojego konta w Cloudinary (Dashboard → "Cloud name").
   // Dopóki jest puste, strona pokazuje zdjęcia zastępcze z data/photos.json.
-  cloudName: "",
+  cloudName: "tatry",
 
   // Zdjęcia z tym tagiem w Cloudinary pojawią się na stronie głównej w "Najnowszych pracach"
   featuredTag: "wyrozniane",
