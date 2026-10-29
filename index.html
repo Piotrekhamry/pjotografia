@@ -69,10 +69,11 @@
 <script>
     // Tło sekcji hero i zdjęcie "O mnie" pochodzą z config.js
     document.getElementById('hero').style.backgroundImage = "url('" + SITE.hero + "')";
-    // Zdjęcie w sekcji "Cześć, jestem Piotr": pole aboutPhoto w config.js. Bez niego sekcja jest sam tekst.
+    // Zdjęcie w sekcji "Cześć, jestem Piotr": pole aboutPhoto w config.js, a jeśli go nie ma, to avatar. Bez obu sekcja jest sam tekst.
     var pic = document.getElementById('about-pic');
-    if (SITE.aboutPhoto) {
-        pic.style.backgroundImage = "url('" + SITE.aboutPhoto + "')";
+    var aboutSrc = SITE.aboutPhoto || SITE.avatar;
+    if (aboutSrc) {
+        pic.style.backgroundImage = "url('" + aboutSrc + "')";
     } else {
         pic.style.display = 'none';
         pic.parentElement.style.gridTemplateColumns = '1fr';
