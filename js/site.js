@@ -20,6 +20,7 @@
     <nav id="nav-menu"><ul>
       <li class="has-dropdown">${link('o-mnie.html', 'O mnie &#9663;')}${aboutSub}</li>
       <li class="has-dropdown">${link('galerie.html', 'Galerie &#9663;')}${galleriesSub}</li>
+      <li>${link('sesje-plenerowe.html', 'Sesje plenerowe')}</li>
       <li>${link('blog.html', 'Blog')}</li>
       <li>${link('warsztaty.html', 'Warsztaty')}</li>
       <li>${link('sklep.html', 'Sklep')}</li>
