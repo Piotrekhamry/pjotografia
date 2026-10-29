@@ -4,332 +4,72 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Piotr Hamryszczak — Pjotografia | Fotografia Przyrody i Krajobrazu</title>
+    <meta name="description" content="Fotografia przyrody i krajobrazu: góry, złote godziny, Skandynawia. Galerie, blog, warsztaty i wydruki zdjęć.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Montserrat:wght@400;600;700&display=swap">
-    <style>
-        :root {
-            --bg-color: #0b0b0b;
-            --card-bg: #141414;
-            --gold: #d4af37;
-            --yellow: #f1c40f;
-            --orange: #e67e22;
-            --white: #ffffff;
-            --text-gray: #b0b0b0;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--white);
-            font-family: 'Inter', sans-serif;
-            line-height: 1.6;
-        }
-
-        header {
-            background-color: rgba(11, 11, 11, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(212, 175, 55, 0.15);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            text-decoration: none;
-        }
-
-        .brand-avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 4px;
-            object-fit: cover;
-            border: 1px solid var(--gold);
-        }
-
-        .brand-text h1 {
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-            font-size: 1.1rem;
-            color: var(--white);
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-        }
-
-        .brand-text p {
-            font-size: 0.7rem;
-            color: var(--orange);
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            font-weight: 500;
-        }
-
-        /* Przycisk hamburgera (widoczny tylko na mniejszych ekranach) */
-        .menu-toggle {
-            display: none;
-            flex-direction: column;
-            justify-content: space-between;
-            width: 30px;
-            height: 21px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            z-index: 1001;
-        }
-
-        .menu-toggle span {
-            width: 100%;
-            height: 3px;
-            background-color: var(--white);
-            border-radius: 3px;
-            transition: 0.3s;
-        }
-
-        nav ul {
-            list-style: none;
-            display: flex;
-            gap: 18px;
-            align-items: center;
-        }
-
-        nav ul li {
-            position: relative;
-        }
-
-        nav ul li a {
-            color: var(--text-gray);
-            text-decoration: none;
-            font-size: 0.75rem;
-            letter-spacing: 0.5px;
-            transition: color 0.3s ease;
-            text-transform: uppercase;
-            font-weight: 500;
-            padding: 10px 0;
-            display: block;
-        }
-
-        nav ul li a:hover {
-            color: var(--yellow);
-        }
-
-        .dropdown-menu {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            background-color: #121212;
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            list-style: none;
-            display: none;
-            min-width: 190px;
-            padding: 10px 0;
-            z-index: 100;
-        }
-
-        .dropdown-menu li a {
-            padding: 8px 20px;
-            font-size: 0.75rem;
-            white-space: nowrap;
-        }
-
-        .dropdown-menu li a:hover {
-            background-color: rgba(212, 175, 55, 0.1);
-            color: var(--gold);
-        }
-
-        nav ul li.has-dropdown:hover .dropdown-menu {
-            display: block;
-        }
-
-        .hero {
-            position: relative;
-            text-align: center;
-            padding: 160px 20px 140px 20px;
-            background-image: linear-gradient(rgba(11, 11, 11, 0.75), rgba(11, 11, 11, 0.9)), url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1600&q=80');
-            background-size: cover;
-            background-position: center;
-            border-bottom: 1px solid rgba(212, 175, 55, 0.1);
-        }
-
-        .hero-content {
-            max-width: 800px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 2;
-        }
-
-        .hero h2 {
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-            font-size: 2.8rem;
-            color: var(--yellow);
-            margin-bottom: 15px;
-        }
-
-        .hero p {
-            color: var(--text-gray);
-            font-size: 1.15rem;
-            font-weight: 300;
-            margin-bottom: 30px;
-        }
-
-        .btn-main {
-            display: inline-block;
-            background-color: var(--orange);
-            color: var(--white);
-            padding: 12px 30px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            transition: background 0.3s;
-        }
-
-        .btn-main:hover {
-            background-color: var(--gold);
-            color: #000;
-        }
-
-        footer {
-            text-align: center;
-            padding: 50px 20px;
-            border-top: 1px solid rgba(212, 175, 55, 0.1);
-            color: var(--text-gray);
-            font-size: 0.85rem;
-            background-color: #050505;
-        }
-
-        footer a {
-            color: var(--gold);
-            text-decoration: none;
-        }
-
-        footer a:hover {
-            color: var(--orange);
-        }
-
-        /* Responsywność dla ekranów poniżej 1100px (miejsca jest dużo, więc tu wchodzi hamburger) */
-        @media (max-width: 1100px) {
-            .menu-toggle {
-                display: flex;
-            }
-
-            nav {
-                position: absolute;
-                top: 100%;
-                left: 0;
-                width: 100%;
-                background-color: rgba(11, 11, 11, 0.98);
-                backdrop-filter: blur(10px);
-                border-bottom: 1px solid rgba(212, 175, 55, 0.15);
-                max-height: 0;
-                overflow: hidden;
-                transition: max-height 0.4s ease-in-out;
-            }
-
-            nav.active {
-                max-height: 600px; 
-            }
-
-            nav ul {
-                flex-direction: column;
-                align-items: flex-start;
-                padding: 20px 30px;
-                gap: 15px;
-            }
-
-            .dropdown-menu {
-                position: static;
-                display: block;
-                box-shadow: none;
-                border: none;
-                background: transparent;
-                padding-left: 15px;
-                margin-top: 5px;
-                min-width: unset;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="home">
+<main>
 
-    <header>
-        <a href="index.html" class="brand">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80" alt="Piotr Hamryszczak" class="brand-avatar">
-            <div class="brand-text">
-                <h1>Piotr Hamryszczak</h1>
-                <p>Mountain Photographer</p>
-            </div>
-        </a>
-
-        <button class="menu-toggle" id="mobile-menu" aria-label="Menu">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
-
-        <nav id="nav-menu">
-            <ul>
-                <li class="has-dropdown">
-                    <a href="o-mnie.html">O mnie &triangledown;</a>
-                    <ul class="dropdown-menu">
-                        <li><a href="o-mnie.html#biografia">Biografia</a></li>
-                        <li><a href="o-mnie.html#sprzet">Sprzęt fotograficzny</a></li>
-                        <li><a href="o-mnie.html#osiagniecia">Osiągnięcia</a></li>
-                    </ul>
-                </li>
-                <li class="has-dropdown">
-                    <a href="galerie.html">Galerie &triangledown;</a>
-                    <ul class="dropdown-menu">
-                        <li><a href="galerie.html#tatry">Tatry i Karkonosze</a></li>
-                        <li><a href="galerie.html#norwegia">Norwegia i Islandia</a></li>
-                        <li><a href="galerie.html#zlota-godzina">Złota Godzina</a></li>
-                    </ul>
-                </li>
-                <li><a href="blog.html">Blog</a></li>
-                <li><a href="warsztaty.html">Warsztaty</a></li>
-                <li><a href="sklep.html">Sklep</a></li>
-                <li><a href="ebooki.html">Ebooki</a></li>
-                <li><a href="wydruki.html">Wydruki zdjęć</a></li>
-                <li><a href="wspolpraca.html">Współpraca</a></li>
-                <li><a href="kontakt.html">Kontakt</a></li>
-            </ul>
-        </nav>
-    </header>
-
-    <section class="hero">
+    <section class="hero" id="hero">
         <div class="hero-content">
             <h2>Światło, Przestrzeń i Góry</h2>
             <p>Witaj w moim wizualnym dzienniku. Poluję na ulotne chwile, złote godziny i niezwykłe formy natury.</p>
-            <a href="galerie.html" class="btn-main">Zobacz Galerie</a>
+            <a href="galerie.html" class="btn">Zobacz galerie</a>
+        </div>
+        <a href="#najnowsze" class="scroll-hint">Przewiń &#8595;</a>
+    </section>
+
+    <section class="container" id="najnowsze">
+        <div class="section-head">
+            <h2>Najnowsze prace</h2>
+            <p>Wybrane kadry z ostatnich wypraw</p>
+        </div>
+        <div data-gallery="wyrozniane" data-limit="9"></div>
+        <div class="center"><a href="galerie.html" class="btn ghost">Wszystkie galerie</a></div>
+    </section>
+
+    <section class="band">
+        <div class="container">
+            <div class="section-head">
+                <h2>Galerie</h2>
+                <p>Wybierz miejsce, w które chcesz się wybrać</p>
+            </div>
+            <div class="cards" data-gallery-cards></div>
         </div>
     </section>
 
-    <footer>
-        <p>&copy; 2026 Piotr Hamryszczak (Pjotografia). Wszelkie prawa zastrzeżone.<br>
-        Instagram: <a href="https://instagram.com" target="_blank">@pjotografia</a></p>
-    </footer>
+    <section class="container">
+        <div class="split">
+            <div class="pic" id="about-pic"></div>
+            <div>
+                <h2>Cześć, jestem Piotr</h2>
+                <p>Fotografuję góry, przyrodę i światło, które pojawia się tylko na chwilę. Zapraszam do mojej galerii oraz do poznania historii stojących za zdjęciami.</p>
+                <a href="o-mnie.html" class="btn ghost">Poznaj mnie</a>
+            </div>
+        </div>
+    </section>
 
-    <script>
-        const mobileMenu = document.getElementById('mobile-menu');
-        const navMenu = document.getElementById('nav-menu');
+    <section class="band">
+        <div class="container">
+            <div class="cards">
+                <a class="card" href="warsztaty.html"><div class="body"><h3>Warsztaty</h3><p>Wspólne wyjścia w teren i nauka fotografii krajobrazu.</p></div></a>
+                <a class="card" href="ebooki.html"><div class="body"><h3>Ebooki</h3><p>Przewodniki fotograficzne po miejscach, które warto zobaczyć.</p></div></a>
+                <a class="card" href="wydruki.html"><div class="body"><h3>Wydruki zdjęć</h3><p>Moje fotografie na ścianie Twojego domu.</p></div></a>
+            </div>
+        </div>
+    </section>
 
-        mobileMenu.addEventListener('click', () => {
-            navMenu.classList.toggle('active');
-        });
-    </script>
+</main>
+
+<script src="js/config.js"></script>
+<script>
+    // Tło sekcji hero i zdjęcie "O mnie" pochodzą z config.js
+    document.getElementById('hero').style.backgroundImage = "url('" + SITE.hero + "')";
+    document.getElementById('about-pic').style.backgroundImage = "url('" + SITE.hero + "')";
+</script>
+<script src="js/site.js"></script>
 </body>
 </html>

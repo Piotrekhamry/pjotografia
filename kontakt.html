@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kontakt — Piotr Hamryszczak | Pjotografia</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Montserrat:wght@400;600;700&display=swap">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+    <div class="container narrow">
+        <h2 class="page-title">Kontakt</h2>
+        <div class="contact-box prose">
+            <p>Masz pytanie o zdjęcia, wydruki, współpracę albo warsztaty? Napisz do mnie.</p>
+            <p id="contact-lines"></p>
+
+            <!-- Formularz: żeby działał, załóż darmowe konto na formspree.io,
+                 utwórz formularz i wklej jego adres w action="" poniżej. -->
+            <form class="contact" id="contact-form" method="POST" action="">
+                <input type="text" name="name" placeholder="Imię" required>
+                <input type="email" name="email" placeholder="Twój e-mail" required>
+                <textarea name="message" placeholder="Wiadomość" required></textarea>
+                <button type="submit" class="btn">Wyślij</button>
+            </form>
+            <p class="todo" id="form-note" hidden>Formularz zostanie uruchomiony po podaniu adresu Formspree w kontakt.html.</p>
+        </div>
+    </div>
+</main>
+
+<script src="js/config.js"></script>
+<script src="js/site.js"></script>
+<script>
+    const lines = [];
+    if (SITE.email) lines.push('E-mail: <a href="mailto:' + SITE.email + '">' + SITE.email + '</a>');
+    if (SITE.instagram) lines.push('Instagram: <a href="' + SITE.instagram + '" target="_blank" rel="noopener">@pjotografia</a>');
+    document.getElementById('contact-lines').innerHTML = lines.join('<br>');
+
+    const form = document.getElementById('contact-form');
+    if (!form.getAttribute('action')) {
+        form.style.display = 'none';
+        document.getElementById('form-note').hidden = false;
+    }
+</script>
+</body>
+</html>
