@@ -24,7 +24,7 @@ window.SITE = {
 
   galleries: [
     {
-      id: "babia gora",
+      id: "tatry",
       title: "Babia góra",
       tag: "tatry",
       description: ""
