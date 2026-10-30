@@ -48,9 +48,9 @@ window.SITE = {
       description: ""
       },
     {
-      id: "zlota-godzina",
+      id: "Gorce",
       title: "Gorce",
-      tag: "zlota-godzina",
+      tag: "gorce",
       description: ""
         },
     {
