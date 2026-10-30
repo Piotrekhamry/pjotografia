@@ -1,4 +1,4 @@
-ny/*
+/*
  * USTAWIENIA STRONY — to jedyny plik, który zwykle musisz edytować.
  * Zdjęcia dodajesz w panelu Cloudinary (patrz README.md), a strona pobiera je sama.
  */
