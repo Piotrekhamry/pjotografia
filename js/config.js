@@ -1,4 +1,4 @@
-/*
+ny/*
  * USTAWIENIA STRONY — to jedyny plik, który zwykle musisz edytować.
  * Zdjęcia dodajesz w panelu Cloudinary (patrz README.md), a strona pobiera je sama.
  */
@@ -42,9 +42,9 @@ window.SITE = {
       description: ""
       },
     {
-      id: "zlota-godzina",
+      id: "Pieniny",
       title: "Pieniny",
-      tag: "zlota-godzina",
+      tag: "pieniny",
       description: ""
       },
     {
