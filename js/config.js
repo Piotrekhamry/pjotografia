@@ -32,7 +32,7 @@ window.SITE = {
     {
       id: "Tarty",
       title: "Tatry",
-      tag: "norwegia",
+      tag: "tatry",
       description: ""
     },
     {
