@@ -24,13 +24,13 @@ window.SITE = {
 
   galleries: [
     {
-      id: "tatry",
+      id: "Babia góra",
       title: "Babia góra",
       tag: "tatry",
       description: ""
     },
     {
-      id: "norwegia",
+      id: "Tarty",
       title: "Tatry",
       tag: "norwegia",
       description: ""
@@ -54,7 +54,7 @@ window.SITE = {
       description: ""
         },
     {
-      id: "zlota-godzina",
+      id: "Pogórze przemyskie",
       title: "Pogórze przemyskie",
       tag: "pogorze przemyskie",
       description: ""
