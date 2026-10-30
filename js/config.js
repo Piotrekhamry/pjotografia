@@ -26,7 +26,7 @@ window.SITE = {
     {
       id: "Babia góra",
       title: "Babia góra",
-      tag: "tatry",
+      tag: "babia",
       description: ""
     },
     {
