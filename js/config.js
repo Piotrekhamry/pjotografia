@@ -52,6 +52,12 @@ window.SITE = {
       title: "Gorce",
       tag: "zlota-godzina",
       description: ""
+        },
+    {
+      id: "zlota-godzina",
+      title: "Pogórze przemyskie",
+      tag: "zlota-godzina",
+      description: ""
     }
   ]
 };
