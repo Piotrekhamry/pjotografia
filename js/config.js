@@ -27,19 +27,31 @@ window.SITE = {
       id: "tatry",
       title: "Babia góra",
       tag: "tatry",
-      description: "Wędrówki po górskich szlakach w poszukiwaniu idealnego światła."
+      description: ""
     },
     {
       id: "norwegia",
       title: "Tatry",
       tag: "norwegia",
-      description: "Niezwykłe formy geologiczne i arktyczne światło."
+      description: ""
     },
     {
       id: "zlota-godzina",
       title: "Przyroda loklanie",
       tag: "zlota-godzina",
-      description: "Palety barw o wschodzie i zachodzie słońca."
+      description: ""
+      },
+    {
+      id: "zlota-godzina",
+      title: "Pieniny",
+      tag: "zlota-godzina",
+      description: ""
+      },
+    {
+      id: "zlota-godzina",
+      title: "Gorce",
+      tag: "zlota-godzina",
+      description: ""
     }
   ]
 };
