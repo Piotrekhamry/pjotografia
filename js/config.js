@@ -25,7 +25,7 @@ window.SITE = {
   galleries: [
     {
       id: "tatry",
-      title: "Tatry i Karkonosze",
+      title: "Babia góra",
       tag: "tatry",
       description: "Wędrówki po górskich szlakach w poszukiwaniu idealnego światła."
     },
