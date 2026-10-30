@@ -31,13 +31,13 @@ window.SITE = {
     },
     {
       id: "norwegia",
-      title: "Norwegia i Islandia",
+      title: "Tatry",
       tag: "norwegia",
       description: "Niezwykłe formy geologiczne i arktyczne światło."
     },
     {
       id: "zlota-godzina",
-      title: "Złota Godzina",
+      title: "Przyroda loklanie",
       tag: "zlota-godzina",
       description: "Palety barw o wschodzie i zachodzie słońca."
     }
