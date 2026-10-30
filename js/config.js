@@ -56,7 +56,7 @@ window.SITE = {
     {
       id: "zlota-godzina",
       title: "Pogórze przemyskie",
-      tag: "zlota-godzina",
+      tag: "pogorze przemyskie",
       description: ""
     }
   ]
