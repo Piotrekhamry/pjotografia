@@ -36,9 +36,9 @@ window.SITE = {
       description: ""
     },
     {
-      id: "zlota-godzina",
+      id: "Przyroda Lokalnie",
       title: "Przyroda loklanie",
-      tag: "zlota-godzina",
+      tag: "przyroda lokalnie",
       description: ""
       },
     {
