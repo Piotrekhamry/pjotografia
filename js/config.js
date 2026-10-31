@@ -36,10 +36,10 @@ window.SITE = {
       description: ""
     },
     {
-      id: "Przyroda Lokalnie",
+      id: "Za progiem",
       title: "Przyroda loklanie",
       tag: "przyroda lokalnie",
-      description: ""
+      description: "Zdjęcia z okolic domu i z drogi do pracy. Piękno nie zawsze wymaga wyprawy."
       },
     {
       id: "Bieszczady",
