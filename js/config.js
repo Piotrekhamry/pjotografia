@@ -46,6 +46,7 @@ window.SITE = {
       title: "Bieszczady",
       tag: "bieszczady",
       description: ""
+    },
     {
       id: "Pieniny",
       title: "Pieniny",
