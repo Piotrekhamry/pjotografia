@@ -12,8 +12,8 @@ window.SITE = {
   px500: "",
 
   // Zdjęcie profilowe (nagłówek i sekcja "Cześć, jestem Piotr"). Wklej adres z Cloudinary.
-  avatar: "https://res.cloudinary.com/sivhxknj/image/upload/v1793268116/Ja.jpg",
-
+  avatar: "https://res.cloudinary.com/sivhxknj/image/upload/v1793479099/IMG_8307.jpg",
+  
   // Zdjęcie w tle strony głównej
   hero: "https://res.cloudinary.com/sivhxknj/image/upload/v1793259284/Babia%20g%C3%B3ra.jpg",
 
