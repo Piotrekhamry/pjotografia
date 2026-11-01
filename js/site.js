@@ -28,8 +28,6 @@
         <li>${link('sesje-plenerowe.html', 'Sesje plenerowe')}</li>
         <li>${link('blog.html', 'Blog')}</li>
         <li>${link('warsztaty.html', 'Warsztaty')}</li>
-        <li>${link('sklep.html', 'Sklep')}</li>
-        <li>${link('ebooki.html', 'Ebooki')}</li>
         <li>${link('wydruki.html', 'Wydruki zdjęć')}</li>
         <li>${link('wspolpraca.html', 'Współpraca')}</li>
         <li>${link('kontakt.html', 'Kontakt')}</li>
