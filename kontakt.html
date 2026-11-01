@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kontakt — Piotr Hamryszczak | Pjotografia</title>
+    <meta name="description" content="Kontakt z Piotrem Hamryszczakiem – sesje plenerowe, zdjęcia na zlecenie, współpraca.">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Pjotografia">
+    <meta property="og:title" content="Kontakt — Piotr Hamryszczak | Pjotografia">
+    <meta property="og:description" content="Kontakt z Piotrem Hamryszczakiem – sesje plenerowe, zdjęcia na zlecenie, współpraca.">
+    <meta property="og:url" content="https://pjotografia.vercel.app/kontakt.html">
+    <meta property="og:image" content="https://res.cloudinary.com/sivhxknj/image/upload/c_fill,w_1200,h_630,f_jpg,q_auto/v1793259284/Babia%20g%C3%B3ra.jpg">
+    <meta property="og:locale" content="pl_PL">
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="css/style.css">
@@ -34,6 +43,7 @@
 <script>
     const lines = [];
     if (SITE.email) lines.push('E-mail: <a href="mailto:' + SITE.email + '">' + SITE.email + '</a>');
+    if (SITE.phone) lines.push('Telefon: <a href="tel:+48' + SITE.phone.replace(/\s/g, '') + '">' + SITE.phone + '</a>');
     if (SITE.instagram) lines.push('Instagram: <a href="' + SITE.instagram + '" target="_blank" rel="noopener">@pjotografia</a>');
     document.getElementById('contact-lines').innerHTML = lines.join('<br>');
 
