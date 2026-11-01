@@ -26,6 +26,7 @@
         <li class="has-dropdown">${link('o-mnie.html', 'O mnie &#9663;')}${aboutSub}</li>
         <li class="has-dropdown">${link('galerie.html', 'Galerie &#9663;', isGallery)}${galleriesSub}</li>
         <li>${link('sesje-plenerowe.html', 'Sesje plenerowe')}</li>
+        <li>${link('cennik.html', 'Cennik')}</li>
         <li>${link('warsztaty.html', 'Warsztaty')}</li>
         <li>${link('wydruki.html', 'Wydruki zdjęć')}</li>
         <li>${link('wspolpraca.html', 'Współpraca')}</li>

@@ -162,3 +162,15 @@ footer.site-footer a:hover { opacity: .7; }
   .brand-avatar { width: 42px; height: 42px; }
   .footer-inner { justify-content: center; text-align: center; }
 }
+
+/* Cennik */
+.price-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; max-width: 980px; margin: 0 auto 20px; }
+.price-card { border: 1px solid var(--line); padding: 32px 28px; background: #fff; text-align: center; }
+.price-card.featured { border-color: var(--head); box-shadow: 0 10px 28px rgba(0,0,0,.08); }
+.price-card h3 { font-weight: 500; font-size: 1.1rem; color: var(--head); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+.price-card .price { font-size: 2rem; color: var(--head); margin-bottom: 18px; }
+.price-card ul { list-style: none; padding: 0; margin: 0; color: var(--text); }
+.price-card li { padding: 8px 0; border-top: 1px solid var(--line); }
+.center .btn + .btn { margin-left: 12px; }
+.prose a.btn { color: #fff; text-decoration: none; }
+.prose a.btn:hover { color: var(--head); }
