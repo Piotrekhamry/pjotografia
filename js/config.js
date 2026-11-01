@@ -37,7 +37,7 @@ window.SITE = {
     },
     {
       id: "Za progiem",
-      title: "Przyroda loklanie",
+      title: "Za progiem",
       tag: "przyroda lokalnie",
       description: "Zdjęcia z okolic domu i z drogi do pracy. Piękno nie zawsze wymaga wyprawy."
       },
