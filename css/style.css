@@ -174,3 +174,10 @@ footer.site-footer a:hover { opacity: .7; }
 .center .btn + .btn { margin-left: 12px; }
 .prose a.btn { color: #fff; text-decoration: none; }
 .prose a.btn:hover { color: var(--head); }
+
+/* Hasło na zdjęciu startowym */
+.hero-text { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(90%, 760px); text-align: center; color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,.55); }
+.hero-text h2 { font-size: clamp(1.8rem, 4.5vw, 3rem); font-weight: 500; line-height: 1.2; margin-bottom: 12px; color: #fff; }
+.hero-text p { font-size: clamp(.95rem, 2vw, 1.15rem); letter-spacing: 1px; margin-bottom: 26px; opacity: .95; }
+.hero-text .btn { background: rgba(255,255,255,.92); color: var(--head); border-color: #fff; text-shadow: none; }
+.hero-text .btn:hover { background: transparent; color: #fff; }
