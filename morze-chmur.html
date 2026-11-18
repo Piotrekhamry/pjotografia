@@ -207,7 +207,7 @@ const MODELS=[
   {id:'icon_seamless',name:'DWD ICON'},
   {id:'meteofrance_seamless',name:'Météo-France'}
 ];
-const LEVELS=[1000,975,950,925,900,850,800,700,600];
+const LEVELS=[1000,975,950,925,900,850,800,700,600,500,400,300,250];
 const HOURLY=['cloud_cover_low','cloud_cover_mid','cloud_cover_high','wind_speed_10m',
   ...LEVELS.flatMap(l=>[`temperature_${l}hPa`,`relative_humidity_${l}hPa`,`cloud_cover_${l}hPa`,`geopotential_height_${l}hPa`])];
 const PRESETS=[
@@ -393,7 +393,7 @@ function evalModel(md,summit,when){
     lv.push({p,h:hh,t:tt,rh,cc});
   }
   lv.sort((a,b)=>a.h-b.h);
-  if(lv.length<3)return null;
+  if(lv.length<2)return null;
 
   const below=lv.filter(l=>l.h<=summit-120&&l.h>=summit-1800);
   const above=lv.filter(l=>l.h>=summit-80);
@@ -490,8 +490,9 @@ function render(){
   const out=$('#out'),sunrise=state.mode==='sunrise',label=sunrise?'Wschód':'Zachód';
   if(!state.days.length){out.innerHTML=`<div class="status">Brak nadchodzących ${sunrise?'wschodów':'zachodów'} słońca w zasięgu prognozy.</div>`;return}
   const scores=state.days.map(d=>d.agg?d.agg.combined:-1),best=Math.max(...scores),bi=best>=45?scores.indexOf(best):-1;
+  const noData=best<0;
   const tz=state.tz?` <small>${esc(state.tz)}</small>`:'';
-  const sum=bi>=0?`<p class="sum">Najlepszy ${sunrise?'wschód':'zachód'} w prognozie: <b>${esc(fmtDate(state.days[bi].date))}</b> (${best}/100)</p>`
+  const sum=noData?`<p class="sum err">Modele nie dały danych dla tej wysokości – spróbuj obniżyć wysokość punktu.</p>`:bi>=0?`<p class="sum">Najlepszy ${sunrise?'wschód':'zachód'} w prognozie: <b>${esc(fmtDate(state.days[bi].date))}</b> (${best}/100)</p>`
     :`<p class="sum">W najbliższych dniach brak wyraźnie dobrego ${sunrise?'wschodu':'zachodu'} – najwyższa ocena ${Math.max(0,best)}/100.</p>`;
   out.innerHTML=sum+state.days.map((d,i)=>{
     const a=d.agg,date=fmtDate(d.date),time=d.time.slice(11,16).replace(/^0/,'');
