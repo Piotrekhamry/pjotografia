@@ -254,7 +254,8 @@ const interp=(a,i)=>{if(!a)return null;const i0=Math.floor(i),f=i-i0,x=a[i0],y=a
   if(x==null&&y==null)return null;if(x==null)return y;if(y==null)return x;return x+(y-x)*f};
 const piece=(x,p)=>{if(x<=p[0][0])return p[0][1];for(let i=1;i<p.length;i++){if(x<=p[i][0]){const[a,b]=p[i-1],[c,d]=p[i];return b+(d-b)*(x-a)/(c-a)}}return p[p.length-1][1]};
 const col=v=>v>=70?'var(--good)':v>=45?'var(--mid)':'var(--bad)';
-const verdict=s=>s>=75?['Jedź!','Bardzo dobre warunki']:s>=55?['Warto spróbować','Dobre szanse']:s>=35?['Loteria','Możliwe, ale niepewne']:['Odpuść','Małe szanse'];
+const verdict=(s,a)=>{const what=!a?'':a.sea>=50&&a.sun>=50?'morze chmur i kolory':a.sea>=a.sun?'szansa na morze chmur':'szansa na kolorowe niebo';
+  return s>=75?['Jedź!',what]:s>=55?['Warto spróbować',what]:s>=35?['Loteria',what+' – niepewna']:['Odpuść','małe szanse na jedno i drugie']};
 const fmtCoord=(lat,lon)=>`${Math.abs(lat).toFixed(4)}°${lat>=0?'N':'S'}, ${Math.abs(lon).toFixed(4)}°${lon>=0?'E':'W'}`;
 const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 const store={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -472,7 +473,8 @@ function aggregate(per){
   const v=per.filter(p=>p.r);if(!v.length)return null;
   const m=k=>mean(v.map(p=>p.r[k]));
   const sea=m('sea'),sun=m('sun'),combos=v.map(p=>p.r.combined);
-  return{n:v.length,sea:Math.round(sea),sun:Math.round(sun),combined:Math.round(Math.sqrt(sea*sun)),
+  const hi=Math.max(sea,sun),lo=Math.min(sea,sun),score=Math.round(clamp(hi+(lo>=50?(lo-50)*0.3:0),0,100));
+  return{n:v.length,sea:Math.round(sea),sun:Math.round(sun),combined:score,score,
     spread:Math.max(...combos)-Math.min(...combos),belowCloud:m('belowCloud'),aboveClear:m('aboveClear'),
     ccHigh:m('ccHigh'),ccMid:m('ccMid'),wind:m('wind'),inv:v.filter(p=>p.r.inv).length,
     inCloud:v.filter(p=>p.r.inCloud).length,top:median(v.map(p=>p.r.top)),
@@ -545,8 +547,9 @@ function compute(){
     const t=(ref.daily[key]||[])[i];if(!t||toMin(t)<nowMin)return;
     const tm=toMin(t);
     const per=ok.map(m=>({id:m.id,name:m.name,r:evalModel(m.md,elev,tm)}));
+    per.forEach(p=>{if(p.r){const hi=Math.max(p.r.sea,p.r.sun),lo=Math.min(p.r.sea,p.r.sun);p.r.combined=Math.round(clamp(hi+(lo>=50?(lo-50)*0.3:0),0,100))}});
     const trend=TREND.map(o=>{const off2=rising?o:-o,rs=ok.map(m=>evalModel(m.md,elev,tm+off2)).filter(Boolean);
-      return{off:off2,n:rs.length,sea:rs.length?mean(rs.map(r=>r.sea)):null,inCloud:rs.length?rs.filter(r=>r.inCloud).length/rs.length:0}});
+      return{off:off2,n:rs.length,sea:rs.length?mean(rs.map(r=>r.sea)):null,sun:rs.length?mean(rs.map(r=>r.sun)):null,inCloud:rs.length?rs.filter(r=>r.inCloud).length/rs.length:0}});
     if(!rising)trend.sort((a,b)=>a.off-b.off);
     days.push({date:d,time:t,tm,per,agg:aggregate(per),trend,sun:sunTimes(tm,off/60,lat,lon,rising)});
   });
@@ -570,7 +573,7 @@ function render(){
   out.innerHTML=sum+state.days.map((d,i)=>{
     const a=d.agg,date=fmtDate(d.date),time=d.time.slice(11,16).replace(/^0/,'');
     if(!a)return`<article class="day" style="--i:${i};--c:var(--muted)"><div class="dh"><div class="score"><svg viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="28"/></svg><span class="num">–</span></div><div class="dt"><b>${esc(date)}</b><div class="s">${label.toLowerCase()} ${time}${tz} · brak danych modeli dla tego terminu</div></div></div></article>`;
-    const[v1,v2]=verdict(a.combined);
+    const[v1,v2]=verdict(a.combined,a);
     const agree=a.spread<=15?'modele zgodne':a.spread<=30?'modele częściowo zgodne':'modele się rozjeżdżają';
     return`<article class="day${i===bi?' top':''}" data-i="${i}" style="--i:${i};--c:${col(a.combined)}">
       <div class="dh" role="button" tabindex="0" aria-expanded="false">
@@ -630,6 +633,8 @@ function trendHTML(d,i){
   let s=`<svg viewBox="0 0 ${W} 66" aria-label="Morze chmur w czasie"><defs><linearGradient id="tg${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6cb6ff" stop-opacity=".35"/><stop offset="1" stop-color="#6cb6ff" stop-opacity="0"/></linearGradient></defs>`;
   s+=`<line x1="${P}" x2="${W-P}" y1="28" y2="28" stroke="#25324d" stroke-dasharray="2 4"/>`;
   s+=`<line x1="${zx}" x2="${zx}" y1="4" y2="48" stroke="#ffb454" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+  const sv=pts.map((p,k)=>p.sun!=null?[x(k),y(p.sun)]:null).filter(Boolean);
+  if(sv.length>1)s+=`<path class="tl" pathLength="1" d="M${sv.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L')}" fill="none" stroke="#ffb454" stroke-width="2" stroke-dasharray="1" opacity=".85" stroke-linecap="round"/>`;
   s+=`<path class="ta" d="${area}" fill="url(#tg${i})"/><path class="tl" pathLength="1" d="${line}" fill="none" stroke="#6cb6ff" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
   pts.forEach((p,k)=>{if(p.sea!=null)s+=`<circle cx="${x(k).toFixed(1)}" cy="${y(p.sea).toFixed(1)}" r="${k===z?4:2.8}" fill="${p.inCloud>.5?'#f87171':k===z?'#ffb454':'#6cb6ff'}"/>`});
   [0,z,n-1].forEach(k=>{s+=`<text x="${x(k)}" y="62" font-size="11" fill="${k===z?'#ffb454':'#8fa0c0'}" text-anchor="${k===0?'start':k===n-1?'end':'middle'}">${hm(d.tm+pts[k].off)}</text>`});
@@ -638,13 +643,13 @@ function trendHTML(d,i){
   const seas=pts.map(p=>p.sea).filter(v=>v!=null),at0=pts[z].sea,rising=state.mode==='sunrise';
   const before=pts.filter(p=>p.off<0&&p.sea!=null).map(p=>p.sea),after=pts.filter(p=>p.off>0&&p.sea!=null).map(p=>p.sea);
   let note;
-  if(Math.max(...seas)<30)note='Przez całe okno brak wyraźnego morza chmur.';
+  if(Math.max(...seas)<30)note='Brak wyraźnego morza chmur'+(pts[z].sun>=50?' – ale kolory nieba mogą być ładne.':'.');
   else if(Math.max(...seas)-Math.min(...seas)<=15)note='Warunki stabilne w całym oknie – dobry znak.';
   else if(after.length&&Math.min(...after)<at0-20)note=rising?'Warstwa może słabnąć po wschodzie – liczą się pierwsze minuty.':'Po zachodzie warstwa słabnie.';
   else if(before.length&&Math.min(...before)<at0-20)note=rising?'Chmury tworzą się dopiero tuż przed wschodem – niepewne.':'Morze chmur rośnie pod wieczór.';
   else note='Warunki zmienne w czasie.';
   if(pts.some(p=>p.inCloud>.5))note+=' Czerwone punkty: szczyt może być w chmurze.';
-  return`<div class="trend"><div class="tlbl">Morze chmur w czasie (${rising?'−1 h … +2 h od wschodu':'−2 h … +1 h od zachodu'})</div>${s}<div class="tnote">${note}</div></div>`;
+  return`<div class="trend"><div class="tlbl">W czasie (${rising?'−1 h … +2 h od wschodu':'−2 h … +1 h od zachodu'}): <span style="color:#6cb6ff">━ morze chmur</span> <span style="color:#ffb454">━ kolory nieba</span></div>${s}<div class="tnote">${note}</div></div>`;
 }
 function animateIn(root){
   const go=()=>{
@@ -689,7 +694,7 @@ function detailHTML(day){
   <div class="profile">${profileSVG(day,summit)}</div>
   <div class="tw"><table><tr><th>Model</th><th>Morze</th><th>${state.mode==='sunrise'?'Wschód':'Zachód'}</th><th>Razem</th><th>Niskie</th><th>Średnie</th><th>Wysokie</th><th>Wiatr</th></tr>
   ${day.per.map(p=>p.r?`<tr><td>${esc(p.name)}</td><td>${p.r.sea}</td><td>${p.r.sun}</td><td><b>${p.r.combined}</b></td><td>${f(p.r.ccLow)}%</td><td>${f(p.r.ccMid)}%</td><td>${f(p.r.ccHigh)}%</td><td>${f(p.r.wS!=null?p.r.wS:p.r.wind)} km/h</td></tr>`:`<tr><td>${esc(p.name)}</td><td colspan="7" style="color:var(--muted);text-align:left">brak danych</td></tr>`).join('')}</table></div>
-  <p class="why">„Razem” to średnia geometryczna obu ocen – wysoki wynik wymaga i morza chmur, i dobrego ${ev}. Kolumny chmur: niskie / średnie / wysokie w %.</p>`;
+  <p class="why">„Razem” to lepsza z dwóch szans (morze chmur albo kolory nieba), z bonusem, gdy obie są dobre. Kolumny chmur: niskie / średnie / wysokie w %.</p>`;
 }
 
 /* ---------- zdarzenia ---------- */
