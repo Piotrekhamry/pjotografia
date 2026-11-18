@@ -109,6 +109,26 @@ button.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--l
 .bars b{color:var(--text);font-weight:600}
 .bar{height:8px;background:var(--panel2);border-radius:6px;overflow:hidden;margin-top:4px}
 .bar span{display:block;height:100%;width:0;border-radius:6px;transition:width 1s var(--ease);transition-delay:calc(var(--i)*70ms + 200ms)}
+.times{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;color:#c7d3ec;margin:2px 0 6px;font-variant-numeric:tabular-nums}
+.times span{display:inline-flex;align-items:center;gap:6px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%}
+.arr{width:16px;height:16px;color:var(--accent);transition:transform .6s var(--ease)}
+.go{font-size:14px;background:rgba(255,180,84,.1);border:1px solid rgba(255,180,84,.3);border-radius:10px;padding:6px 10px;margin:4px 0 8px}
+.go b{color:var(--accent)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0}
+.stats>div{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:7px 9px;min-width:0}
+.stats span{display:block;font-size:11px;color:var(--muted);line-height:1.25}
+.stats b{display:block;font-size:16px;margin-top:2px;white-space:nowrap}
+.stats small{display:block;font-size:11px;color:var(--muted);line-height:1.2}
+.stats .good{color:var(--good)}.stats .mid{color:var(--mid)}.stats .bad{color:var(--bad)}
+.trend{margin:10px 0 6px}
+.trend svg{width:100%;height:auto;display:block}
+.tlbl{font-size:12px;color:var(--muted)}
+.tnote{font-size:13px;color:#c7d3ec}
+.tl{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.3s var(--ease) forwards;animation-delay:calc(var(--i)*70ms + 250ms)}
+.ta{opacity:0;animation:fadeIn .8s ease forwards;animation-delay:calc(var(--i)*70ms + 700ms)}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes fadeIn{to{opacity:1}}
 .badge{display:inline-block;font-size:12px;padding:2px 9px;border-radius:20px;background:var(--panel2);color:var(--muted);border:1px solid var(--line);margin:0 6px 4px 0}
 .badge.best{background:rgba(255,180,84,.14);color:var(--accent);border-color:rgba(255,180,84,.4)}
 .why{font-size:14px;color:#c7d3ec;margin:6px 0 0}
@@ -130,8 +150,9 @@ th{color:var(--muted);font-weight:500}
   .bars{grid-template-columns:1fr}
   .locctl{flex-direction:column;align-items:stretch}
   .seg{width:100%}
-  .elevbox input{flex:1;width:auto}
-  .elevbox label{flex:1}
+  .elevbox input{width:100%}
+  .elevbox label{flex:1;min-width:0}
+  .stats{grid-template-columns:1fr 1fr}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important;transition-duration:.01ms!important;transition-delay:0s!important}}
 </style>
@@ -184,7 +205,8 @@ th{color:var(--muted);font-weight:500}
         <button type="button" data-m="sunset">🌇 Zachód</button>
       </div>
       <div class="elevbox">
-        <label>Wysokość punktu (m n.p.m.)<input id="elev" type="number" inputmode="numeric" step="10"></label>
+        <label>Wysokość (m n.p.m.)<input id="elev" type="number" inputmode="numeric" step="10"></label>
+        <label>Podejście (min)<input id="appr" type="number" inputmode="numeric" step="15" min="0" placeholder="np. 120"></label>
         <button class="ghost" id="recalc" type="button">Przelicz</button>
       </div>
     </div>
@@ -208,8 +230,9 @@ const MODELS=[
   {id:'meteofrance_seamless',name:'Météo-France'}
 ];
 const LEVELS=[1000,975,950,925,900,850,800,700,600,500,400,300,250];
-const HOURLY=['cloud_cover_low','cloud_cover_mid','cloud_cover_high','wind_speed_10m',
-  ...LEVELS.flatMap(l=>[`temperature_${l}hPa`,`relative_humidity_${l}hPa`,`cloud_cover_${l}hPa`,`geopotential_height_${l}hPa`])];
+const HOURLY=['cloud_cover_low','cloud_cover_mid','cloud_cover_high','wind_speed_10m','wind_gusts_10m','precipitation',
+  ...LEVELS.flatMap(l=>[`temperature_${l}hPa`,`relative_humidity_${l}hPa`,`cloud_cover_${l}hPa`,`geopotential_height_${l}hPa`,`wind_speed_${l}hPa`])];
+const TREND=[-60,-30,0,30,60,90,120]; // minuty względem wschodu (dla zachodu odwrócone)
 const PRESETS=[
   ['Rysy',49.1795,20.0881,2499],['Giewont',49.2509,19.9339,1895],['Kasprowy Wierch',49.2318,19.9810,1987],
   ['Babia Góra',49.5733,19.5292,1725],['Śnieżka',50.7361,15.7400,1603],['Tarnica',49.0753,22.7266,1346],
@@ -363,6 +386,7 @@ function showLoc(){
   const hint={dem:'Wysokość z modelu terenu – na wierzchołku bywa zaniżona. Popraw ją, jeśli znasz dokładną.',guess:'Nie udało się ustalić wysokości – wpisz ją ręcznie i kliknij Przelicz.'}[l.eleSrc];
   $('#lhint').hidden=!hint;$('#lhint').textContent=hint||'';
   $('#elev').value=Math.round(l.elev);
+  $('#appr').value=store.get('mc_appr',{})[apprKey(l)]||'';
   const card=$('#loc');card.style.animation='none';void card.offsetWidth;card.style.animation='';
 }
 
@@ -376,9 +400,15 @@ async function fetchModel(model,lat,lon){
 }
 
 /* ---------- ocena jednego modelu dla jednego wschodu/zachodu ---------- */
-function evalModel(md,summit,when){
+function atHeight(lv,key,z){
+  const a=lv.filter(l=>l[key]!=null);if(!a.length)return null;
+  if(z<=a[0].h)return a[0][key];
+  for(let i=1;i<a.length;i++)if(z<=a[i].h){const p=a[i-1],q=a[i];return p[key]+(q[key]-p[key])*(z-p.h)/(q.h-p.h)}
+  return a[a.length-1][key];
+}
+function evalModel(md,summit,whenMin){
   const h=md.hourly;if(!h||!h.time)return null;
-  const idx=(toMin(when)-toMin(h.time[0]))/60;
+  const idx=(whenMin-toMin(h.time[0]))/60;
   if(idx<0||idx>h.time.length-2)return null;
   const v=k=>interp(h[k],idx);
   const ccLow=v('cloud_cover_low'),ccMid=v('cloud_cover_mid'),ccHigh=v('cloud_cover_high'),wind=v('wind_speed_10m');
@@ -390,7 +420,7 @@ function evalModel(md,summit,when){
     if(hh==null||rh==null)continue;
     if(md.gridElev!=null&&hh<md.gridElev+40)continue; // poziomy pod terenem modelu
     if(cc==null)cc=clamp((rh-70)*3.3,0,100);
-    lv.push({p,h:hh,t:tt,rh,cc});
+    lv.push({p,h:hh,t:tt,rh,cc,ws:v(`wind_speed_${p}hPa`)});
   }
   lv.sort((a,b)=>a.h-b.h);
   if(lv.length<2)return null;
@@ -430,7 +460,9 @@ function evalModel(md,summit,when){
   if(inCloud)sun*=0.4;
   sun=Math.round(clamp(sun,0,100));
 
-  return{sea,sun,combined:Math.round(Math.sqrt(sea*sun)),belowCloud,aboveClear,ccLow,ccMid,ccHigh,wind,top,inv,inCloud,levels:lv};
+  const tS=atHeight(lv,'t',summit),wS=atHeight(lv,'ws',summit);
+  return{sea,sun,combined:Math.round(Math.sqrt(sea*sun)),belowCloud,aboveClear,ccLow,ccMid,ccHigh,wind,top,inv,inCloud,levels:lv,
+    tS,wS,gust:v('wind_gusts_10m'),precip:v('precipitation')};
 }
 
 function aggregate(per){
@@ -440,8 +472,41 @@ function aggregate(per){
   return{n:v.length,sea:Math.round(sea),sun:Math.round(sun),combined:Math.round(Math.sqrt(sea*sun)),
     spread:Math.max(...combos)-Math.min(...combos),belowCloud:m('belowCloud'),aboveClear:m('aboveClear'),
     ccHigh:m('ccHigh'),ccMid:m('ccMid'),wind:m('wind'),inv:v.filter(p=>p.r.inv).length,
-    inCloud:v.filter(p=>p.r.inCloud).length,top:median(v.map(p=>p.r.top))};
+    inCloud:v.filter(p=>p.r.inCloud).length,top:median(v.map(p=>p.r.top)),
+    tS:m('tS'),wS:m('wS'),gust:m('gust'),precip:m('precip')};
 }
+
+/* ---------- słońce: wysokość i azymut (algorytm uproszczony, dokładność ~1 min) ---------- */
+function sunPos(ms,lat,lon){
+  const r=Math.PI/180,d=ms/86400000-10957.5;
+  const g=(357.529+0.98560028*d)*r,q=280.459+0.98564736*d;
+  const L=(q+1.915*Math.sin(g)+0.020*Math.sin(2*g))*r,e=(23.439-0.00000036*d)*r;
+  const ra=Math.atan2(Math.cos(e)*Math.sin(L),Math.cos(L)),dec=Math.asin(Math.sin(e)*Math.sin(L));
+  const gmst=((18.697374558+24.06570982441908*d)%24+24)%24;
+  const H=(gmst*15+lon)*r-ra,f=lat*r;
+  const alt=Math.asin(Math.sin(f)*Math.sin(dec)+Math.cos(f)*Math.cos(dec)*Math.cos(H));
+  const az=Math.atan2(-Math.sin(H),Math.tan(dec)*Math.cos(f)-Math.sin(f)*Math.cos(H));
+  return{alt:alt/r,az:(az/r+360)%360};
+}
+// moment (ms UTC), gdy słońce osiąga wysokość target; rising=true dla poranka
+function sunCross(centerMs,lat,lon,target,rising){
+  let a=centerMs-4*3600e3,b=centerMs+4*3600e3;
+  const fa=sunPos(a,lat,lon).alt-target,fb=sunPos(b,lat,lon).alt-target;
+  if(rising?(fa>0||fb<0):(fa<0||fb>0))return null;
+  for(let i=0;i<40;i++){const m=(a+b)/2,fm=sunPos(m,lat,lon).alt-target;if((fm<0)===rising)a=m;else b=m}
+  return(a+b)/2;
+}
+function sunTimes(eventLocalMin,offMin,lat,lon,rising){
+  const c=(eventLocalMin-offMin)*60000,loc=ms=>ms==null?null:ms/60000+offMin;
+  const t6=loc(sunCross(c,lat,lon,-6,rising)),t4=loc(sunCross(c,lat,lon,-4,rising)),g6=loc(sunCross(c,lat,lon,6,rising));
+  return{az:sunPos(c,lat,lon).az,
+    blue:rising?[t6,t4]:[t4,t6],golden:rising?[t4,g6]:[g6,t4]};
+}
+const hm=m=>{if(m==null)return'–';const d=new Date(Math.round(m)*60000);return d.getUTCHours()+':'+String(d.getUTCMinutes()).padStart(2,'0')};
+const DIRS=['płn.','płn.-wsch.','wsch.','płd.-wsch.','płd.','płd.-zach.','zach.','płn.-zach.'];
+const dirName=az=>DIRS[Math.round(az/45)%8];
+const windChill=(t,v)=>t==null||v==null?t:(t<=10&&v>4.8?13.12+0.6215*t-11.37*Math.pow(v,.16)+0.3965*t*Math.pow(v,.16):t);
+const apprKey=l=>l.name+'|'+l.lat.toFixed(3)+'|'+l.lon.toFixed(3);
 
 function explain(a){
   const t=[];
@@ -453,7 +518,8 @@ function explain(a){
   else if(a.aboveClear>=45)t.push('nad szczytem część chmur');
   else t.push('nad szczytem sporo chmur');
   if(a.inv>a.n/2)t.push('sygnał inwersji temperatury');
-  if(a.wind!=null&&a.wind>35)t.push(`silny wiatr (~${Math.round(a.wind)} km/h) może rozbić warstwę`);
+  const w=a.wS!=null?a.wS:a.wind;
+  if(w!=null&&w>35)t.push(`silny wiatr (~${Math.round(w)} km/h) może rozbić warstwę`);
   if(a.ccHigh>=25&&a.ccHigh<=70)t.push('chmury wysokie mogą pięknie zabarwić niebo');
   return t.join(' · ')+'.';
 }
@@ -471,11 +537,15 @@ async function load(){
 function compute(){
   const ok=state.models;if(!ok.length||!state.loc)return;
   const ref=ok[0].md,off=ref.utc_offset_seconds||0,nowMin=Date.now()/60000+off/60,key=state.mode,elev=state.loc.elev;
-  const days=[];
+  const rising=key==='sunrise',{lat,lon}=state.loc,days=[];
   (ref.daily.time||[]).forEach((d,i)=>{
     const t=(ref.daily[key]||[])[i];if(!t||toMin(t)<nowMin)return;
-    const per=ok.map(m=>({id:m.id,name:m.name,r:evalModel(m.md,elev,t)}));
-    days.push({date:d,time:t,per,agg:aggregate(per)});
+    const tm=toMin(t);
+    const per=ok.map(m=>({id:m.id,name:m.name,r:evalModel(m.md,elev,tm)}));
+    const trend=TREND.map(o=>{const off2=rising?o:-o,rs=ok.map(m=>evalModel(m.md,elev,tm+off2)).filter(Boolean);
+      return{off:off2,n:rs.length,sea:rs.length?mean(rs.map(r=>r.sea)):null,inCloud:rs.length?rs.filter(r=>r.inCloud).length/rs.length:0}});
+    if(!rising)trend.sort((a,b)=>a.off-b.off);
+    days.push({date:d,time:t,tm,per,agg:aggregate(per),trend,sun:sunTimes(tm,off/60,lat,lon,rising)});
   });
   state.days=days;state.tz=ref.timezone_abbreviation||'';
   render();
@@ -506,11 +576,70 @@ function render(){
         ${CHEV}
       </div>
       <div class="bars"><div>Morze chmur <b>${a.sea}</b>/100${bar(a.sea)}</div><div>${label} słońca <b>${a.sun}</b>/100${bar(a.sun)}</div></div>
+      ${timesHTML(d)}
+      ${statsHTML(a)}
+      ${trendHTML(d,i)}
       <div>${i===bi?'<span class="badge best">★ najlepszy termin</span>':''}<span class="badge">${a.n}/${MODELS.length} modeli</span><span class="badge">${agree}</span></div>
       <p class="why">${explain(a)}</p>
       <div class="detail"><div class="clip"><div class="din"></div></div></div>
     </article>`}).join('');
   animateIn(out);
+}
+const ARROW=az=>`<svg class="arr" viewBox="0 0 24 24" style="transform:rotate(${Math.round(az)}deg)" aria-hidden="true"><path d="M12 3l5 12-5-3-5 3z" fill="currentColor"/></svg>`;
+function timesHTML(d){
+  const s=d.sun,rising=state.mode==='sunrise';
+  const appr=store.get('mc_appr',{})[apprKey(state.loc)];
+  let go='';
+  if(appr>0){
+    const target=rising?(s.blue[0]??d.tm-40):(s.golden[0]??d.tm-60);
+    go=`<div class="go">🥾 Wyjście najpóźniej o <b>${hm(target-appr)}</b> – ${rising?'na szczycie na początek niebieskiej godziny':'na miejscu na początek złotej godziny'}</div>`;
+  }
+  return`<div class="times">
+    <span title="Niebieska godzina"><i class="dot" style="background:#5b8cff"></i>${hm(s.blue[0])}–${hm(s.blue[1])}</span>
+    <span title="Złota godzina"><i class="dot" style="background:var(--accent)"></i>${hm(s.golden[0])}–${hm(s.golden[1])}</span>
+    <span title="Kierunek słońca">${ARROW(s.az)}${Math.round(s.az)}° ${dirName(s.az)}</span>
+  </div>${go}`;
+}
+function statsHTML(a){
+  const r=x=>Math.round(x);
+  let margin,mc='';
+  if(a.inCloud>a.n/2){margin='w chmurze';mc='bad'}
+  else if(a.top!=null&&a.belowCloud>=40){const z=state.loc.elev-a.top;margin=`~${Math.round(z/10)*10} m`;mc=z>=300?'good':z>=120?'mid':'bad'}
+  else margin='brak warstwy';
+  const fl=windChill(a.tS,a.wS);
+  const wind=a.wS!=null?a.wS:a.wind;
+  return`<div class="stats">
+    <div><span>Zapas nad chmurami</span><b class="${mc}">${margin}</b></div>
+    <div><span>Temp. na szczycie</span><b>${a.tS==null?'–':r(a.tS)+'°'}</b>${fl!=null&&a.tS!=null&&r(fl)<r(a.tS)?`<small>odczuwalna ${r(fl)}°</small>`:''}</div>
+    <div><span>Wiatr na szczycie</span><b class="${wind>50?'bad':wind>30?'mid':''}">${wind==null?'–':r(wind)+' km/h'}</b>${a.gust!=null&&a.gust>(wind||0)+10?`<small>porywy w dolinach ${r(a.gust)}</small>`:''}</div>
+    <div><span>Opad</span><b class="${a.precip>=0.3?'bad':''}">${a.precip==null?'–':a.precip<0.1?'sucho':a.precip.toFixed(1)+' mm/h'}</b></div>
+  </div>`;
+}
+function trendHTML(d,i){
+  const pts=d.trend,n=pts.length,W=300,P=10,x=k=>P+k*(W-2*P)/(n-1),y=v=>48-v*0.4;
+  const val=pts.map((p,k)=>p.sea!=null?[x(k),y(p.sea)]:null);
+  const vv=val.filter(Boolean);if(vv.length<2)return'';
+  const line='M'+vv.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L');
+  const area=`${line} L${vv[vv.length-1][0].toFixed(1)},48 L${vv[0][0].toFixed(1)},48 Z`;
+  const z=pts.findIndex(p=>p.off===0),zx=x(z);
+  let s=`<svg viewBox="0 0 ${W} 66" aria-label="Morze chmur w czasie"><defs><linearGradient id="tg${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6cb6ff" stop-opacity=".35"/><stop offset="1" stop-color="#6cb6ff" stop-opacity="0"/></linearGradient></defs>`;
+  s+=`<line x1="${P}" x2="${W-P}" y1="28" y2="28" stroke="#25324d" stroke-dasharray="2 4"/>`;
+  s+=`<line x1="${zx}" x2="${zx}" y1="4" y2="48" stroke="#ffb454" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+  s+=`<path class="ta" d="${area}" fill="url(#tg${i})"/><path class="tl" pathLength="1" d="${line}" fill="none" stroke="#6cb6ff" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  pts.forEach((p,k)=>{if(p.sea!=null)s+=`<circle cx="${x(k).toFixed(1)}" cy="${y(p.sea).toFixed(1)}" r="${k===z?4:2.8}" fill="${p.inCloud>.5?'#f87171':k===z?'#ffb454':'#6cb6ff'}"/>`});
+  [0,z,n-1].forEach(k=>{s+=`<text x="${x(k)}" y="62" font-size="11" fill="${k===z?'#ffb454':'#8fa0c0'}" text-anchor="${k===0?'start':k===n-1?'end':'middle'}">${hm(d.tm+pts[k].off)}</text>`});
+  s+='</svg>';
+  // komentarz do trendu
+  const seas=pts.map(p=>p.sea).filter(v=>v!=null),at0=pts[z].sea,rising=state.mode==='sunrise';
+  const before=pts.filter(p=>p.off<0&&p.sea!=null).map(p=>p.sea),after=pts.filter(p=>p.off>0&&p.sea!=null).map(p=>p.sea);
+  let note;
+  if(Math.max(...seas)<30)note='Przez całe okno brak wyraźnego morza chmur.';
+  else if(Math.max(...seas)-Math.min(...seas)<=15)note='Warunki stabilne w całym oknie – dobry znak.';
+  else if(after.length&&Math.min(...after)<at0-20)note=rising?'Warstwa może słabnąć po wschodzie – liczą się pierwsze minuty.':'Po zachodzie warstwa słabnie.';
+  else if(before.length&&Math.min(...before)<at0-20)note=rising?'Chmury tworzą się dopiero tuż przed wschodem – niepewne.':'Morze chmur rośnie pod wieczór.';
+  else note='Warunki zmienne w czasie.';
+  if(pts.some(p=>p.inCloud>.5))note+=' Czerwone punkty: szczyt może być w chmurze.';
+  return`<div class="trend"><div class="tlbl">Morze chmur w czasie (${rising?'−1 h … +2 h od wschodu':'−2 h … +1 h od zachodu'})</div>${s}<div class="tnote">${note}</div></div>`;
 }
 function animateIn(root){
   const go=()=>{
@@ -554,7 +683,7 @@ function detailHTML(day){
   return`<p class="why" style="margin-top:0">Zachmurzenie wg wysokości w chwili ${ev} (średnia z modeli) – paski to % pokrycia nieba warstwą na danej wysokości:</p>
   <div class="profile">${profileSVG(day,summit)}</div>
   <div class="tw"><table><tr><th>Model</th><th>Morze</th><th>${state.mode==='sunrise'?'Wschód':'Zachód'}</th><th>Razem</th><th>Niskie</th><th>Średnie</th><th>Wysokie</th><th>Wiatr</th></tr>
-  ${day.per.map(p=>p.r?`<tr><td>${esc(p.name)}</td><td>${p.r.sea}</td><td>${p.r.sun}</td><td><b>${p.r.combined}</b></td><td>${f(p.r.ccLow)}%</td><td>${f(p.r.ccMid)}%</td><td>${f(p.r.ccHigh)}%</td><td>${f(p.r.wind)} km/h</td></tr>`:`<tr><td>${esc(p.name)}</td><td colspan="7" style="color:var(--muted);text-align:left">brak danych</td></tr>`).join('')}</table></div>
+  ${day.per.map(p=>p.r?`<tr><td>${esc(p.name)}</td><td>${p.r.sea}</td><td>${p.r.sun}</td><td><b>${p.r.combined}</b></td><td>${f(p.r.ccLow)}%</td><td>${f(p.r.ccMid)}%</td><td>${f(p.r.ccHigh)}%</td><td>${f(p.r.wS!=null?p.r.wS:p.r.wind)} km/h</td></tr>`:`<tr><td>${esc(p.name)}</td><td colspan="7" style="color:var(--muted);text-align:left">brak danych</td></tr>`).join('')}</table></div>
   <p class="why">„Razem” to średnia geometryczna obu ocen – wysoki wynik wymaga i morza chmur, i dobrego ${ev}. Kolumny chmur: niskie / średnie / wysokie w %.</p>`;
 }
 
@@ -585,8 +714,14 @@ PRESETS.forEach(([n,lat,lon,elev])=>{const b=document.createElement('button');b.
   b.onclick=()=>pick({name:n,lat,lon,elev,eleSrc:'preset'});$('#chips').appendChild(b)});
 $('#chips').insertAdjacentHTML('afterbegin','<span class="chiplbl">Popularne</span>');
 
-function recalc(){const v=parseFloat($('#elev').value);if(!isNaN(v)&&state.loc){state.loc.elev=v;state.loc.eleSrc='user';$('#lhint').hidden=true;remember(state.loc);$('#elev').blur();if(state.models.length)compute();else load()}}
+function saveAppr(){
+  if(!state.loc)return;const m=store.get('mc_appr',{}),v=parseInt($('#appr').value,10),k=apprKey(state.loc);
+  if(v>0)m[k]=v;else delete m[k];store.set('mc_appr',m);
+}
+$('#appr').addEventListener('change',()=>{saveAppr();if(state.days.length)render()});
+function recalc(){saveAppr();const v=parseFloat($('#elev').value);if(!isNaN(v)&&state.loc){state.loc.elev=v;state.loc.eleSrc='user';$('#lhint').hidden=true;remember(state.loc);$('#elev').blur();if(state.models.length)compute();else load()}}
 $('#recalc').onclick=recalc;
+$('#appr').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveAppr();$('#appr').blur();if(state.days.length)render()}});
 $('#elev').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();recalc()}});
 
 function setMode(m){
