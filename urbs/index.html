@@ -24,6 +24,20 @@ html,body{margin:0;height:100%;overflow:hidden;font-family:Nunito,system-ui,sans
 button{font-family:inherit;color:inherit}
 #topbar{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 0 calc(12px + env(safe-area-inset-left));pointer-events:none;z-index:5}
 #topbar>*{pointer-events:auto}
+.tright{display:flex;gap:8px;align-items:center}
+.seg{display:flex;background:var(--panel);border-radius:14px;box-shadow:var(--shadow);padding:3px}
+.seg button{border:0;background:transparent;border-radius:11px;padding:8px 12px;font-weight:800;font-size:13px;cursor:pointer;opacity:.6}
+.seg button.on{background:var(--terra);color:#fff;opacity:1}
+#rotbar{position:fixed;left:calc(12px + env(safe-area-inset-left));bottom:calc(var(--dockh) + 18px + env(safe-area-inset-bottom));display:flex;gap:6px;z-index:5}
+#rotbar button{width:40px;height:40px;border:0;border-radius:50%;background:var(--panel);box-shadow:var(--shadow);font-size:18px;cursor:pointer}
+#items.closed{display:none}
+.cat.tool{margin-left:auto}
+.sheet h3{display:flex;align-items:center;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+.chip{border:0;border-radius:12px;padding:9px 13px;font-weight:800;font-size:13.5px;background:#efe4d2;cursor:pointer}
+.chip.on{background:var(--terra);color:#fff}
+.statline{font-size:13px;font-weight:700;opacity:.75;margin:2px 0 8px}
+.sunrow{display:flex;align-items:center;gap:10px}.sunrow input{flex:1;accent-color:var(--terra)}
 .left{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .brand{background:var(--panel);border-radius:16px;padding:6px 16px 7px;box-shadow:var(--shadow)}
 .logo{font-family:Cinzel,serif;font-weight:700;font-size:22px;letter-spacing:.2em;color:var(--terra2);line-height:1.1}
@@ -58,7 +72,7 @@ button{font-family:inherit;color:inherit}
 #act button{border:0;border-radius:16px;padding:13px 18px;font-weight:800;font-size:16px;box-shadow:var(--shadow);background:var(--panel);cursor:pointer;min-width:52px}
 #act button.ok{background:#4f9a4a;color:#fff}
 #act button.ok:disabled{background:#c9b9a5;color:#fff}
-#hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockh) + 18px + env(safe-area-inset-bottom));background:rgba(60,45,32,.78);color:#fff;padding:7px 14px;border-radius:12px;font-size:12.5px;max-width:min(560px,calc(100% - 24px));text-align:center;pointer-events:none;z-index:4;transition:opacity .3s}
+#hint{opacity:0;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockh) + 18px + env(safe-area-inset-bottom));background:rgba(60,45,32,.78);color:#fff;padding:7px 14px;border-radius:12px;font-size:12.5px;max-width:min(560px,calc(100% - 24px));text-align:center;pointer-events:none;z-index:4;transition:opacity .3s}
 #info{position:fixed;left:calc(12px + env(safe-area-inset-left));top:205px;width:330px;max-height:calc(100vh - var(--dockh) - 240px);overflow:auto;background:var(--panel);border-radius:18px;box-shadow:var(--shadow);padding:14px 16px 12px;z-index:6;opacity:0;transform:translateX(-14px);pointer-events:none;transition:opacity .25s,transform .25s;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 #info.show{opacity:1;transform:none;pointer-events:auto}
 #info .it{font-family:Cinzel,serif;font-weight:700;font-size:19px;color:var(--terra2);padding-right:26px;letter-spacing:.04em}
@@ -114,27 +128,19 @@ label.ck{display:flex;gap:8px;align-items:center;font-size:14px;margin:5px 0;cur
 <div id="labels"></div>
 
 <div id="topbar">
-  <div class="left">
-    <div class="brand"><div class="logo">URBS</div><span class="sub">zbuduj swój Rzym</span></div>
-    <div class="pill" id="sun"><span>🌅</span><input type="range" id="time" min="0" max="1" step="0.001" value="0.36" aria-label="Pora dnia"><span>🌇</span></div>
-    <div class="pill" id="stats">👥 0</div>
-    <div class="pill" id="era">🏛️ Starożytność</div>
-  </div>
-  <div class="tbtns">
-    <button class="tbtn hide" id="bInstall" title="Zainstaluj jako aplikację">📲</button>
-    <button class="tbtn" id="bMenu" title="Menu">☰</button>
-    <button class="tbtn" id="bToday" title="Pokaż, co zostało dziś">⏳</button>
-    <button class="tbtn" id="bLabels" title="Podpisy budowli">🏷️</button>
-    <button class="tbtn" id="bLegacy" title="Dziedzictwo Rzymian">🏗️</button>
+  <div class="brand"><div class="logo">URBS</div></div>
+  <div class="tright">
+    <div class="seg" id="segEra" role="group" aria-label="Epoka"><button data-v="0" class="on">117 n.e.</button><button data-v="1">Dziś</button></div>
     <button class="tbtn" id="bUndo" title="Cofnij (Ctrl+Z)">↶</button>
-    <button class="tbtn" id="bRotL" title="Obróć widok (Q)">⟲</button>
-    <button class="tbtn" id="bRotR" title="Obróć widok (E)">⟳</button>
-    <button class="tbtn" id="bGrid" title="Siatka (G)">#</button>
-    <button class="tbtn" id="bPeople" title="Ludzie na ulicach">🚶</button>
-    <button class="tbtn" id="bSound" title="Dźwięk">🔊</button>
+    <button class="tbtn" id="bMenu" title="Menu">☰</button>
   </div>
 </div>
-
+<div id="rotbar"><button id="bRotL" title="Obróć widok (Q)">⟲</button><button id="bRotR" title="Obróć widok (E)">⟳</button></div>
+<div hidden id="holder">
+  <input type="range" id="time" min="0" max="1" step="0.001" value="0.36"><div id="stats"></div><div id="era"></div>
+  <button id="bInstall" class="hide"></button><button id="bToday"></button><button id="bLabels"></button><button id="bLegacy"></button>
+  <button id="bGrid"></button><button id="bPeople"></button><button id="bSound"></button>
+</div>
 <div id="hint"></div>
 <div id="ctx">
   <button id="bDone" class="done">✕ Zakończ</button>
@@ -1539,10 +1545,15 @@ const TOOLS=[
 ];
 for(const t of TOOLS) if(t.type&&!t.name) t.name=DEFS[t.type].name;
 const SPECIAL={camera:{id:'camera',kind:'camera',name:'Rozglądaj',emoji:'✋'},bulldoze:{id:'bulldoze',kind:'bulldoze',name:'Burzenie',emoji:'⛏️'}};
-let curCat='domy';
+let curCat='domy', itemsOpen=false;
 const catsEl=document.getElementById('cats'), itemsEl=document.getElementById('items'), hintEl=document.getElementById('hint');
 const isTouch=matchMedia('(pointer:coarse)').matches;
-function renderCats(){ catsEl.innerHTML=''; for(const c of CATS){ const b=document.createElement('button'); b.className='cat'+(c.id===curCat?' on':''); b.textContent=c.l; b.onclick=()=>{ curCat=c.id; renderCats(); renderItems(); }; catsEl.appendChild(b); } }
+function renderCats(){ catsEl.innerHTML='';
+  for(const c of CATS){ const b=document.createElement('button'); b.className='cat'+(itemsOpen&&c.id===curCat?' on':''); b.textContent=c.l;
+    b.onclick=()=>{ if(itemsOpen&&curCat===c.id){ itemsOpen=false; if(tool.cat===c.id) selectTool('camera'); } else { curCat=c.id; itemsOpen=true; } renderCats(); renderItems(); }; catsEl.appendChild(b); }
+  const d=document.createElement('button'); d.className='cat tool'+(tool.kind==='bulldoze'?' on':''); d.textContent='⛏️ Burz';
+  d.onclick=()=>{ itemsOpen=false; selectTool(tool.kind==='bulldoze'?'camera':'bulldoze'); }; catsEl.appendChild(d);
+}
 function itemBtn(t){
   const b=document.createElement('button'); b.className='item'+(tool.id===t.id?' on':''); b.title=t.hint||t.name;
   if(t.icon){ const im=document.createElement('img'); im.src=t.icon; im.alt=''; b.appendChild(im); }
@@ -1551,8 +1562,7 @@ function itemBtn(t){
   b.onclick=()=>selectTool(t.id); return b;
 }
 function renderItems(){
-  itemsEl.innerHTML=''; itemsEl.appendChild(itemBtn(SPECIAL.camera)); itemsEl.appendChild(itemBtn(SPECIAL.bulldoze));
-  const sep=document.createElement('div'); sep.className='sep'; itemsEl.appendChild(sep);
+  itemsEl.innerHTML=''; itemsEl.classList.toggle('closed',!itemsOpen);
   for(const t of TOOLS) if(t.cat===curCat) itemsEl.appendChild(itemBtn(t));
   requestAnimationFrame(()=>document.documentElement.style.setProperty('--dockh',document.getElementById('dock').offsetHeight+'px'));
 }
@@ -1561,9 +1571,10 @@ function selectTool(id){
   pending=null; if(typeof actEl!=='undefined') showAct();
   tool=SPECIAL[id]||TOOLS.find(t=>t.id===id)||SPECIAL.camera;
   if(tool.kind==='build'){ nextSeed=Math.floor(rnd()*1e6); ghostKey=''; }
-  cancelStroke(); applyControlMode(); renderItems(); updateHint(); updatePreview(isTouch?null:hoverCell);
+  cancelStroke(); applyControlMode(); renderCats(); renderItems(); updateHint(); updatePreview(isTouch?null:hoverCell);
   const ik=infoKeyFor(tool); if(ik&&infoAuto&&tool.kind==='build'&&!['house','cypress','pine','garden'].includes(ik)) showInfo(ik); else if(tool.kind!=='camera') hideInfo();
 }
+let hintT=0, hintShown=false;
 function updateHint(){
   let h='';
   const camHint=isTouch?'1 palec: przesuń mapę · 2 palce: przybliż i obróć':'Prawy przycisk: obrót · kółko: zoom · WASD: przesuwanie';
@@ -1577,7 +1588,7 @@ function updateHint(){
   else if(tool.kind==='build') h=(DEFS[tool.type].desc||('Kliknij, aby postawić: '+DEFS[tool.type].name))+' · R obraca'+(DEFS[tool.type].onRoad?' · można stawiać na drodze':'')+' · '+camHint;
   else if(tool.kind==='bulldoze') h='Kliknij lub przeciągnij, aby burzyć · '+camHint;
   else h=(tool.hint||'')+' · '+camHint;
-  hintEl.textContent=h;
+  hintEl.textContent=h; hintEl.style.opacity=tool.kind==='camera'&&hintShown?0:1; clearTimeout(hintT); hintT=setTimeout(()=>{ hintEl.style.opacity=0; },tool.kind==='camera'?3500:5000); if(tool.kind==='camera') hintShown=true;
   document.getElementById('bRotate').classList.toggle('hide',tool.kind!=='build'||isTouch);
   document.getElementById('bDone').classList.toggle('hide',tool.kind==='camera');
   document.getElementById('bInfo').classList.toggle('hide',!infoKeyFor(tool));
@@ -1585,11 +1596,11 @@ function updateHint(){
 }
 function rotateBuilding(){ buildRot=(buildRot+1)%4; if(tool.kind==='build'){ sfx('tick'); if(pending&&pending.kind==='build'){ updatePreview(pending.c); showAct(); } else updatePreview(hoverCell); } }
 document.getElementById('bRotate').onclick=rotateBuilding;
-document.getElementById('bDone').onclick=()=>selectTool('camera');
+document.getElementById('bDone').onclick=()=>{ itemsOpen=false; selectTool('camera'); };
 document.getElementById('bInfo').onclick=()=>{ const k=infoKeyFor(tool); if(infoKey===k) hideInfo(); else showInfo(k); };
 document.getElementById('bBrush').onclick=e=>{ brushSize=brushSize===1?3:1; e.currentTarget.textContent='Pędzel: '+brushSize; };
 document.getElementById('bUndo').onclick=undo;
-document.getElementById('bToday').onclick=()=>setToday(!todayMode);
+document.querySelectorAll('#segEra button').forEach(b=>b.onclick=()=>{ const on=b.dataset.v==='1'; if(on!==todayMode) setToday(on); });
 document.getElementById('bLabels').onclick=e=>{ labelsOn=!labelsOn; e.currentTarget.classList.toggle('off',!labelsOn); };
 document.getElementById('bLegacy').onclick=()=>{ if(infoKey==='legacy') hideInfo(); else showInfo('legacy'); };
 document.getElementById('bRotL').onclick=()=>rotateView(-1);
@@ -1669,7 +1680,7 @@ function showInfo(key){
 function hideInfo(){ infoEl.classList.remove('show'); infoKey=null; }
 Object.assign(INFO,{
   rome:{name:'Rzym za Trajana · ok. 117 n.e.',era:'Trajan panował w latach 98–117 n.e.',text:'Za Trajana imperium osiągnęło największy zasięg – od Brytanii po Mezopotamię. Rzym miał prawdopodobnie ok. miliona mieszkańców i był największym miastem świata zachodniego. To makieta poglądowa: dzielnice i budowle stoją we właściwym położeniu względem siebie, ale nie w skali.',
-    facts:['W trybie ✋ Rozglądaj kliknij dowolną budowlę – zobaczysz jej historię i to, co z niej zostało.','Przycisk ⏳ przenosi do czasów dzisiejszych: zobaczysz, czemu Forum to dziś „kupa kamieni”.','🏗️ Dziedzictwo – co zawdzięcza Rzymianom dzisiejsza inżynieria.','Tyber płynie z północy, okrąża Pole Marsowe i mija Wyspę Tyberyjską – na zachód od niego leży Zatybrze (Trastevere).']},
+    facts:['W trybie ✋ Rozglądaj kliknij dowolną budowlę – zobaczysz jej historię i to, co z niej zostało.','Przełącznik „117 n.e. / Dziś” u góry pokazuje, co przetrwało – i czemu Forum to dziś „kupa kamieni”.','W menu ☰ znajdziesz „Dziedzictwo” – co zawdzięcza Rzymianom dzisiejsza inżynieria.','Tyber płynie z północy, okrąża Pole Marsowe i mija Wyspę Tyberyjską – na zachód od niego leży Zatybrze (Trastevere).']},
   legacy:{name:'Rzymskie fundamenty dzisiejszej inżynierii',era:'',text:'Wiele rozwiązań, z których korzystamy na co dzień, Rzymianie dopracowali – albo wymyślili – dwa tysiące lat temu.',
     facts:['<b>Beton.</b> Opus caementicium z popiołem wulkanicznym twardniał nawet pod wodą. Badania z 2023 r. pokazały, że grudki wapna w środku pozwalają mu samemu „zalepiać” rysy.',
       '<b>Łuk, sklepienie i kopuła.</b> Pozwoliły przekryć ogromne wnętrza i budować mosty. Most Trajana na Dunaju (105 n.e.) miał ponad 1 km i przez ponad tysiąc lat był najdłuższym mostem łukowym świata.',
@@ -1748,43 +1759,46 @@ function closeModal(){ modal.classList.add('hidden'); }
 modal.addEventListener('pointerdown',e=>{ if(e.target===modal) closeModal(); });
 function openMenu(){
   let hasOld=false; try{ hasOld=!!localStorage.getItem('urbs-save-v1'); }catch(e){}
-  const sizes=[20,28,36,44,52].filter(s=>s<=N-6);
+  const sizes=[20,28,36,44,52].filter(x=>x<=N-6);
+  const chip=(id,label,on)=>`<button class="chip${on?' on':''}" id="${id}">${label}</button>`;
+  card.classList.add('sheet');
   card.innerHTML=`
-  <h2>URBS</h2><p>Spokojna piaskownica: wytycz ulice, postaw świątynie i patrz, jak miasto ożywa.</p>
-  <h3>Plan castrum</h3>
-  <p>Rzymski plan: mury z bramami, cardo i decumanus krzyżujące się pośrodku, równe insule.</p>
-  <div class="row"><select id="mCs">${sizes.map(s=>`<option value="${s}" ${s===28?'selected':''}>${s}×${s} pól</option>`).join('')}</select>
-  <label class="ck"><input type="checkbox" id="mFill" checked> od razu zabuduj</label>
-  <button class="btn main" id="mCastrum">Wytycz castrum</button></div>
-  <h3>Nowa mapa</h3>
-  <div class="row"><select id="mN"><option value="32">Mała 32×32</option><option value="48" selected>Średnia 48×48</option><option value="64">Duża 64×64</option></select>
-  <label class="ck"><input type="checkbox" id="mLand" checked> rzeka, gaje i pola</label>
-  <button class="btn" id="mNew">Zacznij od nowa</button></div>
-  <div class="row"><button class="btn main" id="mRome">🏛️ Rzym za Trajana (117 n.e.)</button><button class="btn" id="mDemo">Przykładowe castrum</button>${hasOld?'<button class="btn" id="mOld">Moje poprzednie miasto</button>':''}</div>
-  ${isStandalone?'':'<div class="row"><button class="btn" id="mInstall">📲 Zainstaluj na telefonie / komputerze</button></div>'}
-  <h3>Zasady</h3>
-  <label class="ck"><input type="checkbox" id="mPlots" ${onlyPlots?'checked':''}> Buduj tylko na działkach (ozdoby wszędzie)</label>
+  <div class="row" style="justify-content:space-between;margin:0"><h2>URBS</h2><button class="btn" id="mClose">✕</button></div>
+  <div class="statline" id="mStats">${statsEl.textContent}</div>
+  <h3>Widok</h3>
+  <div class="sunrow"><span>🌅</span><input type="range" id="mTime" min="0" max="1" step="0.001" value="${timeInput.value}" aria-label="Pora dnia"><span>🌇</span></div>
+  <div class="chips">${chip('cLabels','🏷️ Podpisy',labelsOn)}${chip('cPeople','🚶 Ludzie',peopleOn)}${chip('cGrid','# Siatka',gridOn)}${chip('cSound',muted?'🔇 Dźwięk':'🔊 Dźwięk',!muted)}</div>
+  <h3>Wiedza</h3>
+  <div class="chips"><button class="chip" id="cRome">🏛️ O makiecie</button><button class="chip" id="cLegacy">🏗️ Dziedzictwo Rzymian</button></div>
   <label class="ck"><input type="checkbox" id="mInfo" ${infoAuto?'checked':''}> Pokazuj historię przy wyborze budynku</label>
-  <h3>Zapis</h3>
-  <p>Miasto zapisuje się samo w tej przeglądarce. Możesz też skopiować kod i wkleić go gdzie indziej.</p>
-  <div class="row"><button class="btn" id="mCopy">Kopiuj kod miasta</button><button class="btn" id="mLoad">Wczytaj z kodu</button></div>
+  <h3>Miasto</h3>
+  <div class="chips"><button class="chip" id="mRome">🏛️ Rzym za Trajana</button><button class="chip" id="mDemo">🏕️ Przykładowe castrum</button>${hasOld?'<button class="chip" id="mOld">📂 Poprzednie miasto</button>':''}</div>
+  <div class="row"><select id="mN"><option value="32">Mała 32×32</option><option value="48" selected>Średnia 48×48</option><option value="64">Duża 64×64</option></select>
+  <label class="ck"><input type="checkbox" id="mLand" checked> rzeka i gaje</label><button class="btn" id="mNew">Pusta mapa</button></div>
+  <div class="row"><select id="mCs">${sizes.map(x=>`<option value="${x}" ${x===28?'selected':''}>${x}×${x}</option>`).join('')}</select>
+  <label class="ck"><input type="checkbox" id="mFill" checked> zabuduj</label><button class="btn" id="mCastrum">Wytycz castrum</button></div>
+  <label class="ck"><input type="checkbox" id="mPlots" ${onlyPlots?'checked':''}> Buduj tylko na działkach</label>
+  <h3>Zapis i instalacja</h3>
+  <div class="chips">${isStandalone?'':'<button class="chip" id="mInstall">📲 Zainstaluj aplikację</button>'}<button class="chip" id="mCopy">📋 Kopiuj kod miasta</button><button class="chip" id="mLoad">📥 Wczytaj z kodu</button></div>
   <textarea id="mCode" placeholder="Tu pojawi się / tu wklej kod miasta"></textarea>
   <h3>Sterowanie</h3>
-  <div class="keys">Mysz: <b>lewy</b> buduje, <b>prawy</b> obraca, <b>kółko</b> zoom, <b>środkowy</b> przesuwa · <b>WASD</b> przesuwanie · <b>Q/E</b> obrót o 45° · <b>R</b> obrót budynku · <b>Ctrl+Z</b> cofnij · <b>G</b> siatka · <b>Esc</b> tryb rozglądania<br>
-  W trybie <b>✋ Rozglądaj</b> kliknij lub stuknij dowolny budynek, mur czy drogę, aby poznać jego historię.<br>
-  Dotyk: <b>jeden palec</b> przesuwa mapę, <b>dwa palce</b> przybliżają i obracają, ⟲ ⟳ obracają o 45°. Budowanie: stuknij miejsce i zatwierdź <b>✓</b>. Mury i drogi: stuknij początek i koniec albo przytrzymaj palec i rysuj. <b>✕ Zakończ</b> albo ponowne stuknięcie narzędzia wraca do rozglądania.</div>
-  <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn main" id="mClose">Zamknij</button></div>`;
+  <div class="keys">${isTouch?'<b>1 palec</b> przesuwa mapę, <b>2 palce</b> przybliżają i obracają, ⟲ ⟳ obracają o 45°. Budowanie: stuknij miejsce i zatwierdź <b>✓</b>. Mury i drogi: stuknij początek i koniec albo przytrzymaj palec i rysuj.':'<b>Lewy</b> buduje, <b>prawy</b> obraca, <b>kółko</b> przybliża, <b>środkowy</b> przesuwa · <b>WASD</b> przesuwanie · <b>Q/E</b> obrót · <b>R</b> obrót budynku · <b>Ctrl+Z</b> cofnij · <b>Esc</b> koniec budowania'}<br>W trybie rozglądania stuknij dowolną budowlę, aby poznać jej historię.</div>`;
   modal.classList.remove('hidden');
   const $=id=>card.querySelector('#'+id);
+  const toggle=(id,btn)=>{ $(id).onclick=()=>{ document.getElementById(btn).click(); openMenu(); }; };
   $('mClose').onclick=closeModal;
-  $('mCastrum').onclick=()=>{ pushUndo(); makeCastrum(+$('mCs').value,$('mFill').checked); closeModal(); sfx('pop'); toast('Castrum wytyczone'); };
-  $('mNew').onclick=()=>{ pushUndo(); const n=+$('mN').value; resizeWorld(n); if($('mLand').checked) landscape(Math.floor(rnd()*1000)); closeModal(); };
-  $('mDemo').onclick=()=>{ pushUndo(); defaultWorld(); closeModal(); };
-  $('mRome').onclick=()=>{ pushUndo(); romeTrajan(); closeModal(); setTimeout(()=>showInfo('rome'),300); };
-  if(hasOld) $('mOld').onclick=()=>{ try{ const snap=serialize(); deserialize(localStorage.getItem('urbs-save-v1')); pushUndo(snap); closeModal(); }catch(e){ toast('Nie udało się wczytać'); } };
-  if(!isStandalone) $('mInstall').onclick=openInstall;
-  $('mPlots').onchange=e=>{ onlyPlots=e.target.checked; };
+  $('mTime').oninput=e=>{ timeInput.value=e.target.value; applyTime(); };
+  toggle('cLabels','bLabels'); toggle('cPeople','bPeople'); toggle('cGrid','bGrid'); toggle('cSound','bSound');
+  $('cRome').onclick=()=>{ closeModal(); showInfo('rome'); };
+  $('cLegacy').onclick=()=>{ closeModal(); showInfo('legacy'); };
   $('mInfo').onchange=e=>{ infoAuto=e.target.checked; try{ localStorage.setItem('urbs-info',infoAuto?'1':'0'); }catch(_){} };
+  $('mRome').onclick=()=>{ pushUndo(); if(todayMode) setToday(false); romeTrajan(); closeModal(); setTimeout(()=>showInfo('rome'),300); };
+  $('mDemo').onclick=()=>{ pushUndo(); if(todayMode) setToday(false); defaultWorld(); closeModal(); };
+  if(hasOld) $('mOld').onclick=()=>{ try{ const snap=serialize(); deserialize(localStorage.getItem('urbs-save-v1')); pushUndo(snap); closeModal(); }catch(e){ toast('Nie udało się wczytać'); } };
+  $('mNew').onclick=()=>{ pushUndo(); const n=+$('mN').value; resizeWorld(n); if($('mLand').checked) landscape(Math.floor(rnd()*1000)); closeModal(); };
+  $('mCastrum').onclick=()=>{ pushUndo(); makeCastrum(+$('mCs').value,$('mFill').checked); closeModal(); sfx('pop'); toast('Castrum wytyczone'); };
+  $('mPlots').onchange=e=>{ onlyPlots=e.target.checked; };
+  if(!isStandalone) $('mInstall').onclick=()=>openInstall();
   $('mCopy').onclick=async()=>{ const code=btoa(unescape(encodeURIComponent(serialize()))); $('mCode').value=code; try{ await navigator.clipboard.writeText(code); toast('Skopiowano kod miasta'); }catch(e){ $('mCode').select(); toast('Zaznacz i skopiuj kod z pola'); } };
   $('mLoad').onclick=()=>{ const v=$('mCode').value.trim(); if(!v){ toast('Wklej najpierw kod'); return; } try{ const snap=serialize(); deserialize(decodeURIComponent(escape(atob(v)))); pushUndo(snap); closeModal(); toast('Wczytano miasto'); }catch(e){ toast('Ten kod nie wygląda na miasto'); } };
 }
@@ -1870,8 +1884,7 @@ function applyTodayTo(b,instant){ const s=survOf(b); b.target=todayMode?s:1; b.m
 function lineToday(m){ const k=m.userData.key||''; const s=k.startsWith('aq')?0.45:0.3; m.userData.target=todayMode?s:1; if(m.userData.ts==null) m.userData.ts=1; m.material=todayMode?ruinMat:bMat; }
 function setToday(on){
   todayMode=on; for(const b of buildings.values()) applyTodayTo(b,false); for(const m of lineMeshes.values()) lineToday(m);
-  const bt=document.getElementById('bToday'); bt.textContent=on?'🏛️':'⏳'; bt.title=on?'Wróć do starożytności':'Pokaż, co zostało dziś';
-  document.getElementById('era').textContent=on?'📷 Dziś':'🏛️ Starożytność';
+  document.querySelectorAll('#segEra button').forEach(b=>b.classList.toggle('on',(b.dataset.v==='1')===on));
   if(on){ agents.forEach(a=>{ if(a.kind==='cart') a.life=-99; }); toast('Rzym dziś – tyle przetrwało do naszych czasów'); } else toast('Z powrotem w starożytności');
   sfx('pop');
 }
@@ -1881,11 +1894,13 @@ function todayStep(dt){
   for(const m of lineMeshes.values()){ const u=m.userData; if(u.target==null||Math.abs(u.ts-u.target)<0.002) continue; u.ts+=(u.target-u.ts)*k; m.scale.y=Math.max(0.001,u.ts); }
 }
 const labelsEl=document.getElementById('labels'); let labelsOn=true, labelsDirty=true; const labelMap=new Map(); const _lv=new THREE.Vector3();
+const MAJOR=new Set(['colosseum','forumRomanum','circusMax','pantheon','palatium','trajanForum','capitolium','trajanBaths','marcellus','mausAug']);
 function shortName(n){ return n.split(' – ')[0].split(' (')[0].split(' · ')[0]; }
 function syncLabels(){
   labelsDirty=false; const keep=new Set();
   for(const b of buildings.values()){ if(!b.lm||!INFO[b.lm]) continue; keep.add(b.id);
     if(!labelMap.has(b.id)){ const el=document.createElement('button'); el.className='lbl'; el.textContent=shortName(INFO[b.lm].name||DEFS[b.type].name); const lm=b.lm, id=b.id;
+      if(MAJOR.has(lm)) el.dataset.major='1';
       el.onclick=()=>{ showInfo(lm); const bb=buildings.get(id); if(bb) pulses.push({m:bb.mesh,t:0,base:bb.mesh.scale.y}); sfx('tick'); }; labelsEl.appendChild(el); labelMap.set(b.id,el); } }
   for(const [id,el] of labelMap) if(!keep.has(id)){ el.remove(); labelMap.delete(id); }
 }
@@ -1896,7 +1911,7 @@ function updateLabels(){
   labelsEl.classList.toggle('small',far>N*0.75);
   for(const [id,el] of labelMap){ const b=buildings.get(id); if(!b) continue; const bb=b.mesh.geometry.boundingBox; const h=(bb?bb.max.y:1)*b.mesh.scale.y+0.3;
     _lv.set(b.mesh.position.x,h,b.mesh.position.z).project(camera);
-    if(_lv.z>1||_lv.x<-1.05||_lv.x>1.05||_lv.y<-1.05||_lv.y>1.05||!b.mesh.visible){ el.style.display='none'; continue; }
+    if(_lv.z>1||_lv.x<-1.05||_lv.x>1.05||_lv.y<-1.05||_lv.y>1.05||!b.mesh.visible||(far>N*0.5&&!el.dataset.major)){ el.style.display='none'; continue; }
     el.style.display=''; el.style.transform=`translate(${((_lv.x+1)/2*W).toFixed(1)}px,${((1-_lv.y)/2*H).toFixed(1)}px) translate(-50%,-100%)`; }
 }
 /* =========================================================
