@@ -35,6 +35,9 @@ button{font-family:inherit;color:inherit}
 .tbtn{width:42px;height:42px;border-radius:14px;border:0;background:var(--panel);box-shadow:var(--shadow);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .1s}
 .tbtn:active{transform:scale(.92)}
 .tbtn.off{opacity:.45}
+.tbtn.hide{display:none}
+.steps{margin:8px 0 0;padding-left:20px;font-size:14.5px;line-height:1.6}
+.share{display:inline-block;border:1.5px solid currentColor;border-radius:5px;width:16px;height:16px;text-align:center;line-height:12px;font-size:12px;vertical-align:-2px}
 #dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));width:min(1000px,calc(100% - 16px));background:var(--panel);border-radius:22px;box-shadow:var(--shadow);padding:6px 6px 8px;z-index:5;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 #cats{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:2px}
 #cats::-webkit-scrollbar{display:none}
@@ -112,6 +115,7 @@ label.ck{display:flex;gap:8px;align-items:center;font-size:14px;margin:5px 0;cur
     <div class="pill" id="era">🏛️ Starożytność</div>
   </div>
   <div class="tbtns">
+    <button class="tbtn hide" id="bInstall" title="Zainstaluj jako aplikację">📲</button>
     <button class="tbtn" id="bMenu" title="Menu">☰</button>
     <button class="tbtn" id="bToday" title="Pokaż, co zostało dziś">⏳</button>
     <button class="tbtn" id="bLabels" title="Podpisy budowli">🏷️</button>
@@ -1666,6 +1670,7 @@ function openMenu(){
   <label class="ck"><input type="checkbox" id="mLand" checked> rzeka, gaje i pola</label>
   <button class="btn" id="mNew">Zacznij od nowa</button></div>
   <div class="row"><button class="btn main" id="mRome">🏛️ Rzym za Trajana (117 n.e.)</button><button class="btn" id="mDemo">Przykładowe castrum</button>${hasOld?'<button class="btn" id="mOld">Moje poprzednie miasto</button>':''}</div>
+  ${isStandalone?'':'<div class="row"><button class="btn" id="mInstall">📲 Zainstaluj na telefonie / komputerze</button></div>'}
   <h3>Zasady</h3>
   <label class="ck"><input type="checkbox" id="mPlots" ${onlyPlots?'checked':''}> Buduj tylko na działkach (ozdoby wszędzie)</label>
   <label class="ck"><input type="checkbox" id="mInfo" ${infoAuto?'checked':''}> Pokazuj historię przy wyborze budynku</label>
@@ -1686,12 +1691,41 @@ function openMenu(){
   $('mDemo').onclick=()=>{ pushUndo(); defaultWorld(); closeModal(); };
   $('mRome').onclick=()=>{ pushUndo(); romeTrajan(); closeModal(); setTimeout(()=>showInfo('rome'),300); };
   if(hasOld) $('mOld').onclick=()=>{ try{ const snap=serialize(); deserialize(localStorage.getItem('urbs-save-v1')); pushUndo(snap); closeModal(); }catch(e){ toast('Nie udało się wczytać'); } };
+  if(!isStandalone) $('mInstall').onclick=openInstall;
   $('mPlots').onchange=e=>{ onlyPlots=e.target.checked; };
   $('mInfo').onchange=e=>{ infoAuto=e.target.checked; try{ localStorage.setItem('urbs-info',infoAuto?'1':'0'); }catch(_){} };
   $('mCopy').onclick=async()=>{ const code=btoa(unescape(encodeURIComponent(serialize()))); $('mCode').value=code; try{ await navigator.clipboard.writeText(code); toast('Skopiowano kod miasta'); }catch(e){ $('mCode').select(); toast('Zaznacz i skopiuj kod z pola'); } };
   $('mLoad').onclick=()=>{ const v=$('mCode').value.trim(); if(!v){ toast('Wklej najpierw kod'); return; } try{ const snap=serialize(); deserialize(decodeURIComponent(escape(atob(v)))); pushUndo(snap); closeModal(); toast('Wczytano miasto'); }catch(e){ toast('Ten kod nie wygląda na miasto'); } };
 }
 document.getElementById('bMenu').onclick=openMenu;
+/* ---- instalacja jako aplikacja ---- */
+const isStandalone=matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches||navigator.standalone===true;
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const inFrame=(()=>{ try{ return window.self!==window.top; }catch(e){ return true; } })();
+const SITE='https://pjotografia.vercel.app/urbs/';
+let installEvt=null;
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEvt=e; document.getElementById('bInstall').classList.remove('hide'); });
+if(!isStandalone && (isIOS||inFrame)) document.getElementById('bInstall').classList.remove('hide');
+function openInstall(){
+  if(installEvt&&!inFrame){ installEvt.prompt(); installEvt.userChoice.finally(()=>{ installEvt=null; }); return; }
+  let body;
+  if(inFrame||!location.hostname.endsWith('vercel.app')) body=`<p>Grę można zainstalować tylko z Twojej strony – tutaj, w podglądzie, się nie da.</p>
+    <ol class="steps"><li>Otwórz w ${isIOS?'<b>Safari</b>':'przeglądarce'} adres:<br><b style="user-select:text;-webkit-user-select:text">${SITE}</b></li><li>Tam ponownie stuknij 📲 i postępuj według wskazówek.</li></ol>
+    <div class="row"><a class="btn main" href="${SITE}" target="_blank" rel="noopener" style="text-decoration:none">Otwórz grę na stronie</a><button class="btn" id="cpy">Kopiuj adres</button></div>`;
+  else if(isIOS) body=`<p>Na iPhonie i iPadzie dodaje się ją przez Safari:</p>
+    <ol class="steps"><li>Upewnij się, że ta strona jest otwarta w <b>Safari</b> (nie w Chrome ani w aplikacji Instagrama czy Messengera).</li>
+    <li>Stuknij przycisk <b>Udostępnij</b> <span class="share">↑</span> – na dole ekranu (albo na górze na iPadzie).</li>
+    <li>Przewiń listę w dół i wybierz <b>„Do ekranu początkowego”</b>.</li>
+    <li>Stuknij <b>„Dodaj”</b>. Na ekranie pojawi się ikonka Urbs ze świątynią.</li></ol>
+    <p>Uruchomiona z ikonki gra otwiera się na pełnym ekranie i działa też bez internetu.</p>`;
+  else body=`<p>W menu przeglądarki (⋮) wybierz <b>„Zainstaluj aplikację”</b> lub <b>„Dodaj do ekranu głównego”</b>. Na komputerze możesz też kliknąć ikonkę instalacji po prawej stronie paska adresu.</p>`;
+  card.innerHTML=`<h2>Zainstaluj Urbs</h2>${body}<div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn main" id="iClose">Gotowe</button></div>`;
+  modal.classList.remove('hidden');
+  card.querySelector('#iClose').onclick=closeModal;
+  const c=card.querySelector('#cpy'); if(c) c.onclick=async()=>{ try{ await navigator.clipboard.writeText(SITE); toast('Skopiowano adres'); }catch(e){ toast(SITE); } };
+}
+document.getElementById('bInstall').onclick=openInstall;
+
 
 /* ---- ikonki ---- */
 function swatch(kind,val){
