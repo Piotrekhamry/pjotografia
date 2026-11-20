@@ -153,6 +153,8 @@ button.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--l
 .inst button{min-height:38px;padding:6px 12px;font-size:14px}
 .inst .x{background:transparent;color:var(--muted);padding:6px 8px}
 .offl{color:var(--mid)}
+.stats .wide{grid-column:1/-1}
+.fogb{color:#cfe3ff}
 .dsec{font-size:15px;margin:16px 0 6px;font-weight:600}
 .ext{display:block;margin-top:12px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);text-decoration:none;font-size:14px}
 .day{padding:12px 14px}
@@ -263,7 +265,7 @@ const MODELS=[
   {id:'meteofrance_seamless',name:'Météo-France'}
 ];
 const LEVELS=[1000,975,950,925,900,850,800,700,600,500,400,300,250];
-const HOURLY=['cloud_cover_low','cloud_cover_mid','cloud_cover_high','wind_speed_10m','wind_gusts_10m','precipitation',
+const HOURLY=['cloud_cover_low','cloud_cover_mid','cloud_cover_high','wind_speed_10m','wind_gusts_10m','precipitation','relative_humidity_2m',
   ...LEVELS.flatMap(l=>[`temperature_${l}hPa`,`relative_humidity_${l}hPa`,`cloud_cover_${l}hPa`,`geopotential_height_${l}hPa`,`wind_speed_${l}hPa`])];
 const TREND=[-60,-30,0,30,60,90,120]; // minuty względem wschodu (dla zachodu odwrócone)
 const PRESETS=[
@@ -284,7 +286,7 @@ const interp=(a,i)=>{if(!a)return null;const i0=Math.floor(i),f=i-i0,x=a[i0],y=a
   if(x==null&&y==null)return null;if(x==null)return y;if(y==null)return x;return x+(y-x)*f};
 const piece=(x,p)=>{if(x<=p[0][0])return p[0][1];for(let i=1;i<p.length;i++){if(x<=p[i][0]){const[a,b]=p[i-1],[c,d]=p[i];return b+(d-b)*(x-a)/(c-a)}}return p[p.length-1][1]};
 const col=v=>v>=70?'var(--good)':v>=45?'var(--mid)':'var(--bad)';
-const verdict=(s,a)=>{const what=!a?'':a.sea>=50&&a.sun>=50?'morze chmur i kolory':a.sea>=a.sun?'szansa na morze chmur':'szansa na kolorowe niebo';
+const verdict=(s,a)=>{const sea=a&&a.seaFog?'mgła w dolinie':'morze chmur';const what=!a?'':a.sea>=50&&a.sun>=50?sea+' i kolory':a.sea>=a.sun?'szansa na '+(a.seaFog?'mgłę w dolinie':'morze chmur'):'szansa na kolorowe niebo';
   return s>=75?['Jedź!',what]:s>=55?['Warto spróbować',what]:s>=35?['Loteria',what+' – niepewna']:['Odpuść','małe szanse na jedno i drugie']};
 const fmtCoord=(lat,lon)=>`${Math.abs(lat).toFixed(4)}°${lat>=0?'N':'S'}, ${Math.abs(lon).toFixed(4)}°${lon>=0?'E':'W'}`;
 const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -434,6 +436,16 @@ async function fetchModel(model,lat,lon){
   return j;
 }
 
+/* ---------- dolina pod punktem: najniższy teren w promieniu 5 km ---------- */
+async function fetchValley(lat,lon){
+  const pts=[];[1,2,3.5,5].forEach(km=>{for(let k=0;k<12;k++)pts.push(dest(lat,lon,km,k*30))});
+  try{
+    const j=await getJSON(`https://api.open-meteo.com/v1/elevation?latitude=${pts.map(p=>p[0].toFixed(4)).join(',')}&longitude=${pts.map(p=>p[1].toFixed(4)).join(',')}`,10000);
+    const e=(j.elevation||[]).map((x,i)=>({x,i})).filter(o=>o.x!=null&&isFinite(o.x));if(!e.length)return null;
+    const lo=e.reduce((a,b)=>b.x<a.x?b:a);return{min:lo.x,dir:(lo.i%12)*30};
+  }catch(e){return null}
+}
+
 /* ---------- ocena jednego modelu dla jednego wschodu/zachodu ---------- */
 function atHeight(lv,key,z){
   const a=lv.filter(l=>l[key]!=null);if(!a.length)return null;
@@ -496,10 +508,32 @@ function evalModel(md,summit,whenMin){
   sun=Math.round(clamp(sun,0,100));
 
   const tS=atHeight(lv,'t',summit),wS=atHeight(lv,'ws',summit);
+  // przepis na mgłę dolinną: pogodna noc (bez chmur średnich/wysokich), słaby wiatr, wilgotno przy ziemi
+  const nIdx=[1,2,3,4,5,6,7,8].map(k=>idx-k).filter(j=>j>=0);
+  let fog=null;
+  if(nIdx.length>=4){
+    const nCloud=mean(nIdx.map(j=>{const a=interp(h.cloud_cover_mid,j),b=interp(h.cloud_cover_high,j);return a==null&&b==null?null:Math.max(a||0,b||0)}));
+    const nWind=mean(nIdx.slice(0,6).map(j=>interp(h.wind_speed_10m,j)));
+    const rh2=v('relative_humidity_2m');
+    if(nCloud!=null&&nWind!=null&&rh2!=null){
+      const fC=piece(nCloud,[[0,1],[30,.9],[60,.5],[90,.15],[100,.1]]);
+      const fW=piece(nWind,[[0,1],[8,1],[15,.7],[25,.25],[35,.1]]);
+      const fR=piece(rh2,[[70,.05],[80,.2],[88,.55],[94,.85],[98,1]]);
+      fog=clamp(Math.max(100*fC*fW*fR+(inv?10:0),ccLow>=70?ccLow*0.8:0),0,100);
+    }
+  }
   return{sea,sun,combined:Math.round(Math.sqrt(sea*sun)),belowCloud,aboveClear,ccLow,ccMid,ccHigh,wind,top,inv,inCloud,levels:lv,
-    tS,wS,gust:v('wind_gusts_10m'),precip:v('precipitation')};
+    tS,wS,gust:v('wind_gusts_10m'),precip:v('precipitation'),fog};
 }
 
+function applyFog(a,elev,rising){
+  const V=state.valley;a.fog=null;a.depth=V?Math.round(elev-V.min):null;
+  if(!rising||!V||a.depth<120||a.fogRaw==null)return;
+  a.fog=Math.round(a.fogRaw*clamp(a.depth/200,.6,1));
+  const seaV=Math.round(a.fog*0.85*clamp(a.aboveClear/100+0.2,0,1));
+  if(seaV>a.sea){a.sea=seaV;a.seaFog=true}
+  const hi=Math.max(a.sea,a.sun),lo=Math.min(a.sea,a.sun);a.combined=a.score=Math.round(clamp(hi+(lo>=50?(lo-50)*0.3:0),0,100));
+}
 function aggregate(per){
   const v=per.filter(p=>p.r);if(!v.length)return null;
   const m=k=>mean(v.map(p=>p.r[k]));
@@ -509,7 +543,7 @@ function aggregate(per){
     spread:Math.max(...combos)-Math.min(...combos),belowCloud:m('belowCloud'),aboveClear:m('aboveClear'),
     ccHigh:m('ccHigh'),ccMid:m('ccMid'),wind:m('wind'),inv:v.filter(p=>p.r.inv).length,
     inCloud:v.filter(p=>p.r.inCloud).length,top:median(v.map(p=>p.r.top)),
-    tS:m('tS'),wS:m('wS'),gust:m('gust'),precip:m('precip')};
+    tS:m('tS'),wS:m('wS'),gust:m('gust'),precip:m('precip'),fogRaw:m('fog')};
 }
 
 /* ---------- słońce: wysokość i azymut (algorytm uproszczony, dokładność ~1 min) ---------- */
@@ -548,12 +582,13 @@ function explain(a){
   const t=[];
   if(a.belowCloud>=60)t.push('Warstwa chmur poniżej szczytu'+(a.top?` (górna granica ok. ${Math.round(a.top/10)*10} m)`:''));
   else if(a.belowCloud>=30)t.push('Częściowe chmury niżej – morze chmur niepewne');
-  else t.push('Brak wyraźnej warstwy chmur poniżej');
+  else t.push(a.seaFog?'Model nie pokazuje chmur w dolinie (za wąska dla jego siatki)':'Brak wyraźnej warstwy chmur poniżej');
   if(a.inCloud>a.n/2)t.push('szczyt może tkwić w chmurze');
   else if(a.aboveClear>=75)t.push('nad szczytem raczej czysto');
   else if(a.aboveClear>=45)t.push('nad szczytem część chmur');
   else t.push('nad szczytem sporo chmur');
   if(a.inv>a.n/2)t.push('sygnał inwersji temperatury');
+  if(a.fog>=50)t.push(`warunki na mgłę w dolinie ok. ${Math.round(a.depth/10)*10} m niżej (pogodna noc, słaby wiatr, wilgotno)`);
   const w=a.wS!=null?a.wS:a.wind;
   if(w!=null&&w>35)t.push(`silny wiatr (~${Math.round(w)} km/h) może rozbić warstwę`);
   if(a.ccHigh>=25&&a.ccHigh<=70)t.push('chmury wysokie mogą pięknie zabarwić niebo');
@@ -564,7 +599,9 @@ function explain(a){
 async function load(){
   const tok=++loadToken,{lat,lon}=state.loc;state.stale=0;
   $('#out').innerHTML='<div class="status">Pobieram prognozy z 4 modeli…</div><div class="sk"></div><div class="sk"></div><div class="sk"></div>';
+  const vp=fetchValley(lat,lon);
   const settled=await Promise.allSettled(MODELS.map(m=>fetchModel(m,lat,lon)));
+  state.valley=await vp;
   if(tok!==loadToken)return; // użytkownik wybrał już inne miejsce
   const ok=settled.map((s,i)=>s.status==='fulfilled'?{...MODELS[i],md:s.value}:null).filter(Boolean);
   if(!ok.length){$('#out').innerHTML='<div class="status err">Nie udało się pobrać prognoz (brak połączenia lub limit API). Spróbuj za chwilę.</div>';return}
@@ -582,7 +619,9 @@ function compute(){
     const trend=TREND.map(o=>{const off2=rising?o:-o,rs=ok.map(m=>evalModel(m.md,elev,tm+off2)).filter(Boolean);
       return{off:off2,n:rs.length,sea:rs.length?mean(rs.map(r=>r.sea)):null,sun:rs.length?mean(rs.map(r=>r.sun)):null,inCloud:rs.length?rs.filter(r=>r.inCloud).length/rs.length:0}});
     if(!rising)trend.sort((a,b)=>a.off-b.off);
-    days.push({date:d,time:t,tm,per,agg:aggregate(per),trend,sun:sunTimes(tm,off/60,lat,lon,rising)});
+    const agg=aggregate(per);
+    if(agg)applyFog(agg,elev,rising);
+    days.push({date:d,time:t,tm,per,agg,trend,sun:sunTimes(tm,off/60,lat,lon,rising)});
   });
   state.days=days;state.tz=ref.timezone_abbreviation||'';
   render();
@@ -609,7 +648,7 @@ function render(){
     return`<article class="day${i===bi?' top':''}" data-i="${i}" style="--i:${i};--c:${col(a.combined)}">
       <div class="dh" role="button" tabindex="0" aria-expanded="false">
         <div class="score"><svg viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="28"/><circle class="val" cx="32" cy="32" r="28" data-v="${a.combined}"/></svg><span class="num" data-v="${a.combined}">0</span></div>
-        <div class="dt"><b>${esc(date)}</b><div class="s">${label.toLowerCase()} ${time}${tz}${i===bi?' · <span class="star">★ najlepszy</span>':''}</div><div class="vd"><span class="verdict">${v1}</span> <span class="what">${v2}</span></div></div>
+        <div class="dt"><b>${esc(date)}</b><div class="s">${label.toLowerCase()} ${time}${tz}${i===bi?' · <span class="star">★ najlepszy</span>':''}${a.fog>=50?' · <span class="fogb">🌫 mgła w dolinie</span>':''}</div><div class="vd"><span class="verdict">${v1}</span> <span class="what">${v2}</span></div></div>
         <span class="opn"><span>Analiza</span>${CHEV}</span>
       </div>
       <div class="detail"><div class="clip"><div class="din" style="--i:0"></div></div></div>
@@ -636,6 +675,7 @@ function statsHTML(a){
   let margin,mc='';
   if(a.inCloud>a.n/2){margin='w chmurze';mc='bad'}
   else if(a.top!=null&&a.belowCloud>=40){const z=state.loc.elev-a.top;margin=`~${Math.round(z/10)*10} m`;mc=z>=300?'good':z>=120?'mid':'bad'}
+  else if(a.seaFog){margin=`mgła ~${Math.round(a.depth/10)*10} m niżej`;mc=a.fog>=60?'good':'mid'}
   else margin='brak warstwy';
   const fl=windChill(a.tS,a.wS);
   const wind=a.wS!=null?a.wS:a.wind;
@@ -643,6 +683,7 @@ function statsHTML(a){
     <div><span>Zapas nad chmurami</span><b class="${mc}">${margin}</b></div>
     <div><span>Temp. na szczycie</span><b>${a.tS==null?'–':r(a.tS)+'°'}</b>${fl!=null&&a.tS!=null&&r(fl)<r(a.tS)?`<small>odczuwalna ${r(fl)}°</small>`:''}</div>
     <div><span>Wiatr na szczycie</span><b class="${wind>50?'bad':wind>30?'mid':''}">${wind==null?'–':r(wind)+' km/h'}</b>${a.gust!=null&&a.gust>(wind||0)+10?`<small>porywy w dolinach ${r(a.gust)}</small>`:''}</div>
+    ${a.fog!=null?`<div class="wide"><span>Mgła w dolinie (ok. ${Math.round(a.depth/10)*10} m pod Tobą)</span><b class="${a.fog>=60?'good':a.fog>=35?'mid':''}">${a.fog>=60?'duża szansa':a.fog>=35?'możliwa':'mało prawdopodobna'} <small style="display:inline">(${a.fog}/100)</small></b></div>`:''}
     <div><span>Opad</span><b class="${a.precip>=0.3?'bad':''}">${a.precip==null?'–':a.precip<0.1?'sucho':a.precip.toFixed(1)+' mm/h'}</b></div>
   </div>`;
 }
