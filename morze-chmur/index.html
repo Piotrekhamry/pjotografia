@@ -92,7 +92,27 @@ button.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--l
 .day{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px 16px;margin-bottom:12px;cursor:pointer;animation:fadeUp .5s var(--ease) both;animation-delay:calc(var(--i)*70ms);transition:border-color .25s,box-shadow .25s}
 @media(hover:hover){.day:hover{border-color:#3a4c75}}
 .day.top{border-color:rgba(255,180,84,.5);box-shadow:0 10px 34px -14px rgba(255,180,84,.45)}
-.dh{display:flex;gap:14px;align-items:center}
+.dh{display:flex;gap:14px;align-items:center;position:relative}
+.dh>*:not(.scene){position:relative;z-index:1}
+.day{overflow:hidden}
+.scene{position:absolute;z-index:0;right:-14px;top:-12px;bottom:-12px;width:62%;pointer-events:none;-webkit-mask-image:linear-gradient(90deg,transparent 0,rgba(0,0,0,.35) 30%,#000 70%);mask-image:linear-gradient(90deg,transparent 0,rgba(0,0,0,.35) 30%,#000 70%);animation:fadeIn 1s ease both;animation-delay:calc(var(--i)*70ms + 200ms);opacity:0}
+.scene svg{width:100%;height:100%;display:block}
+.opn{text-shadow:0 1px 6px rgba(0,0,0,.8);color:#dfe6f5!important}
+.dt .s,.vd{text-shadow:0 1px 8px rgba(11,18,32,.9)}
+.sdr{animation:sdrift 30s linear infinite}.sdr2{animation:sdrift 20s linear infinite}.sdr3{animation:sdrift 60s linear infinite}
+@keyframes sdrift{to{transform:translateX(-200px)}}
+.bob{animation:bob 7s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateX(0)}50%{transform:translateX(-16px)}}
+.fogm{animation:bob 9s ease-in-out infinite reverse}
+.rain line{animation:rain 1.2s linear infinite}
+@keyframes rain{0%{transform:translateY(-6px);opacity:0}30%{opacity:.5}100%{transform:translateY(14px);opacity:0}}
+.rays{animation:spin 40s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sunup{animation:sunup 6s ease-in-out infinite alternate}
+@keyframes sunup{from{transform:translateY(3px)}to{transform:translateY(-3px)}}
+.tw{transform-box:fill-box;transform-origin:center;animation:tw 3.5s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:0;transform:scale(.3)}50%{opacity:1;transform:scale(1.2)}}
+@media(max-width:480px){.scene{width:44%;-webkit-mask-image:linear-gradient(90deg,transparent 0,rgba(0,0,0,.5) 35%,#000 75%);mask-image:linear-gradient(90deg,transparent 0,rgba(0,0,0,.5) 35%,#000 75%)}.dt{padding-right:4px}}
 .score{position:relative;width:64px;height:64px;flex:none}
 .score svg{width:64px;height:64px;transform:rotate(-90deg);display:block}
 .score circle{fill:none;stroke-width:5}
@@ -632,6 +652,69 @@ const bar=v=>`<div class="bar"><span data-v="${v}" style="background:${col(v)}">
 const fmtDate=d=>{const dt=d.split('-').map(Number);return new Date(Date.UTC(dt[0],dt[1]-1,dt[2])).toLocaleDateString('pl-PL',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'})};
 const CHEV='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
+
+/* ---------- animowane scenki do oceny ---------- */
+function sceneType(a){
+  if(!a)return'fog';const s=a.score;
+  if(s<35)return'fog';if(s<55)return'cloudsun';
+  if(a.sea>=55&&a.sun>=55)return'epic';
+  return a.sea>=a.sun?'sea':'colors';
+}
+const cl=(x,y,s,f,o)=>`<g transform="translate(${x} ${y}) scale(${s})" opacity="${o}"><ellipse cx="0" cy="6" rx="22" ry="7.5" fill="${f}"/><circle cx="-8" cy="2" r="9" fill="${f}"/><circle cx="5" cy="-1" r="12" fill="${f}"/><circle cx="16" cy="4" r="7" fill="${f}"/></g>`;
+function seaRow(y,n,rmin,rmax,f,o,seed){
+  let s=seed,r=()=>(s=(s*16807)%2147483647)/2147483647,it=[];
+  for(let k=0;k<n;k++){const rx=rmin+r()*(rmax-rmin);it.push([k*200/n+r()*10,y+r()*5,rx,rx*.32])}
+  let out='';for(const off of[-200,0,200])for(const[x,yy,rx,ry]of it)out+=`<ellipse cx="${(x+off).toFixed(1)}" cy="${yy.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="${f}" opacity="${o}"/>`;
+  return out;
+}
+function sky(id,stops,anim){
+  return`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">${stops.map((c,k)=>`<stop offset="${k/(stops.length-1)}" stop-color="${c[0]}">${anim&&c[1]?`<animate attributeName="stop-color" values="${c[0]};${c[1]};${c[0]}" dur="${8+k*2}s" repeatCount="indefinite"/>`:''}</stop>`).join('')}</linearGradient>`;
+}
+const PEAKS='<polygon fill="#1d2140" points="40,80 78,38 92,50 112,26 138,56 152,46 200,74 200,80"/>';
+const sunG=id=>`<radialGradient id="${id}"><stop offset="0" stop-color="#fff3d1"/><stop offset=".6" stop-color="#ffd08a"/><stop offset="1" stop-color="#ffb454" stop-opacity="0"/></radialGradient>`;
+function sceneSVG(type,i){
+  const g=`s${type}${i}`;let d='',b='';
+  if(type==='fog'){
+    d=sky(g,[['#252c3a'],['#3a4252'],['#4a5263']]);
+    b=`<rect width="200" height="80" fill="url(#${g})"/>
+      <g class="sdr3">${cl(40,18,1,'#7d8799',.75)}${cl(140,14,1.2,'#8b95a7',.8)}${cl(240,18,1,'#7d8799',.75)}${cl(340,14,1.2,'#8b95a7',.8)}</g>
+      <g class="rain">${[...Array(14)].map((_,k)=>`<line x1="${12+k*14}" y1="${26+(k%3)*6}" x2="${9+k*14}" y2="${34+(k%3)*6}" stroke="#9fb0c8" stroke-width="1" opacity=".45" style="animation-delay:${(k%5)*.25}s"/>`).join('')}</g>
+      <g class="fogm"><rect x="-20" y="46" width="240" height="12" rx="6" fill="#b7c0cf" opacity=".35"/><rect x="-40" y="58" width="260" height="14" rx="7" fill="#c3cbd8" opacity=".45"/><rect x="-20" y="70" width="240" height="12" rx="6" fill="#ccd3de" opacity=".55"/></g>`;
+  }else if(type==='cloudsun'){
+    d=sky(g,[['#22355b'],['#3f5e8c'],['#7d93b5']])+sunG(g+'s');
+    b=`<rect width="200" height="80" fill="url(#${g})"/>
+      <circle class="glow" cx="132" cy="30" r="30" fill="url(#${g}s)"/><circle cx="132" cy="30" r="11" fill="#ffd98f"/>
+      <g class="bob">${cl(124,40,1.35,'#e6ecf7',.95)}</g>
+      <g class="sdr">${cl(30,22,.8,'#cdd6e8',.7)}${cl(230,22,.8,'#cdd6e8',.7)}${cl(80,60,1,'#b9c4da',.6)}${cl(280,60,1,'#b9c4da',.6)}</g>`;
+  }else if(type==='colors'){
+    d=sky(g,[['#2a1c50','#3b1f5e'],['#a2437f','#c4507a'],['#f0855a','#ff9e5e'],['#ffc070','#ffd48a']],true)+sunG(g+'s');
+    b=`<rect width="200" height="80" fill="url(#${g})"/>
+      <circle class="glow" cx="150" cy="76" r="40" fill="url(#${g}s)"/><circle cx="150" cy="78" r="12" fill="#fff0c8"/>
+      <g class="sdr">${[0,200].map(o=>`<ellipse cx="${30+o}" cy="22" rx="34" ry="3" fill="#ff8fa3" opacity=".8"/><ellipse cx="${100+o}" cy="14" rx="44" ry="3.5" fill="#ffb07a" opacity=".85"/><ellipse cx="${160+o}" cy="30" rx="30" ry="2.5" fill="#ff7f9e" opacity=".75"/><ellipse cx="${70+o}" cy="38" rx="38" ry="3" fill="#ffc38a" opacity=".7"/><ellipse cx="${-30+o}" cy="34" rx="30" ry="2.5" fill="#ff8fa3" opacity=".7"/>`).join('')}</g>
+      <rect y="74" width="200" height="6" fill="#1d1730" opacity=".7"/>`;
+  }else if(type==='sea'){
+    d=sky(g,[['#1a2a55'],['#4c4f86'],['#c9939a'],['#f1c19a']])+sunG(g+'s');
+    b=`<rect width="200" height="80" fill="url(#${g})"/>
+      <circle class="glow" cx="168" cy="40" r="26" fill="url(#${g}s)"/><circle cx="168" cy="40" r="7" fill="#fff0c8"/>
+      ${PEAKS}
+      <g class="sdr">${seaRow(56,12,14,26,'#e3e8f6',.85,7)}</g>
+      <g class="sdr2">${seaRow(66,11,18,30,'#f4f6fc',.95,13)}</g>
+      <rect y="70" width="200" height="10" fill="#f4f6fc"/>`;
+  }else{ // epic
+    d=sky(g,[['#25174d','#341b5c'],['#8f3c86','#b2457f'],['#f07a55','#ff8e5a'],['#ffc070','#ffd890']],true)+sunG(g+'s');
+    b=`<rect width="200" height="80" fill="url(#${g})"/>
+      <g class="rays" style="transform-origin:150px 52px">${[...Array(12)].map((_,k)=>`<line x1="150" y1="52" x2="${(150+70*Math.cos(k*Math.PI/6)).toFixed(1)}" y2="${(52+70*Math.sin(k*Math.PI/6)).toFixed(1)}" stroke="#ffe2a8" stroke-width="3" opacity=".22"/>`).join('')}</g>
+      <circle class="glow" cx="150" cy="52" r="34" fill="url(#${g}s)"/><circle class="sunup" cx="150" cy="52" r="10" fill="#fff4d6"/>
+      <g class="sdr">${[0,200].map(o=>`<ellipse cx="${40+o}" cy="16" rx="36" ry="3" fill="#ff9ab0" opacity=".85"/><ellipse cx="${110+o}" cy="10" rx="40" ry="3" fill="#ffc08a" opacity=".85"/>`).join('')}</g>
+      ${PEAKS}
+      <g class="sdr">${seaRow(57,12,14,26,'#ffd6c8',.85,5)}</g>
+      <g class="sdr2">${seaRow(67,11,18,30,'#fff1ea',.95,9)}</g>
+      <rect y="71" width="200" height="9" fill="#fff1ea"/>
+      ${[[30,24],[70,30],[60,12],[175,18],[100,28]].map(([x,y],k)=>`<circle class="tw" cx="${x}" cy="${y}" r="1.6" fill="#fff" style="animation-delay:${k*.7}s"/>`).join('')}`;
+  }
+  return`<div class="scene" aria-hidden="true"><svg viewBox="0 0 200 80" preserveAspectRatio="xMaxYMid slice"><defs>${d}</defs>${b}</svg></div>`;
+}
+
 function render(){
   const out=$('#out'),sunrise=state.mode==='sunrise',label=sunrise?'Wschód':'Zachód';
   if(!state.days.length){out.innerHTML=`<div class="status">Brak nadchodzących ${sunrise?'wschodów':'zachodów'} słońca w zasięgu prognozy.</div>`;return}
@@ -649,6 +732,7 @@ function render(){
       <div class="dh" role="button" tabindex="0" aria-expanded="false">
         <div class="score"><svg viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="28"/><circle class="val" cx="32" cy="32" r="28" data-v="${a.combined}"/></svg><span class="num" data-v="${a.combined}">0</span></div>
         <div class="dt"><b>${esc(date)}</b><div class="s">${label.toLowerCase()} ${time}${tz}${i===bi?' · <span class="star">★ najlepszy</span>':''}${a.fog>=50?' · <span class="fogb">🌫 mgła w dolinie</span>':''}</div><div class="vd"><span class="verdict">${v1}</span> <span class="what">${v2}</span></div></div>
+        ${sceneSVG(sceneType(a),i)}
         <span class="opn"><span>Analiza</span>${CHEV}</span>
       </div>
       <div class="detail"><div class="clip"><div class="din" style="--i:0"></div></div></div>
