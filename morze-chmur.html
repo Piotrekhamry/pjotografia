@@ -134,6 +134,18 @@ button.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--l
 .what{font-size:14px;color:#c7d3ec}
 .star{color:var(--accent)}
 .opn{flex:none;display:flex;flex-direction:column;align-items:center;font-size:11px;color:var(--muted);gap:0}
+.area svg{width:100%;max-width:380px;margin:4px auto 0;display:block}
+.amini{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.amini button{min-height:34px;padding:4px 11px;font-size:13px;background:var(--panel2);color:var(--muted);border:1px solid var(--line);font-weight:500}
+.amini button.on{background:var(--accent);color:#1a1205;border-color:var(--accent)}
+.sec{transition:fill-opacity .6s var(--ease);cursor:pointer;opacity:0;animation:fadeIn .5s ease forwards}
+.sec.sel{stroke:#ffb454;stroke-width:2}
+.alegend{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);justify-content:center;margin-top:6px}
+.alegend i{width:110px;height:8px;border-radius:4px;background:linear-gradient(90deg,#0f1a33,#eef3ff)}
+.apick{font-size:13px;color:#c7d3ec;text-align:center;margin:4px 0 6px;min-height:20px}
+.an{font-size:14px;margin:6px 0;padding-left:12px;border-left:3px solid var(--line)}
+.an.good{border-color:var(--good)}.an.mid{border-color:var(--mid)}.an.bad{border-color:var(--bad)}
+.aload{width:100%;min-height:42px;font-size:15px}
 .dsec{font-size:15px;margin:16px 0 6px;font-weight:600}
 .ext{display:block;margin-top:12px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);text-decoration:none;font-size:14px}
 .day{padding:12px 14px}
@@ -383,7 +395,7 @@ async function pick(loc){
   loc={...loc};
   if(loc.elev==null){loc.elev=await getElevation(loc.lat,loc.lon);loc.eleSrc='dem'}
   if(loc.elev==null){loc.elev=1000;loc.eleSrc='guess'}
-  state.loc=loc;remember(loc);showLoc();
+  state.loc=loc;state.area=null;remember(loc);showLoc();
   if(document.activeElement)document.activeElement.blur();
   await load();
 }
@@ -684,6 +696,91 @@ function profileSVG(day,summit){
   return s;
 }
 
+
+/* ---------- widok z góry: chmury w promieniu 160 km ---------- */
+const RINGS=[10,30,60,100,160],RB=[5,20,45,80,130,190],NDIR=16;
+const LAYERVAR={all:'cloud_cover',low:'cloud_cover_low',mid:'cloud_cover_mid',high:'cloud_cover_high'};
+const LAYERNAME={all:'Wszystkie',low:'Niskie',mid:'Średnie',high:'Wysokie'};
+function dest(lat,lon,km,brg){
+  const r=Math.PI/180,d=km/6371,t=brg*r,p1=lat*r,l1=lon*r;
+  const p2=Math.asin(Math.sin(p1)*Math.cos(d)+Math.cos(p1)*Math.sin(d)*Math.cos(t));
+  const l2=l1+Math.atan2(Math.sin(t)*Math.sin(d)*Math.cos(p1),Math.cos(d)-Math.sin(p1)*Math.sin(p2));
+  return[p2/r,((l2/r+540)%360)-180];
+}
+function loadArea(){
+  const l=state.loc,key=apprKey(l);
+  if(state.area&&state.area.key===key)return Promise.resolve(state.area);
+  if(state.areaP&&state.areaP.key===key)return state.areaP.p;
+  const pts=[{ring:-1,dir:0,lat:l.lat,lon:l.lon}];
+  RINGS.forEach((km,ri)=>{for(let k=0;k<NDIR;k++){const[a,b]=dest(l.lat,l.lon,km,k*360/NDIR);pts.push({ring:ri,dir:k,lat:a,lon:b})}});
+  const url=`https://api.open-meteo.com/v1/forecast?latitude=${pts.map(p=>p.lat.toFixed(3)).join(',')}&longitude=${pts.map(p=>p.lon.toFixed(3)).join(',')}&hourly=cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high&timezone=GMT&forecast_days=7`;
+  const p=getJSON(url,30000).then(j=>{
+    const arr=Array.isArray(j)?j:[j];pts.forEach((pt,i)=>pt.h=arr[i]&&arr[i].hourly);
+    state.area={key,pts};state.areaP=null;return state.area;
+  }).catch(e=>{state.areaP=null;throw e});
+  state.areaP={key,p};return p;
+}
+function sampleA(pt,v,tUtc){const h=pt.h;if(!h||!h.time)return null;return interp(h[v],(tUtc-toMin(h.time[0]))/60)}
+const rmap=km=>8+122*Math.sqrt(km/190);
+const PT=(r,a)=>{const t=a*Math.PI/180;return(160+r*Math.sin(t)).toFixed(1)+','+(160-r*Math.cos(t)).toFixed(1)};
+const angDiff=(a,b)=>Math.abs(((a-b)%360+540)%360-180);
+function areaInner(day,i){
+  const az=day.sun.az,rising=state.mode==='sunrise',offs=rising?[-60,0,60,120]:[-120,-60,0,60];
+  let s=`<svg viewBox="0 0 320 320" role="img" aria-label="Zachmurzenie w okolicy, widok z góry">`;
+  s+=`<circle cx="160" cy="160" r="${rmap(190)}" fill="#0f1a33" stroke="#25324d"/>`;
+  s+=`<path d="M160,160 L${PT(rmap(190),az-30)} A${rmap(190)} ${rmap(190)} 0 0 1 ${PT(rmap(190),az+30)} Z" fill="#ffb454" opacity=".10"/>`;
+  s+=`<circle class="sec" data-k="0" cx="160" cy="160" r="${rmap(RB[0]).toFixed(1)}" fill="#eef3ff" style="fill-opacity:0"/>`;
+  let k=1;
+  RINGS.forEach((km,ri)=>{const r0=rmap(RB[ri]),r1=rmap(RB[ri+1]);
+    for(let d=0;d<NDIR;d++,k++){const a0=d*22.5-11.25,a1=d*22.5+11.25;
+      s+=`<path class="sec" data-k="${k}" style="fill-opacity:0;animation-delay:${ri*90}ms" fill="#eef3ff" stroke="#0b1220" stroke-width=".7" d="M${PT(r0,a0)} L${PT(r1,a0)} A${r1.toFixed(1)} ${r1.toFixed(1)} 0 0 1 ${PT(r1,a1)} L${PT(r0,a1)} A${r0.toFixed(1)} ${r0.toFixed(1)} 0 0 0 ${PT(r0,a0)} Z"/>`}});
+  RINGS.forEach((km,ri)=>{s+=`<text x="${(163).toFixed(0)}" y="${(160-rmap(RB[ri+1])+11).toFixed(1)}" font-size="9" fill="#8fa0c0">${km===160?'160 km':''}</text>`});
+  s+=`<line x1="160" y1="160" x2="${PT(rmap(190)+6,az).split(',')[0]}" y2="${PT(rmap(190)+6,az).split(',')[1]}" stroke="#ffb454" stroke-width="2" stroke-dasharray="4 4"/>`;
+  const[sx,sy]=PT(rmap(190)+12,az).split(',');
+  s+=`<circle cx="${sx}" cy="${sy}" r="8" fill="#ffb454"/><circle cx="${sx}" cy="${sy}" r="12" fill="none" stroke="#ffb454" opacity=".4"/>`;
+  s+=`<text x="160" y="12" font-size="12" font-weight="700" fill="#e8eefb" text-anchor="middle">N</text>`;
+  s+=`<circle cx="160" cy="160" r="4" fill="#ffb454" stroke="#0b1220" stroke-width="2"/></svg>`;
+  return`<div class="amini" data-g="off">${offs.map(o=>`<button type="button" data-v="${o}" class="${o===0?'on':''}">${o===0?(rising?'wschód':'zachód'):(o>0?'+':'−')+Math.abs(o/60)+' h'}</button>`).join('')}</div>
+  <div class="amini" data-g="layer">${Object.keys(LAYERNAME).map(l=>`<button type="button" data-v="${l}" class="${l==='all'?'on':''}">${LAYERNAME[l]}</button>`).join('')}</div>
+  <div class="aview">${s}</div>
+  <div class="alegend"><span>czysto</span><i></i><span>pełne zachmurzenie</span></div>
+  <div class="apick">Stuknij w wycinek, żeby zobaczyć szczegóły.</div>
+  <div class="anote"></div>`;
+}
+function paintArea(box){
+  const A=state.area;if(!A)return;
+  const day=state.days[+box.dataset.i],off=+box.dataset.off,layer=box.dataset.layer,v=LAYERVAR[layer];
+  const offMin=(state.models[0].md.utc_offset_seconds||0)/60,t=day.tm-offMin+off;
+  A.pts.forEach((p,k)=>{const el=box.querySelector(`.sec[data-k="${k}"]`);if(!el)return;const x=sampleA(p,v,t);el.dataset.val=x==null?'':Math.round(x);el.style.fillOpacity=x==null?0:(x/100*.92).toFixed(2)});
+  // interpretacja
+  const az=day.sun.az,sunDirs=[...Array(NDIR).keys()].filter(d=>angDiff(d*22.5,az)<=34);
+  const avg=(rings,dirs,f)=>mean(A.pts.filter(p=>rings.includes(p.ring)&&(!dirs||dirs.includes(p.dir))).map(f));
+  const S=(p,vv)=>sampleA(p,vv,t);
+  const horizon=avg([2,3,4],sunDirs,p=>{const a=S(p,'cloud_cover_low'),b=S(p,'cloud_cover_mid');return a==null&&b==null?null:Math.max(a||0,b||0)});
+  const over=avg([-1,0,1],null,p=>{const a=S(p,'cloud_cover_mid'),b=S(p,'cloud_cover_high');return a==null&&b==null?null:Math.max(a||0,b||0)});
+  const low=avg([0,1,2],null,p=>S(p,'cloud_cover_low'));
+  const li=[],ev=state.mode==='sunrise'?'wschodu':'zachodu';
+  if(horizon!=null)li.push(horizon<35?['good',`Horyzont od strony ${ev} (60–160 km) raczej odsłonięty (${Math.round(horizon)}%) – światło przejdzie pod chmury.`]
+    :horizon<70?['mid',`Horyzont od strony ${ev} częściowo zasłonięty (${Math.round(horizon)}%) – loteria, mogą być przebłyski.`]
+    :['bad',`Horyzont od strony ${ev} zasłonięty (${Math.round(horizon)}%) – słońce może nie przebić się nisko.`]);
+  if(over!=null)li.push(over<15?['mid',`Nad Tobą prawie bez chmur średnich i wysokich (${Math.round(over)}%) – kolory głównie przy horyzoncie.`]
+    :over<75?['good',`Nad Tobą chmury średnie/wysokie (${Math.round(over)}%) – dobre „płótno” na kolory.`]
+    :['bad',`Nad Tobą gęste chmury średnie/wysokie (${Math.round(over)}%) – może być szaro.`]);
+  if(low!=null&&state.loc.elev>500)li.push(low>=60?['good',`Chmury niskie w promieniu 60 km: ${Math.round(low)}% – szansa na rozległe morze chmur.`]
+    :low>=30?['mid',`Chmury niskie w promieniu 60 km: ${Math.round(low)}% – raczej płaty niż jednolite morze.`]
+    :['bad',`Mało chmur niskich w okolicy (${Math.round(low)}%).`]);
+  box.querySelector('.anote').innerHTML=li.map(([c,t])=>`<p class="an ${c}">${t}</p>`).join('')+'<p class="why">Dane: model najlepszy dla regionu (Open-Meteo), siatka 81 punktów. Pomarańczowy klin – kierunek słońca.</p>';
+}
+async function openArea(box){
+  box.innerHTML='<div class="status" style="padding:10px"><span class="msg">Pobieram chmury z 81 punktów wokół…</span></div>';
+  try{await loadArea();box.innerHTML=areaInner(state.days[+box.dataset.i],+box.dataset.i);requestAnimationFrame(()=>paintArea(box))}
+  catch(e){box.innerHTML='<div class="msg err">Nie udało się pobrać danych okolicy. Spróbuj ponownie.</div><button type="button" class="ghost aload">Spróbuj ponownie</button>'}
+}
+function areaBlock(i){
+  const ready=state.area&&state.area.key===apprKey(state.loc);
+  return`<h3 class="dsec">🧭 Widok z góry – chmury w okolicy</h3><div class="area" data-i="${i}" data-off="0" data-layer="all">${ready?areaInner(state.days[i],i):'<button type="button" class="ghost aload">Pokaż chmury w promieniu 160 km</button>'}</div>`;
+}
+
 function detailHTML(day,i){
   const summit=state.loc.elev,f=x=>x==null?'–':Math.round(x),ev=state.mode==='sunrise'?'wschodu':'zachodu',a=day.agg,label=state.mode==='sunrise'?'Wschód':'Zachód';
   const agree=a.spread<=15?'modele zgodne':a.spread<=30?'modele częściowo zgodne':'modele się rozjeżdżają';
@@ -693,7 +790,8 @@ function detailHTML(day,i){
   ${statsHTML(a)}
   <p class="why">${explain(a)}</p>
   ${trendHTML(day,i)}
-  <div><span class="badge">${a.n}/${MODELS.length} modeli</span><span class="badge">${agree}</span></div>
+  ${areaBlock(i)}
+  <div style="margin-top:12px"><span class="badge">${a.n}/${MODELS.length} modeli</span><span class="badge">${agree}</span></div>
   <h3 class="dsec">☁️ Chmury wg wysokości</h3>
   <p class="why" style="margin-top:0">Zachmurzenie wg wysokości w chwili ${ev} (średnia z modeli) – paski to % pokrycia nieba warstwą na danej wysokości:</p>
   <div class="profile">${profileSVG(day,summit)}</div>
@@ -751,9 +849,19 @@ function toggleDay(c){
   const d=c.querySelector('.din');
   const first=!d.innerHTML;
   if(first)d.innerHTML=detailHTML(state.days[+c.dataset.i],+c.dataset.i);
-  requestAnimationFrame(()=>{const open=c.classList.toggle('open');c.querySelector('.dh').setAttribute('aria-expanded',open);if(first)animateIn(d)});
+  requestAnimationFrame(()=>{const open=c.classList.toggle('open');c.querySelector('.dh').setAttribute('aria-expanded',open);if(first){animateIn(d);const ab=d.querySelector('.area');if(ab&&ab.querySelector('.aview'))paintArea(ab)}});
 }
 $('#out').addEventListener('click',e=>{
+  const box=e.target.closest('.area');
+  if(box){
+    if(e.target.closest('.aload')){openArea(box);return}
+    const b=e.target.closest('.amini button');
+    if(b){const g=b.parentNode.dataset.g;box.dataset[g]=b.dataset.v;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));paintArea(box);return}
+    const sec=e.target.closest('.sec');
+    if(sec){const k=+sec.dataset.k,p=state.area.pts[k];box.querySelectorAll('.sec.sel').forEach(x=>x.classList.remove('sel'));sec.classList.add('sel');
+      box.querySelector('.apick').textContent=(p.ring<0?'Twoje miejsce':`${dirName(p.dir*22.5)}, ok. ${RINGS[p.ring]} km`)+` – ${LAYERNAME[box.dataset.layer].toLowerCase()}: ${sec.dataset.val===''?'brak danych':sec.dataset.val+'%'}`;return}
+    return;
+  }
   if(!e.target.closest('.dh'))return;const c=e.target.closest('.day[data-i]');if(c)toggleDay(c);
 });
 $('#out').addEventListener('keydown',e=>{
