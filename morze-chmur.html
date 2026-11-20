@@ -129,9 +129,14 @@ button.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--l
 .ta{opacity:0;animation:fadeIn .8s ease forwards;animation-delay:calc(var(--i)*70ms + 700ms)}
 @keyframes draw{to{stroke-dashoffset:0}}
 @keyframes fadeIn{to{opacity:1}}
-.more{width:100%;margin-top:10px;min-height:42px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px}
-.more .chev{width:18px;height:18px}
-.day.open .more .chev{transform:rotate(180deg)}
+.vd{margin-top:1px;line-height:1.3}
+.vd .verdict{font-size:17px}
+.what{font-size:14px;color:#c7d3ec}
+.star{color:var(--accent)}
+.opn{flex:none;display:flex;flex-direction:column;align-items:center;font-size:11px;color:var(--muted);gap:0}
+.dsec{font-size:15px;margin:16px 0 6px;font-weight:600}
+.ext{display:block;margin-top:12px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);text-decoration:none;font-size:14px}
+.day{padding:12px 14px}
 .badge{display:inline-block;font-size:12px;padding:2px 9px;border-radius:20px;background:var(--panel2);color:var(--muted);border:1px solid var(--line);margin:0 6px 4px 0}
 .badge.best{background:rgba(255,180,84,.14);color:var(--accent);border-color:rgba(255,180,84,.4)}
 .why{font-size:14px;color:#c7d3ec;margin:6px 0 0}
@@ -574,24 +579,15 @@ function render(){
     const a=d.agg,date=fmtDate(d.date),time=d.time.slice(11,16).replace(/^0/,'');
     if(!a)return`<article class="day" style="--i:${i};--c:var(--muted)"><div class="dh"><div class="score"><svg viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="28"/></svg><span class="num">–</span></div><div class="dt"><b>${esc(date)}</b><div class="s">${label.toLowerCase()} ${time}${tz} · brak danych modeli dla tego terminu</div></div></div></article>`;
     const[v1,v2]=verdict(a.combined,a);
-    const agree=a.spread<=15?'modele zgodne':a.spread<=30?'modele częściowo zgodne':'modele się rozjeżdżają';
     return`<article class="day${i===bi?' top':''}" data-i="${i}" style="--i:${i};--c:${col(a.combined)}">
       <div class="dh" role="button" tabindex="0" aria-expanded="false">
         <div class="score"><svg viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="28"/><circle class="val" cx="32" cy="32" r="28" data-v="${a.combined}"/></svg><span class="num" data-v="${a.combined}">0</span></div>
-        <div class="dt"><b>${esc(date)}</b><div class="s">${label.toLowerCase()} słońca ${time}${tz} · <span class="verdict">${v1}</span> – ${v2}</div></div>
-        ${CHEV}
+        <div class="dt"><b>${esc(date)}</b><div class="s">${label.toLowerCase()} ${time}${tz}${i===bi?' · <span class="star">★ najlepszy</span>':''}</div><div class="vd"><span class="verdict">${v1}</span> <span class="what">${v2}</span></div></div>
+        <span class="opn"><span>Analiza</span>${CHEV}</span>
       </div>
-      <div class="bars"><div>Morze chmur <b>${a.sea}</b>/100${bar(a.sea)}</div><div>${label} słońca <b>${a.sun}</b>/100${bar(a.sun)}</div></div>
-      ${timesHTML(d)}
-      ${statsHTML(a)}
-      ${trendHTML(d,i)}
-      <div>${i===bi?'<span class="badge best">★ najlepszy termin</span>':''}<span class="badge">${a.n}/${MODELS.length} modeli</span><span class="badge">${agree}</span></div>
-      <p class="why">${explain(a)}</p>
-      <button type="button" class="ghost more">☁️ <span>Chmury wg wysokości</span> ${CHEV}</button>
-      <div class="detail"><div class="clip"><div class="din"></div></div></div>
+      <div class="detail"><div class="clip"><div class="din" style="--i:0"></div></div></div>
     </article>`}).join('');
-  animateIn(out);
-  const top=out.querySelector('.day.top');if(top)setTimeout(()=>{if(!top.classList.contains('open'))toggleDay(top)},reduceMotion()?0:900);
+  state.best=bi;animateIn(out);
 }
 const ARROW=az=>`<svg class="arr" viewBox="0 0 24 24" style="transform:rotate(${Math.round(az)}deg)" aria-hidden="true"><path d="M12 3l5 12-5-3-5 3z" fill="currentColor"/></svg>`;
 function timesHTML(d){
@@ -688,13 +684,23 @@ function profileSVG(day,summit){
   return s;
 }
 
-function detailHTML(day){
-  const summit=state.loc.elev,f=x=>x==null?'–':Math.round(x),ev=state.mode==='sunrise'?'wschodu':'zachodu';
-  return`<p class="why" style="margin-top:0">Zachmurzenie wg wysokości w chwili ${ev} (średnia z modeli) – paski to % pokrycia nieba warstwą na danej wysokości:</p>
+function detailHTML(day,i){
+  const summit=state.loc.elev,f=x=>x==null?'–':Math.round(x),ev=state.mode==='sunrise'?'wschodu':'zachodu',a=day.agg,label=state.mode==='sunrise'?'Wschód':'Zachód';
+  const agree=a.spread<=15?'modele zgodne':a.spread<=30?'modele częściowo zgodne':'modele się rozjeżdżają';
+  const l=state.loc,co=`https://clearoutside.com/forecast/${l.lat.toFixed(2)}/${l.lon.toFixed(2)}`;
+  return`<div class="bars"><div>Morze chmur <b>${a.sea}</b>/100${bar(a.sea)}</div><div>${label} – kolory nieba <b>${a.sun}</b>/100${bar(a.sun)}</div></div>
+  ${timesHTML(day)}
+  ${statsHTML(a)}
+  <p class="why">${explain(a)}</p>
+  ${trendHTML(day,i)}
+  <div><span class="badge">${a.n}/${MODELS.length} modeli</span><span class="badge">${agree}</span></div>
+  <h3 class="dsec">☁️ Chmury wg wysokości</h3>
+  <p class="why" style="margin-top:0">Zachmurzenie wg wysokości w chwili ${ev} (średnia z modeli) – paski to % pokrycia nieba warstwą na danej wysokości:</p>
   <div class="profile">${profileSVG(day,summit)}</div>
   <div class="tw"><table><tr><th>Model</th><th>Morze</th><th>${state.mode==='sunrise'?'Wschód':'Zachód'}</th><th>Razem</th><th>Niskie</th><th>Średnie</th><th>Wysokie</th><th>Wiatr</th></tr>
   ${day.per.map(p=>p.r?`<tr><td>${esc(p.name)}</td><td>${p.r.sea}</td><td>${p.r.sun}</td><td><b>${p.r.combined}</b></td><td>${f(p.r.ccLow)}%</td><td>${f(p.r.ccMid)}%</td><td>${f(p.r.ccHigh)}%</td><td>${f(p.r.wS!=null?p.r.wS:p.r.wind)} km/h</td></tr>`:`<tr><td>${esc(p.name)}</td><td colspan="7" style="color:var(--muted);text-align:left">brak danych</td></tr>`).join('')}</table></div>
-  <p class="why">„Razem” to lepsza z dwóch szans (morze chmur albo kolory nieba), z bonusem, gdy obie są dobre. Kolumny chmur: niskie / średnie / wysokie w %.</p>`;
+  <p class="why">„Razem” to lepsza z dwóch szans (morze chmur albo kolory nieba), z bonusem, gdy obie są dobre. Kolumny chmur: niskie / średnie / wysokie w %.</p>
+  <a class="ext" href="${co}" target="_blank" rel="noopener">🔭 Porównaj w Clear Outside (godzinowo: chmury, mgła, wilgotność) ↗</a>`;
 }
 
 /* ---------- zdarzenia ---------- */
@@ -743,11 +749,12 @@ document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>{if(state.mode
 
 function toggleDay(c){
   const d=c.querySelector('.din');
-  if(!d.innerHTML)d.innerHTML=detailHTML(state.days[+c.dataset.i]);
-  requestAnimationFrame(()=>{const open=c.classList.toggle('open');c.querySelector('.dh').setAttribute('aria-expanded',open)});
+  const first=!d.innerHTML;
+  if(first)d.innerHTML=detailHTML(state.days[+c.dataset.i],+c.dataset.i);
+  requestAnimationFrame(()=>{const open=c.classList.toggle('open');c.querySelector('.dh').setAttribute('aria-expanded',open);if(first)animateIn(d)});
 }
 $('#out').addEventListener('click',e=>{
-  const c=e.target.closest('.day[data-i]');if(!c||e.target.closest('.din'))return;toggleDay(c);
+  if(!e.target.closest('.dh'))return;const c=e.target.closest('.day[data-i]');if(c)toggleDay(c);
 });
 $('#out').addEventListener('keydown',e=>{
   if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('dh')){e.preventDefault();toggleDay(e.target.closest('.day'))}
