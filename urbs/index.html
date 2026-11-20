@@ -59,6 +59,12 @@ button{font-family:inherit;color:inherit}
 #info ul{margin:4px 0 0;padding-left:18px;font-size:13px;line-height:1.45}
 #info li{margin:4px 0}
 #info .x{position:absolute;top:8px;right:8px;width:30px;height:30px;border:0;border-radius:10px;background:#efe4d2;font-size:18px;cursor:pointer}
+#labels{position:fixed;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+.lbl{position:absolute;left:0;top:0;pointer-events:auto;border:0;background:rgba(252,247,238,.9);color:var(--ink);font-weight:800;font-size:12px;padding:3px 9px;border-radius:9px;box-shadow:0 2px 8px rgba(80,50,20,.22);white-space:nowrap;cursor:pointer;font-family:Nunito,sans-serif}
+.lbl::after{content:'';position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-top-color:rgba(252,247,238,.9);border-bottom:0}
+#labels.small .lbl{font-size:10px;padding:2px 6px;opacity:.9}
+#info .surv{height:7px;border-radius:5px;background:#eadfcc;margin:6px 0 2px;overflow:hidden}
+#info .surv span{display:block;height:100%;background:linear-gradient(90deg,#b98c5a,#c8643b)}
 #toast{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) scale(.9);background:rgba(60,45,32,.88);color:#fff;padding:10px 18px;border-radius:14px;font-weight:700;opacity:0;pointer-events:none;transition:all .2s;z-index:20}
 #toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
 #modal{position:fixed;inset:0;background:rgba(60,40,20,.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:14px}
@@ -96,15 +102,20 @@ label.ck{display:flex;gap:8px;align-items:center;font-size:14px;margin:5px 0;cur
 <body>
 <canvas id="c" tabindex="0"></canvas>
 <div id="vig"></div>
+<div id="labels"></div>
 
 <div id="topbar">
   <div class="left">
     <div class="brand"><div class="logo">URBS</div><span class="sub">zbuduj swój Rzym</span></div>
     <div class="pill" id="sun"><span>🌅</span><input type="range" id="time" min="0" max="1" step="0.001" value="0.36" aria-label="Pora dnia"><span>🌇</span></div>
     <div class="pill" id="stats">👥 0</div>
+    <div class="pill" id="era">🏛️ Starożytność</div>
   </div>
   <div class="tbtns">
     <button class="tbtn" id="bMenu" title="Menu">☰</button>
+    <button class="tbtn" id="bToday" title="Pokaż, co zostało dziś">⏳</button>
+    <button class="tbtn" id="bLabels" title="Podpisy budowli">🏷️</button>
+    <button class="tbtn" id="bLegacy" title="Dziedzictwo Rzymian">🏗️</button>
     <button class="tbtn" id="bUndo" title="Cofnij (Ctrl+Z)">↶</button>
     <button class="tbtn" id="bRotL" title="Obróć widok (Q)">⟲</button>
     <button class="tbtn" id="bRotR" title="Obróć widok (E)">⟳</button>
@@ -577,6 +588,43 @@ D.diocletian=(b,r)=>{
   garden(b,r,W,Dd,(x,z)=>(Math.abs(x)<4.8&&z>-3.9&&z<1.9) || Math.hypot(x,z-(Dd/2))<2.6 || (Math.abs(x)>4.5&&Math.abs(Math.abs(z)-3.9)<0.7));
 };
 
+/* ---- budowle do makiety Rzymu ---- */
+D.palace=(b,r)=>{
+  const W='#efdcbc', W2='#e8cba4';
+  b.box(7.9,0.28,5.9,0,0,0,STONE);
+  b.box(7.9,0.9,0.5,0,0.28,-2.7,W2); b.roofX(8.0,0.22,0.6,0,1.18,-2.7,ROOF);
+  // Domus Flavia: sala tronowa i perystyl z fontanną
+  b.box(2.6,1.7,1.8,-2.55,0.28,-1.5,W); b.roofX(2.8,0.48,2.0,-2.55,1.98,-1.5,ROOF);
+  for(let k=0;k<5;k++) b.column(-3.6+k*0.52,-0.5,0.28,1.0,0.05,MARBLE);
+  b.box(2.6,0.03,2.0,-2.55,0.28,0.85,'#e9dfcc');
+  for(let k=0;k<6;k++){ const x=-3.7+k*0.46; b.column(x,0.0,0.28,0.7,0.04,MARBLE); b.column(x,1.75,0.28,0.7,0.04,MARBLE); }
+  b.box(2.6,0.05,0.25,-2.55,0.98,0.0,ROOF); b.box(2.6,0.05,0.25,-2.55,0.98,1.75,ROOF);
+  b.cyl(0.55,0.1,-2.55,0.28,0.85,MARBLE,8); b.cyl(0.48,0.11,-2.55,0.28,0.85,WATERC,8);
+  // Domus Augustana: bryła mieszkalna i dziedziniec z basenem
+  b.box(2.4,1.4,1.8,0.45,0.28,-1.5,W2); b.roofX(2.6,0.4,2.0,0.45,1.68,-1.5,ROOF);
+  windows(b,2.4,1.8,0.45,-1.5,0.95,4,3);
+  b.box(2.4,0.03,2.1,0.45,0.28,0.85,'#e9dfcc'); b.box(1.6,0.06,1.2,0.45,0.28,0.85,WATERC); b.box(0.5,0.09,0.5,0.45,0.28,0.85,MARBLE);
+  for(let k=0;k<6;k++){ const x=-0.7+k*0.46; b.column(x,-0.3,0.28,0.7,0.04,MARBLE); }
+  // „stadion” – ogród w kształcie toru
+  b.box(1.8,0.9,5.4,3.05,0.28,0,W2);
+  b.box(1.4,0.04,4.8,3.05,1.18,0,'#93c06a'); b.box(0.9,0.05,4.0,3.05,1.2,0,'#e6d7b5');
+  b.cypress(2.6,-2.0,0.5,1.18); b.cypress(3.5,-2.0,0.5,1.18); b.cypress(2.6,2.0,0.5,1.18); b.cypress(3.5,2.0,0.5,1.18);
+  // egzedra z widokiem na Circus Maximus
+  b.add(new THREE.CylinderGeometry(1.0,1.0,0.9,16,1,true,-Math.PI/2,Math.PI),W2,-1.0,0.73,2.9);
+  for(let k=0;k<7;k++){ const a=-Math.PI/2+(k+0.5)/7*Math.PI; b.column(-1.0+Math.sin(a)*0.9,2.9+Math.cos(a)*0.9,0.28,0.8,0.04,MARBLE); }
+};
+D.mausoleum=(b,r)=>{
+  b.cyl(1.85,0.75,0,0,0,TRAV,28); b.cyl(1.9,0.08,0,0.72,0,'#efe4cc',28);
+  b.cyl(1.55,0.35,0,0.8,0,'#7fae55',24); b.cyl(1.2,0.35,0,1.15,0,'#86b85e',22);
+  for(let k=0;k<14;k++){ const a=k/14*Math.PI*2; b.cypress(Math.cos(a)*1.4,Math.sin(a)*1.4,0.45,1.15); }
+  b.cyl(0.7,0.65,0,1.5,0,TRAV,18); b.cyl(0.74,0.06,0,2.12,0,'#efe4cc',18);
+  b.cyl(0.08,0.25,0,2.18,0,BRONZE,8); b.cyl(0.06,0.25,0,2.43,0,BRONZE,7); b.sph(0.06,0,2.74,0,BRONZE);
+  b.box(0.5,0.45,0.05,0,0,1.84,DARK);
+  for(const sx of [-1,1]){ b.box(0.18,0.1,0.18,sx*0.6,0,1.95,STONE); b.add(G.cone(4),'#d8c9a8',sx*0.6,0.1+0.45,1.95,0,Math.PI/4,0,0.07,0.9,0.07); }
+};
+D.pyramid=(b,r)=>{ b.box(1.9,0.12,1.9,0,0,0,STONE); b.pyr(1.7,2.3,0,0.12,0,'#f2ede2'); b.box(0.22,0.14,0.02,0,0.5,0.62,'#d9cfbc'); };
+D.trajanbaths=(b,r)=>D.caracalla(b,r);
+
 const DEFS={
   house:{name:'Kamienice',cat:'domy',w:1,d:1,v:18,pop:8,desc:'Maluj przeciągając — każdy dom jest trochę inny'},
   domus:{name:'Domus',cat:'domy',w:2,d:2,v:6,pop:12},
@@ -596,6 +644,10 @@ const DEFS={
   circus:{name:'Cyrk',cat:'rozr',w:5,d:16,v:1},
   theatre:{name:'Teatr',cat:'rozr',w:7,d:6,v:1},
   barracks:{name:'Koszary',cat:'woj',w:5,d:5,v:1,pop:480},
+  palace:{name:'Pałac cesarski',cat:'publ',w:8,d:6,v:1,pop:300},
+  trajanbaths:{name:'Termy Trajana',cat:'publ',w:9,d:9,v:1},
+  mausoleum:{name:'Mauzoleum',cat:'ozd',w:4,d:4,v:1,decor:true},
+  pyramid:{name:'Piramida',cat:'ozd',w:2,d:2,v:1,decor:true},
   arch:{name:'Łuk triumfalny',cat:'ozd',w:1,d:1,v:1,onRoad:true,decor:true},
   fountain:{name:'Fontanna',cat:'ozd',w:1,d:1,v:1,decor:true},
   statue:{name:'Posąg',cat:'ozd',w:1,d:1,v:4,decor:true},
@@ -802,6 +854,7 @@ function processLines(){
     m.position.set(wx(i),0,wx(j));
     if(ex) lineGroup.remove(ex); else { m.scale.set(1,0.01,1); growing.push({m,t:0}); }
     lineGroup.add(m); lineMeshes.set(id,m);
+    if(todayMode){ lineToday(m); m.userData.ts=m.userData.target; m.scale.y=m.userData.ts; const gi=growing.findIndex(g=>g.m===m); if(gi>=0) growing.splice(gi,1); }
   }
   dirtyLines.clear();
 }
@@ -819,14 +872,16 @@ function canPlace(type,x,z,rot){
   }
   return true;
 }
-function addBuilding(type,x,z,rot,seed,anim=true){
+function addBuilding(type,x,z,rot,seed,anim=true,lm=null){
   const def=DEFS[type]; const [fw,fd]=fpSize(def,rot); const id=nextId++;
   for(let j=z;j<z+fd;j++) for(let i=x;i<x+fw;i++) bld[I(i,j)]=id;
   const m=new THREE.Mesh(getGeom(type,seed),bMat); m.castShadow=m.receiveShadow=true;
   m.position.set(x+fw/2-N/2,0,z+fd/2-N/2); m.rotation.y=rot*Math.PI/2;
   if(anim){ m.scale.set(0.01,0.01,0.01); growing.push({m,t:0}); }
   buildGroup.add(m);
-  buildings.set(id,{id,type,x,z,rot,seed,mesh:m});
+  buildings.set(id,{id,type,x,z,rot,seed,mesh:m,lm:lm||null,ts:1});
+  if(todayMode){ applyTodayTo(buildings.get(id),true); }
+  labelsDirty=true;
   dirtyTerrain=true; dirtyRoads=true; dirtySave=true;
   return id;
 }
@@ -834,7 +889,7 @@ function removeBuilding(id){
   const b=buildings.get(id); if(!b) return;
   const [fw,fd]=fpSize(DEFS[b.type],b.rot);
   for(let j=b.z;j<b.z+fd;j++) for(let i=b.x;i<b.x+fw;i++) if(inb(i,j)&&bld[I(i,j)]===id) bld[I(i,j)]=0;
-  buildGroup.remove(b.mesh); buildings.delete(id);
+  buildGroup.remove(b.mesh); buildings.delete(id); labelsDirty=true;
   chariots.delete(id);
   dirtyTerrain=true; dirtyRoads=true; dirtySave=true;
 }
@@ -864,7 +919,7 @@ function clearCell(i,j){ const id=I(i,j); if(bld[id]) removeBuilding(bld[id]); s
    ========================================================= */
 function rle(a){ const out=[]; let prev=a[0],c=0; for(let k=0;k<a.length;k++){ if(a[k]===prev) c++; else { out.push(prev+'*'+c); prev=a[k]; c=1; } } out.push(prev+'*'+c); return out.join(','); }
 function unrle(s,n){ const a=new Uint8Array(n); let p=0; for(const part of s.split(',')){ const [v,c]=part.split('*').map(Number); a.fill(v,p,p+c); p+=c; } return a; }
-function serialize(){ const bl=[]; for(const b of buildings.values()) bl.push([b.type,b.x,b.z,b.rot,b.seed]); return JSON.stringify({v:1,N,t:rle(terrain),r:rle(road),l:rle(line),b:bl}); }
+function serialize(){ const bl=[]; for(const b of buildings.values()) bl.push(b.lm?[b.type,b.x,b.z,b.rot,b.seed,b.lm]:[b.type,b.x,b.z,b.rot,b.seed]); return JSON.stringify({v:2,N,t:rle(terrain),r:rle(road),l:rle(line),b:bl}); }
 function clearWorld(){
   for(const b of buildings.values()) buildGroup.remove(b.mesh); buildings.clear();
   for(const m of lineMeshes.values()) lineGroup.remove(m); lineMeshes.clear();
@@ -875,14 +930,15 @@ function deserialize(str){
   const o=JSON.parse(str); if(!o||!o.N) throw new Error('zły zapis');
   if(o.N!==N) resizeWorld(o.N); else { clearWorld(); alloc(o.N); }
   terrain.set(unrle(o.t,N*N)); road.set(unrle(o.r,N*N)); line.set(unrle(o.l,N*N));
-  for(const [type,x,z,rot,seed] of o.b){ if(!DEFS[type]) continue; addBuilding(type,x,z,rot,seed,false); }
+  for(const [type,x,z,rot,seed,lm] of o.b){ if(!DEFS[type]) continue; addBuilding(type,x,z,rot,seed,false,lm||null); }
+  if(todayMode) for(let id=0;id<N*N;id++) if(line[id]) dirtyLines.add(id);
   for(let id=0;id<N*N;id++) if(line[id]) dirtyLines.add(id);
   dirtyTerrain=true; dirtyRoads=true; dirtySave=true;
 }
 const undoStack=[];
 function pushUndo(snap){ undoStack.push(snap||serialize()); if(undoStack.length>40) undoStack.shift(); }
 function undo(){ if(!undoStack.length){ toast('Nie ma czego cofnąć'); return; } deserialize(undoStack.pop()); sfx('thud'); }
-function autosave(){ if(!dirtySave) return; dirtySave=false; try{ localStorage.setItem('urbs-save-v1',serialize()); }catch(e){} }
+function autosave(){ if(!dirtySave) return; dirtySave=false; try{ localStorage.setItem('urbs-save-v2',serialize()); }catch(e){} }
 
 /* =========================================================
    Generatory: castrum i krajobraz
@@ -903,9 +959,9 @@ function tryPlaceIn(type,bx0,bz0,bw,bd,center=true){
   if(!cand.length) return false;
   const c=cand.find(c=>c.f)||cand[0]; addBuilding(type,c.x,c.z,c.r,Math.floor(rnd()*1e6),false); return true;
 }
-function fillHouses(bx0,bz0,bw,bd){
+function fillHouses(bx0,bz0,bw,bd,dens=1){
   for(let j=bz0;j<bz0+bd;j++) for(let i=bx0;i<bx0+bw;i++){
-    if(bld[I(i,j)]) continue; const p=rnd();
+    if(!inb(i,j)||bld[I(i,j)]) continue; if(dens<1&&rnd()>dens) continue; const p=rnd();
     if(p<0.3 && i+1<bx0+bw && j+1<bz0+bd){ const r=bestRot('insula',i,j); if(r>=0){ addBuilding('insula',i,j,r,Math.floor(rnd()*1e6),false); continue; } }
     if(p<0.55 && i+1<bx0+bw && j+1<bz0+bd){ const r=bestRot('domus',i,j); if(r>=0){ addBuilding('domus',i,j,r,Math.floor(rnd()*1e6),false); continue; } }
     const q=rnd(); let type=q<0.08?'taberna':q<0.11?'cypress':q<0.13?'fountain':'house';
@@ -942,6 +998,92 @@ function landscape(seed){
   for(let k=0;k<7;k++){ const w=3+Math.floor(rnd()*4), d=4+Math.floor(rnd()*4), x=Math.floor(rnd()*(N-w)), z=Math.floor(rnd()*(N-d));
     for(let j=z;j<z+d;j++) for(let i=x;i<x+w;i++) if(terrain[I(i,j)]!==2) setTerrain(i,j,4); }
 }
+/* =========================================================
+   Makieta: Rzym za Trajana (ok. 117 n.e.)
+   ========================================================= */
+function romeTrajan(){
+  resizeWorld(64);
+  const TR_=(x0,z0,w,d,v)=>{ for(let j=z0;j<z0+d;j++) for(let i=x0;i<x0+w;i++) if(inb(i,j)&&terrain[I(i,j)]!==2) setTerrain(i,j,v); };
+  const R=(a,b,v=1)=>{ for(const [i,j] of lPath({i:a[0],j:a[1]},{i:b[0],j:b[1]})) if(!bld[I(i,j)]&&!(road[I(i,j)]===2&&v===1)) setRoad(i,j,v); };
+  const L=(a,b,v)=>{ for(const [i,j] of lPath({i:a[0],j:a[1]},{i:b[0],j:b[1]})) if(!bld[I(i,j)]) setLine(i,j,v); };
+  const P=(type,x,z,rot,lm)=>{ for(let r=0;r<=4;r++) for(let dz=-r;dz<=r;dz++) for(let dx=-r;dx<=r;dx++){ if(Math.max(Math.abs(dx),Math.abs(dz))!==r) continue; if(canPlace(type,x+dx,z+dz,rot)){ addBuilding(type,x+dx,z+dz,rot,Math.floor(rnd()*1e6),false,lm); return true; } } console.warn('nie zmieszczono',lm||type); return false; };
+  // ogrody (horti) i wzgórza porośnięte drzewami
+  for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const n=vnoise(i/4.5,j/4.5,11);
+    const hort=(i<7&&j<14)||(i>=24&&i<41&&j<8)||(i<3&&j>=19&&j<33)||(i>=41&&i<52&&j<11);
+    if(hort&&n>0.33) setTerrain(i,j,3); }
+  TR_(54,47,10,8,4); TR_(0,60,8,4,4); TR_(57,33,7,7,4);
+  // Tyber
+  const pts=[[24,0],[16,6],[9,14],[6,22],[7,30],[12,37],[15,42],[15,48],[12,56],[11,63]];
+  for(let k=0;k<pts.length-1;k++){ const [x0,z0]=pts[k],[x1,z1]=pts[k+1]; const st=Math.max(Math.abs(x1-x0),Math.abs(z1-z0))*3;
+    for(let s=0;s<=st;s++){ const x=x0+(x1-x0)*s/st, z=Math.round(z0+(z1-z0)*s/st); for(let dx=-1;dx<=1;dx++){ const i=Math.round(x)+dx; if(inb(i,z)) setTerrain(i,z,2); } } }
+  for(let j=36;j<=42;j++) for(let i=11;i<=15;i++) setTerrain(i,j,2);
+  for(let j=37;j<=41;j++) for(let i=13;i<=14;i++) setTerrain(i,j,0);                 // Wyspa Tyberyjska
+  // zabudowane dzielnice
+  TR_(36,13,12,21,1); TR_(0,33,10,27,1); TR_(14,57,24,7,1); TR_(26,9,14,10,1); TR_(39,44,25,12,1); TR_(52,13,12,8,1);
+  TR_(28,33,10,12,1); TR_(21,19,16,14,1);
+  // drogi
+  R([20,0],[20,30],2);                         // Via Lata / Via Flaminia
+  R([2,16],[19,16]); R([18,16],[18,33]);       // most Nerona i Pole Marsowe
+  R([20,30],[27,30]); R([27,30],[27,44]);
+  R([8,44],[38,44]);                           // most Emiliusza i Vicus Tuscus
+  R([9,41],[16,41]); R([16,41],[16,44]);       // most Fabrycjusza przez wyspę
+  R([35,40],[40,40],2);                        // Via Sacra
+  R([38,34],[50,34]); R([38,43],[51,43]); R([50,34],[50,43]);
+  R([38,34],[38,57]);
+  R([38,57],[63,57],2);                        // Via Appia
+  R([16,58],[37,58]); R([22,57],[22,63]); R([30,58],[30,63]);
+  for(const x of [38,42,46]) R([x,13],[x,33]);
+  for(const z of [17,21,25,29]) R([36,z],[47,z]);
+  R([42,6],[42,13]); R([47,21],[58,21]); R([58,10],[58,21]);
+  R([4,32],[4,61]); for(const z of [38,46,52]) R([0,z],[9,z]); R([4,41],[9,41]);
+  R([26,9],[40,9]); R([33,9],[33,18]);
+  R([40,47],[63,47]); R([52,47],[52,56]);
+  // akwedukty i mur
+  L([63,45],[37,45],2);                        // Aqua Claudia i łuki Nerona aż na Palatyn
+  L([63,30],[57,30],2);                        // woda dla Term Trajana
+  L([0,26],[5,26],2); L([5,26],[5,32],2);      // Aqua Traiana (109 n.e.) na Zatybrze
+  L([34,12],[52,12],1); L([52,12],[52,20],1);  // fragment Muru Serwiańskiego
+  L([16,56],[16,62],1);
+  // budowle
+  P('mausoleum',16,8,0,'mausAug');
+  P('pantheon',13,17,2,'pantheon');
+  P('baths',12,22,0,'agrippa');
+  P('theatre',11,28,0,'pompey');
+  P('column',24,19,0,'trajanColumn');
+  P('basilica',21,20,1,'ulpia');
+  P('forum',22,24,0,'trajanForum');
+  P('market',29,20,0,'trajanMarkets');
+  P('temple',29,24,0,'marsUltor');
+  P('temple',23,31,0,'capitolium');
+  P('forum',29,34,0,'forumRomanum');
+  P('basilica',28,30,1,'aemilia');
+  P('curia',35,31,0,'curiaJulia');
+  P('temple',35,34,0,'castor');
+  P('basilica',28,40,1,'julia');
+  P('arch',38,40,1,'archTitus');
+  P('colosseum',41,35,0,'colosseum');
+  P('barracks',51,37,0,'ludus');
+  P('palace',29,46,0,'palatium');
+  P('circus',20,52,3,'circusMax');
+  P('theatre',16,35,0,'marcellus');
+  P('curia',13,37,0,'aesculapius');
+  P('pyramid',24,60,0,'cestius');
+  P('barracks',56,4,0,'castraPraetoria');
+  P('trajanbaths',48,23,0,'trajanBaths');
+  // groby i cyprysy przy Via Appia
+  for(let x=39;x<64;x+=2){ if(canPlace('cypress',x,56,0)) addBuilding('cypress',x,56,0,Math.floor(rnd()*100),false); if(x%4===1&&canPlace('statue',x,58,0)) addBuilding('statue',x,58,2,Math.floor(rnd()*100),false); else if(canPlace('cypress',x,58,0)) addBuilding('cypress',x,58,0,Math.floor(rnd()*100),false); }
+  // dzielnice mieszkalne
+  fillHouses(36,13,12,21,0.9);   // Subura
+  fillHouses(0,33,10,28,0.7);    // Zatybrze
+  fillHouses(14,57,24,7,0.7);    // Awentyn
+  fillHouses(26,9,14,10,0.45);   // Kwirynał
+  fillHouses(39,44,25,12,0.3);   // Celius
+  fillHouses(52,13,12,8,0.5);    // Eskwilin
+  fillHouses(8,0,12,9,0.25);     // północ Pola Marsowego
+  undoStack.length=0;
+  controls.target.set(wx(36),0,wx(40)); camera.position.set(wx(36)+15,19,wx(40)+21); controls.update();
+}
+
 function defaultWorld(){
   resizeWorld(48);
   const seed=Math.floor(rnd()*1000);
@@ -988,7 +1130,7 @@ const SKINS=['#e9c19c','#d9a97c','#c58c62','#f0cfae','#b07a52'];
 function spawnPed(){
   if(!roadList.length) return; const src=doorList.length&&rnd()<0.8?pickArr(doorList):pickArr(roadList);
   agents.push({kind:'ped',ax:src.i,az:src.j,bx:src.i,bz:src.j,t:1,speed:0.32+rnd()*0.26,lane:(rnd()<0.5?-1:1)*(0.1+rnd()*0.24),
-    col:pickArr(TUNICS),skin:pickArr(SKINS),sc:rnd()<0.12?0.72:0.95+rnd()*0.12,carry:rnd()<0.2?pickArr(['#b86a3c','#d9b24c','#c9a36b']):null,
+    col:pickArr(TUNICS),mcol:pickArr(['#e8433d','#2f7fd8','#f2c230','#28a36b','#ff7f50','#7b5cd6','#222831','#f4f4f4','#ff5fa2','#35b6c9']),skin:pickArr(SKINS),sc:rnd()<0.12?0.72:0.95+rnd()*0.12,carry:rnd()<0.2?pickArr(['#b86a3c','#d9b24c','#c9a36b']):null,
     life:25+rnd()*70,ph:rnd()*6,pause:0,hx:0,hz:1,init:false,rx:0,rz:0,ry:0});
 }
 function spawnCart(){
@@ -1068,13 +1210,13 @@ function updateAgents(dt,time){
   if(dirtyRoads){ rebuildRoadLists(); dirtyRoads=false; }
   let peds=0, carts=0; for(const a of agents) a.kind==='ped'?peds++:carts++;
   const pedT=peopleOn&&roadList.length?Math.min(MAXPED,Math.round(roadList.length*0.4+buildings.size*1.1)):0;
-  const cartT=peopleOn?Math.min(MAXCART,Math.floor(wideList.length/6)):0;
+  const cartT=peopleOn&&!todayMode?Math.min(MAXCART,Math.floor(wideList.length/6)):0;
   spawnAcc+=dt; let guard=0;
   while(spawnAcc>0.06 && guard++<4){ spawnAcc-=0.06; if(peds<pedT){ spawnPed(); peds++; } if(carts<cartT){ spawnCart(); carts++; } }
   if(spawnAcc>1) spawnAcc=0;
   if(peds>pedT+8){ for(const a of agents) if(a.kind==='ped'&&a.life>0&&rnd()<0.05) a.life=0; }
   let bc=0; for(const b of buildings.values()) if(b.type==='barracks') bc++;
-  const patT=peopleOn&&roadList.length?Math.min(4,bc):0;
+  const patT=peopleOn&&roadList.length&&!todayMode?Math.min(4,bc):0;
   while(patrols.length<patT && roadList.length){ spawnPatrol(); }
   while(patrols.length>patT) patrols.pop();
   for(let k=agents.length-1;k>=0;k--){ const a=agents[k]; if(!stepAgent(a,dt)||(!peopleOn&&a.kind==='cart')){ agents.splice(k,1); } }
@@ -1085,7 +1227,7 @@ function updateAgents(dt,time){
   // render
   for(const k in PP) cnt[k]=0;
   for(const a of agents){
-    if(a.kind==='ped') person(a.rx,a.y,a.rz,a.ry,a.sc,a.col,a.skin,a.ph,a.carry,false);
+    if(a.kind==='ped') person(a.rx,a.y,a.rz,a.ry,a.sc,todayMode?a.mcol:a.col,a.skin,a.ph,todayMode?null:a.carry,false);
     else { parent(a.rx,a.y,a.rz,a.ry,1); if(cnt.cart>=CCAP) continue; put('cart',WOOD); put('cargo',a.col); put('wheel','#5a4030',offW1); put('wheel','#5a4030',offW2); put('ox',a.animal);
       _LM.copy(_PM).multiply(offCh); _AP.setFromMatrixPosition(_LM); person(_AP.x,_AP.y,_AP.z,a.ry,0.9,a.driver,a.skin,0,null,false); }
   }
@@ -1101,7 +1243,7 @@ function updateAgents(dt,time){
   }
   // rydwany w cyrkach
   for(const b of buildings.values()){
-    if(b.type!=='circus') continue;
+    if(b.type!=='circus'||todayMode) continue;
     let st=chariots.get(b.id); if(!st){ st=[0,1,2,3].map(k=>({s:-k*0.7,R:0.95+k*0.13,v:1.4+rnd()*0.3})); chariots.set(b.id,st); }
     const th=b.rot*Math.PI/2, c=Math.cos(th), s=Math.sin(th), cx=b.mesh.position.x, cz=b.mesh.position.z;
     st.forEach((ch,k)=>{ if(cnt.chariot>=HCAP) return; ch.v=1.45+Math.sin(time*0.6+k*1.7)*0.3; if(peopleOn) ch.s+=ch.v*dt;
@@ -1211,7 +1353,7 @@ function endPointer(e){
   if(camDown&&e.pointerId===camDown.id){ const cd=camDown; camDown=null;
     if(Math.hypot(e.clientX-cd.x,e.clientY-cd.y)<8&&performance.now()-cd.t<600&&pointers.size===0){ const c=cellAt(e);
       if(c&&c.inside){ const id=bld[I(c.i,c.j)]; let key=null;
-        if(id){ const b=buildings.get(id); key=b.type; pulses.push({m:b.mesh,t:0}); }
+        if(id){ const b=buildings.get(id); key=b.lm&&INFO[b.lm]?b.lm:b.type; pulses.push({m:b.mesh,t:0}); }
         else if(line[I(c.i,c.j)]) key=line[I(c.i,c.j)]===1?'l-wall':'l-aq';
         else if(road[I(c.i,c.j)]) key=road[I(c.i,c.j)]===2?'r-wide':'r-narrow';
         if(key&&INFO[key]){ showInfo(key); sfx('tick'); } else hideInfo(); } } }
@@ -1304,11 +1446,11 @@ const TOOLS=[
   {id:'l-aq',cat:'drogi',kind:'line',val:2,name:'Akwedukt',hint:'Przeciągnij, aby poprowadzić akwedukt (może iść nad drogą i wodą)'},
   {id:'b-house',cat:'domy',kind:'brush',type:'house',name:'Kamienice',hint:'Maluj kamienice przeciągając — każda jest trochę inna i zwraca się do ulicy'},
   ...['domus','insula','taberna','garden'].map(t=>({id:'b-'+t,cat:'domy',kind:'build',type:t})),
-  ...['forum','temple','pantheon','basilica','curia','market','baths','caracalla','diocletian'].map(t=>({id:'b-'+t,cat:'publ',kind:'build',type:t})),
+  ...['forum','temple','pantheon','basilica','curia','market','palace','baths','trajanbaths','caracalla','diocletian'].map(t=>({id:'b-'+t,cat:'publ',kind:'build',type:t})),
   ...['colosseum','circus','theatre'].map(t=>({id:'b-'+t,cat:'rozr',kind:'build',type:t})),
   {id:'b-barracks',cat:'woj',kind:'build',type:'barracks'},
   {id:'l-wall',cat:'woj',kind:'line',val:1,name:'Mur miejski',hint:'Przeciągnij, aby postawić mur. Mur na drodze zamienia się w bramę'},
-  ...['arch','fountain','statue','column','cypress','pine'].map(t=>({id:'b-'+t,cat:'ozd',kind:'build',type:t})),
+  ...['arch','fountain','statue','column','mausoleum','pyramid','cypress','pine'].map(t=>({id:'b-'+t,cat:'ozd',kind:'build',type:t})),
 ];
 for(const t of TOOLS) if(t.type&&!t.name) t.name=DEFS[t.type].name;
 const SPECIAL={camera:{id:'camera',kind:'camera',name:'Rozglądaj',emoji:'✋'},bulldoze:{id:'bulldoze',kind:'bulldoze',name:'Burzenie',emoji:'⛏️'}};
@@ -1352,6 +1494,9 @@ document.getElementById('bRotate').onclick=rotateBuilding;
 document.getElementById('bInfo').onclick=()=>{ const k=infoKeyFor(tool); if(infoKey===k) hideInfo(); else showInfo(k); };
 document.getElementById('bBrush').onclick=e=>{ brushSize=brushSize===1?3:1; e.currentTarget.textContent='Pędzel: '+brushSize; };
 document.getElementById('bUndo').onclick=undo;
+document.getElementById('bToday').onclick=()=>setToday(!todayMode);
+document.getElementById('bLabels').onclick=e=>{ labelsOn=!labelsOn; e.currentTarget.classList.toggle('off',!labelsOn); };
+document.getElementById('bLegacy').onclick=()=>{ if(infoKey==='legacy') hideInfo(); else showInfo('legacy'); };
 document.getElementById('bRotL').onclick=()=>rotateView(-1);
 document.getElementById('bRotR').onclick=()=>rotateView(1);
 function toggleGrid(){ gridOn=!gridOn; if(gridLines) gridLines.visible=gridOn; document.getElementById('bGrid').classList.toggle('off',!gridOn); }
@@ -1421,18 +1566,93 @@ function infoKeyFor(t){ if(!t) return null; if(t.type&&INFO[t.type]) return t.ty
 function showInfo(key){
   const d=INFO[key]; if(!d){ hideInfo(); return; }
   infoKey=key;
-  const name=DEFS[key]?.name||TOOLS.find(t=>t.id===key)?.name||'';
-  infoEl.innerHTML=`<button class="x" aria-label="Zamknij">×</button><div class="it">${name}</div>${d.era?`<div class="era">${d.era}</div>`:''}<p>${d.text}</p>${d.facts?.length?`<div class="dyk">Czy wiesz, że…</div><ul>${d.facts.map(f=>`<li>${f}</li>`).join('')}</ul>`:''}`;
+  const name=d.name||DEFS[key]?.name||TOOLS.find(t=>t.id===key)?.name||'';
+  infoEl.innerHTML=`<button class="x" aria-label="Zamknij">×</button><div class="it">${name}</div>${d.era?`<div class="era">${d.era}</div>`:''}<p>${d.text}</p>${d.facts?.length?`<div class="dyk">${key==='legacy'?'Co zawdzięczamy Rzymianom':key==='rome'?'Jak oglądać makietę':'Czy wiesz, że…'}</div><ul>${d.facts.map(f=>`<li>${f}</li>`).join('')}</ul>`:''}${d.today?`<div class="dyk today">🔗 Co zostało dziś</div>${d.surv!=null?`<div class="surv"><span style="width:${Math.round(d.surv*100)}%"></span></div>`:''}<p>${d.today}</p>`:''}${d.legacy?`<div class="dyk">🏗️ Dziedzictwo</div><p>${d.legacy}</p>`:''}`;
   infoEl.querySelector('.x').onclick=hideInfo;
   infoEl.classList.add('show'); infoEl.scrollTop=0;
 }
 function hideInfo(){ infoEl.classList.remove('show'); infoKey=null; }
+Object.assign(INFO,{
+  rome:{name:'Rzym za Trajana · ok. 117 n.e.',era:'Trajan panował w latach 98–117 n.e.',text:'Za Trajana imperium osiągnęło największy zasięg – od Brytanii po Mezopotamię. Rzym miał prawdopodobnie ok. miliona mieszkańców i był największym miastem świata zachodniego. To makieta poglądowa: dzielnice i budowle stoją we właściwym położeniu względem siebie, ale nie w skali.',
+    facts:['W trybie ✋ Rozglądaj kliknij dowolną budowlę – zobaczysz jej historię i to, co z niej zostało.','Przycisk ⏳ przenosi do czasów dzisiejszych: zobaczysz, czemu Forum to dziś „kupa kamieni”.','🏗️ Dziedzictwo – co zawdzięcza Rzymianom dzisiejsza inżynieria.','Tyber płynie z północy, okrąża Pole Marsowe i mija Wyspę Tyberyjską – na zachód od niego leży Zatybrze (Trastevere).']},
+  legacy:{name:'Rzymskie fundamenty dzisiejszej inżynierii',era:'',text:'Wiele rozwiązań, z których korzystamy na co dzień, Rzymianie dopracowali – albo wymyślili – dwa tysiące lat temu.',
+    facts:['<b>Beton.</b> Opus caementicium z popiołem wulkanicznym twardniał nawet pod wodą. Badania z 2023 r. pokazały, że grudki wapna w środku pozwalają mu samemu „zalepiać” rysy.',
+      '<b>Łuk, sklepienie i kopuła.</b> Pozwoliły przekryć ogromne wnętrza i budować mosty. Most Trajana na Dunaju (105 n.e.) miał ponad 1 km i przez ponad tysiąc lat był najdłuższym mostem łukowym świata.',
+      '<b>Wodociągi i kanalizacja.</b> Akwedukty, zbiorniki rozdzielcze i rury z ołowiu – po łacinie plumbum, stąd angielskie „plumbing”. Kanał Cloaca Maxima częściowo działa do dziś.',
+      '<b>Drogi.</b> Warstwowa konstrukcja jak we współczesnych drogach, kamienie milowe i sieć dziesiątek tysięcy kilometrów utwardzonych dróg.',
+      '<b>Stadiony.</b> Koloseum miało numerowane wejścia, sektory, korytarze do szybkiego opróżniania widowni i rozsuwany dach.',
+      '<b>Ogrzewanie podłogowe.</b> Hypokaust ogrzewał termy i bogate domy ciepłym powietrzem pod posadzką.',
+      '<b>Bloki i przepisy budowlane.</b> Wielopiętrowe insule, limity wysokości, przepisy przeciwpożarowe po pożarze w 64 n.e. i straż pożarna (vigiles).',
+      '<b>Urbanistyka.</b> Siatka ulic z obozu wojskowego wyznacza do dziś centra wielu miast, np. Turynu.',
+      '<b>Handel.</b> Targi Trajana to piętrowy kompleks sklepów – praprzodek galerii handlowej.']},
+  capitolium:{name:'Świątynia Jowisza Kapitolińskiego',era:'wg tradycji 509 p.n.e., wielokrotnie odbudowywana',surv:0.05,text:'Najważniejsza świątynia Rzymu, na szczycie Kapitolu, poświęcona Jowiszowi, Junonie i Minerwie. Tu kończyły się pochody triumfalne.',
+    today:'Zostały fragmenty podium – część można zobaczyć w Muzeach Kapitolińskich. Plac na szczycie wzgórza zaprojektował w XVI w. Michał Anioł.',legacy:'Od nazwy wzgórza pochodzi „Kapitol” – tak nazwano m.in. siedzibę Kongresu USA w Waszyngtonie.'},
+  forumRomanum:{name:'Forum Romanum',era:'od VII–VI w. p.n.e.',surv:0.2,text:INFO.forum.text,facts:INFO.forum.facts,
+    today:'Pojedyncze kolumny, łuki i fundamenty. Marmur przez wieki rozbierano i wypalano na wapno, a samo forum, zasypane ziemią, służyło za pastwisko – nazywano je Campo Vaccino, „krowim polem”.',legacy:'Słowo „forum” żyje dalej: jako miejsce debaty, a nawet forum internetowe.'},
+  curiaJulia:{name:'Kuria Julia – siedziba senatu',era:'44–29 p.n.e., odbudowa po 283 n.e.',surv:0.9,text:INFO.curia.text,facts:INFO.curia.facts,
+    today:'Stoi prawie w całości – dzięki temu, że w VII w. zamieniono ją w kościół. W XX w. przywrócono jej starożytny wygląd.',legacy:'Senat jako izba parlamentu – nazwa pochodzi od łacińskiego senex, „starzec”.'},
+  aemilia:{name:'Bazylika Emilia',era:'179 p.n.e.',surv:0.08,text:'Wielka hala sądowa i handlowa na północnym skraju forum.',
+    today:'Fundamenty i fragmenty posadzki. W marmurze widać wtopione brązowe monety – ślad pożaru podczas złupienia Rzymu przez Wizygotów w 410 r.',legacy:INFO.basilica.facts[1]},
+  julia:{name:'Bazylika Julia',era:'poświęcona 46 p.n.e. (Juliusz Cezar)',surv:0.05,text:'Siedziba sądów cywilnych – rozprawy toczyły się w kilku częściach hali naraz.',
+    today:'Został prostokąt posadzki i stopni. Na stopniach widać wydrapane plansze do gier – Rzymianie grali, czekając na rozprawy.',legacy:'Plan bazyliki stał się wzorem kościołów, a „bazylika” to dziś tytuł ważnych świątyń.'},
+  castor:{name:'Świątynia Kastora i Polluksa',era:'pierwsza 484 p.n.e., obecne ruiny z czasów Augusta',surv:0.35,text:'Świątynia boskich bliźniąt, które wg legendy pomogły Rzymianom w bitwie nad jeziorem Regillus.',
+    today:'Stoją trzy korynckie kolumny z kawałkiem belkowania – jeden z symboli forum.'},
+  archTitus:{name:'Łuk Tytusa',era:'ok. 81 n.e.',surv:1,text:INFO.arch.facts[0],
+    today:'Stoi do dziś, odrestaurowany w XIX w.',legacy:'Był wzorem m.in. dla Łuku Triumfalnego w Paryżu.'},
+  colosseum:{...INFO.colosseum,name:'Koloseum (Amfiteatr Flawiuszów)',surv:0.7,
+    today:'Przetrwał szkielet i północna część zewnętrznego pierścienia; resztę zniszczyły trzęsienia ziemi (m.in. w 1349 r.) i rozbiórka na kamień budowlany. Dziury w murach to ślady po wyrwanych żelaznych klamrach.',
+    legacy:'Każdy dzisiejszy stadion powtarza jego rozwiązania: numerowane wejścia, sektory, korytarze do szybkiej ewakuacji i dach nad widownią.'},
+  ludus:{name:'Ludus Magnus – szkoła gladiatorów',era:'za Domicjana (81–96 n.e.)',surv:0.1,text:'Największa szkoła i koszary gladiatorów, z małą areną treningową. Z Koloseum łączył ją podziemny tunel.',
+    today:'Odsłonięte fundamenty i fragment areny tuż obok Koloseum.'},
+  palatium:{name:'Pałac cesarzy na Palatynie',era:'ukończony ok. 92 n.e. za Domicjana',surv:0.25,text:'Ogromna rezydencja cesarzy: sale tronowe, dziedzińce z fontannami i ogród w kształcie toru, czyli „stadion”. Z tarasu cesarz mógł oglądać wyścigi w Circus Maximus.',
+    today:'Rozległe ruiny ceglanych murów na Palatynie.',legacy:'Od nazwy wzgórza – Palatium – pochodzi słowo „pałac”, a także angielskie „palace”.'},
+  circusMax:{...INFO.circus,name:'Circus Maximus',surv:0.02,
+    today:'Został długi, trawiasty plac w kształcie toru – dziś park, w którym odbywają się koncerty i wielkie zgromadzenia.',
+    legacy:'Kibice w barwach drużyn i fortuny dla zwycięzców: woźnica Gajusz Appulejusz Diokles zarobił ok. 35 mln sestercji – bywa nazywany najlepiej opłacanym sportowcem w historii.'},
+  marcellus:{name:'Teatr Marcellusa',era:'ukończony ok. 13–11 p.n.e. (August)',surv:0.7,text:'Teatr nazwany na cześć siostrzeńca Augusta. Mieścił ok. 11–20 tys. widzów (szacunki są różne).',
+    today:'Stoją dwie kondygnacje arkad, a na nich w XVI w. zbudowano pałac. W starożytnych murach do dziś są mieszkania!',legacy:'Jego arkadowa fasada przypomina Koloseum, zbudowane prawie sto lat później.'},
+  pantheon:{...INFO.pantheon,name:'Panteon',surv:1,
+    today:'Stoi w całości od prawie 1900 lat – to najlepiej zachowany budynek starożytnego Rzymu. Spoczywa w nim m.in. malarz Rafael.',
+    legacy:'Wzór dla kopuł Bazyliki św. Piotra, Kapitolu w Waszyngtonie i wielu bibliotek. Rzymski beton z popiołem wulkanicznym jest tak trwały, że naukowcy wciąż badają jego recepturę.'},
+  agrippa:{name:'Termy Agryppy',era:'ok. 25 p.n.e.',surv:0.03,text:'Pierwsze wielkie publiczne termy Rzymu, ufundowane przez Agryppę, przyjaciela Augusta. Obok leżało sztuczne jezioro.',
+    today:'Prawie nic – fragment muru za Panteonem.'},
+  pompey:{name:'Teatr Pompejusza',era:'55 p.n.e.',surv:0,text:'Pierwszy kamienny teatr Rzymu, z ogromnym portykiem i ogrodami. W sali posiedzeń należącej do kompleksu zamordowano Juliusza Cezara w idy marcowe 44 p.n.e.',
+    today:'Nie widać go, ale domy przy Campo de’ Fiori zachowały łuk widowni – ulica Via di Grottapinta biegnie po jego obrysie.'},
+  mausAug:{name:'Mauzoleum Augusta',era:'28 p.n.e.',surv:0.45,text:'Okrągły grobowiec pierwszego cesarza i jego rodziny, porośnięty cyprysami, z posągiem Augusta na szczycie.',
+    today:'Przetrwała okrągła bryła; po latach renowacji otwarto ją dla zwiedzających w 2021 r.'},
+  trajanForum:{name:'Forum Trajana',era:'112 n.e., arch. Apollodor z Damaszku',surv:0.15,text:'Największe z forów cesarskich, sfinansowane łupami z wojen dackich. Żeby je zbudować, ścięto zbocze między Kapitolem a Kwirynałem – napis na kolumnie mówi, że jej wysokość odpowiada wysokości usuniętego wzgórza.',
+    today:'Widać fragmenty posadzki i rzędy kolumn Bazyliki Ulpia.'},
+  ulpia:{name:'Bazylika Ulpia',era:'112 n.e.',surv:0.15,text:'Największa bazylika Rzymu w swoich czasach – część Forum Trajana. Nazwę wzięła od rodu Trajana (Ulpii).',today:'Kilka ustawionych na nowo kolumn z szarego granitu.'},
+  trajanColumn:{...INFO.column,name:'Kolumna Trajana',surv:1,
+    today:'Stoi nienaruszona od prawie 1900 lat.',legacy:'Spiralny fryz to jedno z najważniejszych źródeł wiedzy o rzymskiej armii: uzbrojeniu, obozach, mostach i machinach.'},
+  trajanMarkets:{name:'Targi Trajana',era:'ok. 100–110 n.e.',surv:0.8,text:'Ponad sto pięćdziesiąt sklepów i biur na kilku poziomach, wbudowanych w zbocze Kwirynału.',
+    today:'Zachowały się zadziwiająco dobrze – mieści się w nich Muzeum Forów Cesarskich.',legacy:'Prototyp galerii handlowej: piętra, korytarze i sklepy z witrynami.'},
+  marsUltor:{name:'Świątynia Marsa Mściciela (Forum Augusta)',era:'poświęcona 2 p.n.e.',surv:0.3,text:'August ślubował ją przed bitwą pod Filippi z zabójcami Cezara. Za świątynią stał wysoki mur oddzielający forum od gęstej i łatwopalnej Subury.',
+    today:'Stoją trzy kolumny, fragment podium i wysoki mur ogniowy.'},
+  trajanBaths:{name:'Termy Trajana',era:'otwarte 109 n.e., arch. Apollodor z Damaszku',surv:0.1,text:'Pierwsze termy „cesarskie”: symetryczne, z ogromnymi salami, bibliotekami i ogrodami – wzór dla term Karakalli i Dioklecjana. Zbudowano je częściowo na gruzach Złotego Domu Nerona.',
+    today:'Pojedyncze mury i egzedry w parku Colle Oppio.'},
+  castraPraetoria:{name:'Castra Praetoria',era:'ok. 23 n.e.',surv:0.3,text:'Obóz gwardii pretoriańskiej – elitarnej ochrony cesarza, która nieraz sama decydowała, kto zasiądzie na tronie.',
+    today:'Fragmenty murów obozu włączono później w Mury Aureliana – stoją do dziś.'},
+  cestius:{name:'Piramida Cestiusza',era:'ok. 18–12 p.n.e.',surv:1,text:'Grobowiec bogatego urzędnika Gajusza Cestiusza, z czasów rzymskiej mody na Egipt. Napis podaje, że budowa trwała 330 dni.',
+    today:'Stoi w całości przy Porta San Paolo. Obok jest Cmentarz Niekatolicki, gdzie pochowano m.in. poetów Keatsa i Shelleya.'},
+  aesculapius:{name:'Wyspa Tyberyjska – świątynia Eskulapa',era:'291 p.n.e.',surv:0.05,text:'Świątynię boga medycyny zbudowano po zarazie. Wyspie nadano kształt statku obłożonego kamieniem.',
+    today:'Na wyspie od XVI w. działa szpital Fatebenefratelli – leczy się tu ludzi od ponad 2000 lat. Most Fabrycjusza (62 p.n.e.) prowadzący na wyspę wciąż służy przechodniom!'},
+});
+INFO.palace={name:'Pałac cesarski',era:'',text:INFO.palatium.text,legacy:INFO.palatium.legacy};
+INFO.mausoleum={name:'Mauzoleum',era:'',text:'Okazałe grobowce cesarzy stawiano na planie koła, z ziemnym kopcem obsadzonym drzewami.',facts:['Mauzoleum Hadriana, zbudowane kilkanaście lat po Trajanie, to dzisiejszy Zamek Świętego Anioła.']};
+INFO.pyramid={name:'Piramida',era:'',text:INFO.cestius.text,today:INFO.cestius.today};
+INFO.trajanbaths={name:'Termy Trajana',era:INFO.trajanBaths.era,text:INFO.trajanBaths.text,today:INFO.trajanBaths.today};
+INFO['l-aq'].today='Najpiękniejsze arkady zobaczysz w Parku Akweduktów na przedmieściach Rzymu. Za Trajana doprowadzono też nowy akwedukt – Aqua Traiana (109 n.e.) – na Zatybrze.';
+INFO['l-aq'].legacy='Grawitacyjne wodociągi, zbiorniki rozdzielcze i ołowiane rury: łacińskie plumbum dało angielskie „plumbing”.';
+INFO['l-wall'].today='Kawałek Muru Serwiańskiego stoi tuż przed dworcem Termini – fragment jest nawet w restauracji na dworcu. Za Trajana mur był już w dużej mierze zbędny: miasto dawno rozlało się poza niego.';
+
 
 /* ---- menu ---- */
 const modal=document.getElementById('modal'), card=document.getElementById('card');
 function closeModal(){ modal.classList.add('hidden'); }
 modal.addEventListener('pointerdown',e=>{ if(e.target===modal) closeModal(); });
 function openMenu(){
+  let hasOld=false; try{ hasOld=!!localStorage.getItem('urbs-save-v1'); }catch(e){}
   const sizes=[20,28,36,44,52].filter(s=>s<=N-6);
   card.innerHTML=`
   <h2>URBS</h2><p>Spokojna piaskownica: wytycz ulice, postaw świątynie i patrz, jak miasto ożywa.</p>
@@ -1445,7 +1665,7 @@ function openMenu(){
   <div class="row"><select id="mN"><option value="32">Mała 32×32</option><option value="48" selected>Średnia 48×48</option><option value="64">Duża 64×64</option></select>
   <label class="ck"><input type="checkbox" id="mLand" checked> rzeka, gaje i pola</label>
   <button class="btn" id="mNew">Zacznij od nowa</button></div>
-  <div class="row"><button class="btn" id="mDemo">Wczytaj przykładowe miasto</button></div>
+  <div class="row"><button class="btn main" id="mRome">🏛️ Rzym za Trajana (117 n.e.)</button><button class="btn" id="mDemo">Przykładowe castrum</button>${hasOld?'<button class="btn" id="mOld">Moje poprzednie miasto</button>':''}</div>
   <h3>Zasady</h3>
   <label class="ck"><input type="checkbox" id="mPlots" ${onlyPlots?'checked':''}> Buduj tylko na działkach (ozdoby wszędzie)</label>
   <label class="ck"><input type="checkbox" id="mInfo" ${infoAuto?'checked':''}> Pokazuj historię przy wyborze budynku</label>
@@ -1464,6 +1684,8 @@ function openMenu(){
   $('mCastrum').onclick=()=>{ pushUndo(); makeCastrum(+$('mCs').value,$('mFill').checked); closeModal(); sfx('pop'); toast('Castrum wytyczone'); };
   $('mNew').onclick=()=>{ pushUndo(); const n=+$('mN').value; resizeWorld(n); if($('mLand').checked) landscape(Math.floor(rnd()*1000)); closeModal(); };
   $('mDemo').onclick=()=>{ pushUndo(); defaultWorld(); closeModal(); };
+  $('mRome').onclick=()=>{ pushUndo(); romeTrajan(); closeModal(); setTimeout(()=>showInfo('rome'),300); };
+  if(hasOld) $('mOld').onclick=()=>{ try{ const snap=serialize(); deserialize(localStorage.getItem('urbs-save-v1')); pushUndo(snap); closeModal(); }catch(e){ toast('Nie udało się wczytać'); } };
   $('mPlots').onchange=e=>{ onlyPlots=e.target.checked; };
   $('mInfo').onchange=e=>{ infoAuto=e.target.checked; try{ localStorage.setItem('urbs-info',infoAuto?'1':'0'); }catch(_){} };
   $('mCopy').onclick=async()=>{ const code=btoa(unescape(encodeURIComponent(serialize()))); $('mCode').value=code; try{ await navigator.clipboard.writeText(code); toast('Skopiowano kod miasta'); }catch(e){ $('mCode').select(); toast('Zaznacz i skopiuj kod z pola'); } };
@@ -1511,6 +1733,47 @@ function renderIcons(){
   r2.dispose(); try{ r2.forceContextLoss(); }catch(e){}
 }
 
+
+/* =========================================================
+   Tryb „Dziś” i podpisy budowli
+   ========================================================= */
+let todayMode=false;
+const ruinMat=new THREE.MeshStandardMaterial({color:'#cfc3ad',roughness:0.95,flatShading:true,side:THREE.DoubleSide});
+const TYPE_SURV={house:0,domus:0.03,insula:0.04,taberna:0,garden:0,fountain:0.3,statue:0.4,column:0.9,cypress:1,pine:1,arch:0.8,temple:0.15,forum:0.2,basilica:0.08,curia:0.9,market:0.5,baths:0.1,caracalla:0.45,diocletian:0.4,pantheon:1,colosseum:0.7,circus:0.02,theatre:0.5,barracks:0.1,palace:0.25,mausoleum:0.45,pyramid:1,trajanbaths:0.1};
+function survOf(b){ const d=b.lm&&INFO[b.lm]; if(d&&d.surv!=null) return d.surv; return TYPE_SURV[b.type]??0; }
+function applyTodayTo(b,instant){ const s=survOf(b); b.target=todayMode?s:1; b.mesh.material=(todayMode&&s<0.95)?ruinMat:bMat; if(instant){ b.ts=b.target; b.mesh.scale.y=Math.max(0.001,b.ts); b.mesh.visible=b.ts>0.012; } }
+function lineToday(m){ const k=m.userData.key||''; const s=k.startsWith('aq')?0.45:0.3; m.userData.target=todayMode?s:1; if(m.userData.ts==null) m.userData.ts=1; m.material=todayMode?ruinMat:bMat; }
+function setToday(on){
+  todayMode=on; for(const b of buildings.values()) applyTodayTo(b,false); for(const m of lineMeshes.values()) lineToday(m);
+  const bt=document.getElementById('bToday'); bt.textContent=on?'🏛️':'⏳'; bt.title=on?'Wróć do starożytności':'Pokaż, co zostało dziś';
+  document.getElementById('era').textContent=on?'📷 Dziś':'🏛️ Starożytność';
+  if(on){ agents.forEach(a=>{ if(a.kind==='cart') a.life=-99; }); toast('Rzym dziś – tyle przetrwało do naszych czasów'); } else toast('Z powrotem w starożytności');
+  sfx('pop');
+}
+function todayStep(dt){
+  const k=Math.min(1,dt*3.2);
+  for(const b of buildings.values()){ if(b.target==null||Math.abs(b.ts-b.target)<0.002) continue; b.ts+=(b.target-b.ts)*k; if(Math.abs(b.ts-b.target)<0.002) b.ts=b.target; b.mesh.scale.y=Math.max(0.001,b.ts); b.mesh.visible=b.ts>0.012; }
+  for(const m of lineMeshes.values()){ const u=m.userData; if(u.target==null||Math.abs(u.ts-u.target)<0.002) continue; u.ts+=(u.target-u.ts)*k; m.scale.y=Math.max(0.001,u.ts); }
+}
+const labelsEl=document.getElementById('labels'); let labelsOn=true, labelsDirty=true; const labelMap=new Map(); const _lv=new THREE.Vector3();
+function shortName(n){ return n.split(' – ')[0].split(' (')[0].split(' · ')[0]; }
+function syncLabels(){
+  labelsDirty=false; const keep=new Set();
+  for(const b of buildings.values()){ if(!b.lm||!INFO[b.lm]) continue; keep.add(b.id);
+    if(!labelMap.has(b.id)){ const el=document.createElement('button'); el.className='lbl'; el.textContent=shortName(INFO[b.lm].name||DEFS[b.type].name); const lm=b.lm, id=b.id;
+      el.onclick=()=>{ showInfo(lm); const bb=buildings.get(id); if(bb) pulses.push({m:bb.mesh,t:0,base:bb.mesh.scale.y}); sfx('tick'); }; labelsEl.appendChild(el); labelMap.set(b.id,el); } }
+  for(const [id,el] of labelMap) if(!keep.has(id)){ el.remove(); labelMap.delete(id); }
+}
+function updateLabels(){
+  if(labelsDirty) syncLabels();
+  labelsEl.style.display=labelsOn?'':'none'; if(!labelsOn) return;
+  const W=innerWidth,H=innerHeight, far=camera.position.distanceTo(controls.target);
+  labelsEl.classList.toggle('small',far>N*0.75);
+  for(const [id,el] of labelMap){ const b=buildings.get(id); if(!b) continue; const bb=b.mesh.geometry.boundingBox; const h=(bb?bb.max.y:1)*b.mesh.scale.y+0.3;
+    _lv.set(b.mesh.position.x,h,b.mesh.position.z).project(camera);
+    if(_lv.z>1||_lv.x<-1.05||_lv.x>1.05||_lv.y<-1.05||_lv.y>1.05||!b.mesh.visible){ el.style.display='none'; continue; }
+    el.style.display=''; el.style.transform=`translate(${((_lv.x+1)/2*W).toFixed(1)}px,${((1-_lv.y)/2*H).toFixed(1)}px) translate(-50%,-100%)`; }
+}
 /* =========================================================
    Pętla
    ========================================================= */
@@ -1527,8 +1790,9 @@ function loop(now){
   camStep(dt); controls.update();
   for(let k=growing.length-1;k>=0;k--){ const g=growing[k]; g.t+=dt/0.42; const t=Math.min(1,g.t); const sy=easeOutBack(t), sxz=0.75+0.25*Math.min(1,t*1.4);
     g.m.scale.set(sxz,Math.max(0.01,sy),sxz); if(t>=1){ g.m.scale.set(1,1,1); growing.splice(k,1); } }
-  for(let k=pulses.length-1;k>=0;k--){ const p=pulses[k]; p.t+=dt/0.35; const s=1+0.07*Math.sin(Math.min(1,p.t)*Math.PI); p.m.scale.set(s,s,s); if(p.t>=1){ p.m.scale.set(1,1,1); pulses.splice(k,1); } }
+  for(let k=pulses.length-1;k>=0;k--){ const p=pulses[k]; if(p.base==null) p.base=p.m.scale.y; p.t+=dt/0.35; const s=1+0.07*Math.sin(Math.min(1,p.t)*Math.PI); p.m.scale.set(s,p.base*s,s); if(p.t>=1){ p.m.scale.set(1,p.base,1); pulses.splice(k,1); } }
   updateAgents(dt,now/1000);
+  todayStep(dt); updateLabels();
   T.water.material.emissive.setRGB(0.02+Math.sin(now/900)*0.015,0.05+Math.sin(now/900)*0.02,0.07);
   statT+=dt; if(statT>0.6){ statT=0; updateStats(); }
   saveT+=dt; if(saveT>2.5){ saveT=0; autosave(); }
@@ -1541,8 +1805,8 @@ function start(){
   try{ infoAuto=localStorage.getItem('urbs-info')!=='0'; }catch(e){}
   buildBoard(); resetCamera(); applyTime();
   let loaded=false;
-  try{ const s=localStorage.getItem('urbs-save-v1'); if(s){ deserialize(s); loaded=true; } }catch(e){ console.warn(e); }
-  if(!loaded) defaultWorld();
+  try{ const s=localStorage.getItem('urbs-save-v2'); if(s){ deserialize(s); loaded=true; } }catch(e){ console.warn(e); }
+  if(!loaded){ romeTrajan(); dirtySave=true; }
   undoStack.length=0; dirtySave=false;
   renderIcons();
   renderCats(); selectTool('camera');
@@ -1550,7 +1814,7 @@ function start(){
   window.__urbsReady=true;
   document.getElementById('loading').remove();
   requestAnimationFrame(loop);
-  if(!loaded) setTimeout(()=>toast('Witaj w Urbs! Wybierz narzędzie na dole i buduj.'),600);
+  if(!loaded) setTimeout(()=>showInfo('rome'),700);
 }
 start();
 if('serviceWorker' in navigator&&location.protocol==='https:') window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
