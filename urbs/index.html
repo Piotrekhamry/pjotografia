@@ -1141,18 +1141,18 @@ const TUNICS=['#efe8d8','#efe8d8','#c9a36b','#8a6d4b','#b85c3c','#6e8fae','#a7b3
 const SKINS=['#e9c19c','#d9a97c','#c58c62','#f0cfae','#b07a52'];
 function spawnPed(){
   if(!roadList.length) return; const src=doorList.length&&rnd()<0.8?pickArr(doorList):pickArr(roadList);
-  agents.push({kind:'ped',ax:src.i,az:src.j,bx:src.i,bz:src.j,t:1,speed:0.32+rnd()*0.26,lane:(rnd()<0.5?-1:1)*(0.1+rnd()*0.24),
+  agents.push({kind:'ped',ax:src.i,az:src.j,bx:src.i,bz:src.j,t:1,speed:0.13+rnd()*0.09,lane:(rnd()<0.5?-1:1)*(0.1+rnd()*0.24),
     col:pickArr(TUNICS),mcol:pickArr(['#e8433d','#2f7fd8','#f2c230','#28a36b','#ff7f50','#7b5cd6','#222831','#f4f4f4','#ff5fa2','#35b6c9']),skin:pickArr(SKINS),sc:rnd()<0.12?0.72:0.95+rnd()*0.12,carry:rnd()<0.2?pickArr(['#b86a3c','#d9b24c','#c9a36b']):null,
     life:25+rnd()*70,ph:rnd()*6,pause:0,hx:0,hz:1,init:false,rx:0,rz:0,ry:0});
 }
 function spawnCart(){
   if(!wideList.length) return; const s=pickArr(wideList);
-  agents.push({kind:'cart',ax:s.i,az:s.j,bx:s.i,bz:s.j,t:1,speed:0.28+rnd()*0.12,lane:0.17,col:pickArr(['#c9b08a','#b86a3c','#8f6040','#d9b24c','#a7b36b']),
+  agents.push({kind:'cart',ax:s.i,az:s.j,bx:s.i,bz:s.j,t:1,speed:0.16+rnd()*0.06,lane:0.17,col:pickArr(['#c9b08a','#b86a3c','#8f6040','#d9b24c','#a7b36b']),
     animal:pickArr(['#8a6a4a','#6b4a35','#9a9086','#c9b9a0']),driver:pickArr(TUNICS),skin:pickArr(SKINS),life:1e9,ph:0,pause:0,hx:0,hz:1,init:false,rx:0,rz:0,ry:0});
 }
 function spawnPatrol(){
   const src=barracksDoors.length?pickArr(barracksDoors):(roadList.length?pickArr(roadList):null); if(!src) return;
-  patrols.push({lead:{kind:'patrol',ax:src.i,az:src.j,bx:src.i,bz:src.j,t:1,speed:0.4,lane:0,life:1e9,ph:0,pause:0,hx:0,hz:1,init:false,rx:0,rz:0,ry:0},trail:[],dist:0,skins:[...Array(7)].map(()=>pickArr(SKINS))});
+  patrols.push({lead:{kind:'patrol',ax:src.i,az:src.j,bx:src.i,bz:src.j,t:1,speed:0.17,lane:0,life:1e9,ph:0,pause:0,hx:0,hz:1,init:false,rx:0,rz:0,ry:0},trail:[],dist:0,skins:[...Array(7)].map(()=>pickArr(SKINS))});
 }
 function stepAgent(a,dt){
   if(a.pause>0) a.pause-=dt;
@@ -1173,7 +1173,7 @@ function stepAgent(a,dt){
   if(!a.init){ a.rx=tx; a.rz=tz; a.ry=Math.atan2(dx,dz); a.y=y; a.init=true; }
   const k=1-Math.exp(-dt*9); a.rx+=(tx-a.rx)*k; a.rz+=(tz-a.rz)*k; a.y+=(y-a.y)*k;
   let dr=Math.atan2(dx,dz)-a.ry; dr=Math.atan2(Math.sin(dr),Math.cos(dr)); a.ry+=dr*Math.min(1,dt*8);
-  if(a.pause<=0) a.ph+=dt*a.speed*14;
+  if(a.pause<=0) a.ph+=dt*a.speed*(a.kind==='patrol'?58:52)/(a.sc||1);
   return true;
 }
 
@@ -1181,13 +1181,15 @@ function stepAgent(a,dt){
 function pool(geom,cap,rough=0.8){ const m=new THREE.InstancedMesh(geom,new THREE.MeshStandardMaterial({roughness:rough,flatShading:true}),cap); m.count=0; m.frustumCulled=false; m.castShadow=true; m.setColorAt(0,new THREE.Color(1,1,1)); m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); return m; }
 function mergedBoxes(list){ return mergeGeometries(list.map(([w,h,d,x,y,z])=>new THREE.BoxGeometry(w,h,d).translate(x,y,z))); }
 const PP={
-  body:pool(new THREE.CylinderGeometry(0.034,0.056,0.15,7).translate(0,0.075,0),PCAP),
-  head:pool(new THREE.SphereGeometry(0.036,7,5).translate(0,0.185,0),PCAP),
-  carry:pool(new THREE.CylinderGeometry(0.02,0.03,0.07,6).translate(0,0.255,0),PCAP),
-  helm:pool(new THREE.SphereGeometry(0.041,7,4,0,Math.PI*2,0,Math.PI/2).translate(0,0.19,0),LCAP,0.4),
-  crest:pool(new THREE.BoxGeometry(0.014,0.035,0.065).translate(0,0.24,0),LCAP),
-  shield:pool(new THREE.BoxGeometry(0.1,0.13,0.018).translate(0.035,0.09,0.06),LCAP),
-  spear:pool(new THREE.BoxGeometry(0.01,0.34,0.01).translate(-0.055,0.16,0.02),LCAP),
+  body:pool(new THREE.CylinderGeometry(0.03,0.05,0.13,7).translate(0,0.135,0),PCAP),
+  head:pool(new THREE.SphereGeometry(0.034,7,5).translate(0,0.235,0),PCAP),
+  leg:pool(new THREE.BoxGeometry(0.022,0.085,0.024).translate(0,-0.0425,0),PCAP*2),
+  arm:pool(new THREE.BoxGeometry(0.019,0.08,0.02).translate(0,-0.04,0),PCAP*2),
+  carry:pool(new THREE.CylinderGeometry(0.02,0.03,0.07,6).translate(0,0.3,0),PCAP),
+  helm:pool(new THREE.SphereGeometry(0.039,7,4,0,Math.PI*2,0,Math.PI/2).translate(0,0.24,0),LCAP,0.4),
+  crest:pool(new THREE.BoxGeometry(0.014,0.035,0.065).translate(0,0.288,0),LCAP),
+  shield:pool(new THREE.BoxGeometry(0.1,0.13,0.018).translate(0.06,0.13,0.05),LCAP),
+  spear:pool(new THREE.BoxGeometry(0.01,0.36,0.01).translate(-0.06,0.2,0.03),LCAP),
   cart:pool(new THREE.BoxGeometry(0.2,0.07,0.3).translate(0,0.11,-0.08),CCAP),
   cargo:pool(new THREE.BoxGeometry(0.16,0.06,0.2).translate(0,0.175,-0.08),CCAP),
   wheel:pool(new THREE.CylinderGeometry(0.06,0.06,0.025,8).rotateZ(Math.PI/2),CCAP*2),
@@ -1202,10 +1204,16 @@ function put(name,col,off){ const m=PP[name]; const k=cnt[name]++; if(off){ _LM.
 const offW1=new THREE.Matrix4().makeTranslation(0.115,0.06,-0.08), offW2=new THREE.Matrix4().makeTranslation(-0.115,0.06,-0.08);
 const offH1=new THREE.Matrix4().makeTranslation(0.035,0,0.17), offH2=new THREE.Matrix4().makeTranslation(-0.035,0,0.17);
 const offDrv=new THREE.Matrix4().makeTranslation(0,0.06,0.0), offCh=new THREE.Matrix4().makeTranslation(0,0.03,-0.04);
-function person(x,y,z,ry,s,body,skin,ph,carry,legion){
-  const bob=Math.abs(Math.sin(ph))*0.018*s; parent(x,y+bob,z,ry,s);
+const _lq=new THREE.Quaternion(), _lp=new THREE.Vector3(), _lo=new THREE.Matrix4(), _one=new THREE.Vector3(1,1,1), _X=new THREE.Vector3(1,0,0);
+function limb(name,col,x,y,ang){ _lp.set(x,y,0); _lq.setFromAxisAngle(_X,ang); _lo.compose(_lp,_lq,_one); put(name,col,_lo); }
+const SANDAL='#6b4a35';
+function person(x,y,z,ry,s,body,skin,ph,carry,legion,amp=1){
+  const sw=Math.sin(ph)*0.55*amp, bob=Math.abs(Math.cos(ph))*0.007*s*amp; parent(x,y+bob,z,ry,s);
   if(cnt.body>=PCAP) return;
-  put('body',body); put('head',skin); if(carry&&cnt.carry<PCAP) put('carry',carry);
+  put('body',body); put('head',skin);
+  limb('leg',legion?'#c9a07a':skin,0.017,0.085,sw); limb('leg',legion?'#c9a07a':skin,-0.017,0.085,-sw);
+  limb('arm',body,0.047,0.19,carry?-2.6:-sw*0.8); limb('arm',body,-0.047,0.19,legion?-0.9:sw*0.8);
+  if(carry&&cnt.carry<PCAP) put('carry',carry);
   if(legion&&cnt.helm<LCAP){ put('helm','#a8a6a0'); put('crest',RED); put('shield','#a9302a'); put('spear','#6b4a35'); }
 }
 const TEAMS=['#c0392b','#2e6fb5','#3f8f4a','#f1ece0'];
@@ -1239,19 +1247,19 @@ function updateAgents(dt,time){
   // render
   for(const k in PP) cnt[k]=0;
   for(const a of agents){
-    if(a.kind==='ped') person(a.rx,a.y,a.rz,a.ry,a.sc,todayMode?a.mcol:a.col,a.skin,a.ph,todayMode?null:a.carry,false);
+    if(a.kind==='ped') person(a.rx,a.y,a.rz,a.ry,a.sc,todayMode?a.mcol:a.col,a.skin,a.ph,todayMode?null:a.carry,false,a.pause>0?0:1);
     else { parent(a.rx,a.y,a.rz,a.ry,1); if(cnt.cart>=CCAP) continue; put('cart',WOOD); put('cargo',a.col); put('wheel','#5a4030',offW1); put('wheel','#5a4030',offW2); put('ox',a.animal);
-      _LM.copy(_PM).multiply(offCh); _AP.setFromMatrixPosition(_LM); person(_AP.x,_AP.y,_AP.z,a.ry,0.9,a.driver,a.skin,0,null,false); }
+      _LM.copy(_PM).multiply(offCh); _AP.setFromMatrixPosition(_LM); person(_AP.x,_AP.y-0.06,_AP.z,a.ry,0.9,a.driver,a.skin,0,null,false,0); }
   }
   for(const p of patrols){
     const l=p.lead; person(l.rx,l.y,l.rz,l.ry,1.05,'#b3332b',p.skins[0],l.ph,null,true);
     const tr=p.trail; if(tr.length<2) continue;
     let idx=tr.length-1;
-    for(let f=0;f<6;f++){ const row=1+Math.floor(f/2), side=f%2?1:-1, lag=row*0.23; const target=p.dist-lag;
+    for(let f=0;f<6;f++){ const row=1+Math.floor(f/2), side=f%2?1:-1, lag=row*0.2; const target=p.dist-lag;
       while(idx>0 && tr[idx].d>target) idx--; const A=tr[idx], Bp=tr[Math.min(idx+1,tr.length-1)];
       let dx=Bp.x-A.x, dz=Bp.z-A.z; const L=Math.hypot(dx,dz)||1; dx/=L; dz/=L;
       if(target<0) continue;
-      person(A.x+(-dz)*side*0.085,A.y,A.z+dx*side*0.085,Math.atan2(dx,dz),1.0,'#b3332b',p.skins[f+1],l.ph+f*0.7,null,true); }
+      person(A.x+(-dz)*side*0.085,A.y,A.z+dx*side*0.085,Math.atan2(dx,dz),1.0,'#b3332b',p.skins[f+1],l.ph,null,true); }
   }
   // rydwany w cyrkach
   for(const b of buildings.values()){
@@ -1261,7 +1269,7 @@ function updateAgents(dt,time){
     st.forEach((ch,k)=>{ if(cnt.chariot>=HCAP) return; ch.v=1.45+Math.sin(time*0.6+k*1.7)*0.3; if(peopleOn) ch.s+=ch.v*dt;
       const [lx,lz,h]=trackPos(ch.s,ch.R); const X=cx+lx*c+lz*s, Z=cz-lx*s+lz*c;
       parent(X,0.05,Z,h+th,1); put('chariot',TEAMS[k]); put('horse','#6b4a35',offH1); put('horse','#4e3628',offH2);
-      _LM.copy(_PM).multiply(offDrv); _AP.setFromMatrixPosition(_LM); person(_AP.x,_AP.y,_AP.z,h+th,0.9,TEAMS[k],SKINS[k],0,null,false); });
+      _LM.copy(_PM).multiply(offDrv); _AP.setFromMatrixPosition(_LM); person(_AP.x,_AP.y-0.04,_AP.z,h+th,0.9,TEAMS[k],SKINS[k],0,null,false,0); });
   }
   for(const k in PP){ const m=PP[k]; m.count=cnt[k]; m.instanceMatrix.needsUpdate=true; if(m.instanceColor) m.instanceColor.needsUpdate=true; }
 }
