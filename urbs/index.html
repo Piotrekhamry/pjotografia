@@ -50,6 +50,15 @@ button{font-family:inherit;color:inherit}
 #ctx button{border:0;background:var(--panel);box-shadow:var(--shadow);border-radius:14px;padding:9px 13px;font-weight:800;font-size:13px;cursor:pointer}
 #ctx button.hide{display:none}
 #hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockh) + 18px + env(safe-area-inset-bottom));background:rgba(60,45,32,.78);color:#fff;padding:7px 14px;border-radius:12px;font-size:12.5px;max-width:min(560px,calc(100% - 24px));text-align:center;pointer-events:none;z-index:4;transition:opacity .3s}
+#info{position:fixed;left:calc(12px + env(safe-area-inset-left));top:205px;width:330px;max-height:calc(100vh - var(--dockh) - 240px);overflow:auto;background:var(--panel);border-radius:18px;box-shadow:var(--shadow);padding:14px 16px 12px;z-index:6;opacity:0;transform:translateX(-14px);pointer-events:none;transition:opacity .25s,transform .25s;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#info.show{opacity:1;transform:none;pointer-events:auto}
+#info .it{font-family:Cinzel,serif;font-weight:700;font-size:19px;color:var(--terra2);padding-right:26px;letter-spacing:.04em}
+#info .era{display:inline-block;margin:5px 0 2px;background:#f0e2cc;border-radius:8px;padding:2px 8px;font-size:12px;font-weight:800}
+#info p{font-size:13.5px;line-height:1.5;margin:7px 0}
+#info .dyk{font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--terra2);margin-top:8px}
+#info ul{margin:4px 0 0;padding-left:18px;font-size:13px;line-height:1.45}
+#info li{margin:4px 0}
+#info .x{position:absolute;top:8px;right:8px;width:30px;height:30px;border:0;border-radius:10px;background:#efe4d2;font-size:18px;cursor:pointer}
 #toast{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) scale(.9);background:rgba(60,45,32,.88);color:#fff;padding:10px 18px;border-radius:14px;font-weight:700;opacity:0;pointer-events:none;transition:all .2s;z-index:20}
 #toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
 #modal{position:fixed;inset:0;background:rgba(60,40,20,.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:14px}
@@ -70,6 +79,7 @@ label.ck{display:flex;gap:8px;align-items:center;font-size:14px;margin:5px 0;cur
 #loading .logo{font-size:40px}
 #loading .msg{font-size:14px;opacity:.75;max-width:340px;text-align:center}
 @media (max-width:640px){
+ #info{left:8px;right:8px;width:auto;top:auto;bottom:calc(var(--dockh) + 70px + env(safe-area-inset-bottom));max-height:42vh}
  .item{width:66px;font-size:10px}.item img,.item .ico{width:46px;height:46px}
  .logo{font-size:18px}.sub{display:none}
  .tbtn{width:38px;height:38px;font-size:16px}
@@ -106,11 +116,13 @@ label.ck{display:flex;gap:8px;align-items:center;font-size:14px;margin:5px 0;cur
 
 <div id="hint"></div>
 <div id="ctx">
+  <button id="bInfo">ℹ️ Historia</button>
   <button id="bBrush">Pędzel: 1</button>
   <button id="bRotate">↻ Obróć (R)</button>
 </div>
 <div id="dock"><div id="cats"></div><div id="items"></div></div>
 <div id="toast"></div>
+<div id="info"></div>
 
 <div id="modal" class="hidden"><div class="card" id="card"></div></div>
 
@@ -498,6 +510,73 @@ D.garden=(b,r)=>{
   b.box(1.8,0.03,0.2,0,0.5,0.85,WOOD); b.box(1.6,0.05,0.24,0,0.53,0.85,'#6f9d4a');
 };
 
+
+/* ---- wielkie termy cesarskie ---- */
+function vaultHall(b,w,h,d,x,z,y0,c,roof){ // hala ze sklepieniem kolebkowym wzdłuż x
+  b.box(w,h,d,x,y0,z,c);
+  b.add(new THREE.CylinderGeometry(d/2,d/2,w,14),roof,x,y0+h,z,0,0,Math.PI/2,0.5,1,1);
+}
+function palaestra(b,x,z,w,d){
+  b.box(w,0.03,d,x,0.12,z,SAND);
+  for(let k=0;k<=Math.round(w/0.42);k++){ const px=x-w/2+k*(w/Math.round(w/0.42)); b.column(px,z-d/2+0.1,0.12,0.75,0.045,MARBLE); b.column(px,z+d/2-0.1,0.12,0.75,0.045,MARBLE); }
+  for(let k=1;k<Math.round(d/0.42);k++){ const pz=z-d/2+k*(d/Math.round(d/0.42)); b.column(x-w/2+0.1,pz,0.12,0.75,0.045,MARBLE); b.column(x+w/2-0.1,pz,0.12,0.75,0.045,MARBLE); }
+  b.box(w,0.06,0.32,x,0.87,z-d/2+0.1,ROOF); b.box(w,0.06,0.32,x,0.87,z+d/2-0.1,ROOF);
+  b.box(0.32,0.06,d,x-w/2+0.1,0.87,z,ROOF); b.box(0.32,0.06,d,x+w/2-0.1,0.87,z,ROOF);
+}
+function garden(b,r,W,Dd,skip){
+  for(let k=0;k<40;k++){ const x=(r()-0.5)*(W-0.6), z=(r()-0.5)*(Dd-0.6); if(skip(x,z)) continue;
+    if(r()<0.5) b.cypress(x,z,0.5+r()*0.3,0.06); else { b.cyl(0.03,0.4,x,0.06,z,WOOD,5); b.sph(0.22,x,0.5,z,'#6a9a4a',0.45); } }
+}
+D.caracalla=(b,r)=>{
+  const W=8.9, Dd=8.9, BR='#d69a72';
+  b.box(W,0.06,Dd,0,0,0,'#9cc96a');
+  // mur obwodowy z egzedrami bocznymi
+  b.box(W,0.55,0.16,0,0,-Dd/2+0.08,BR); b.box(0.16,0.55,Dd,-W/2+0.08,0,0,BR); b.box(0.16,0.55,Dd,W/2-0.08,0,0,BR);
+  b.box(3.4,0.55,0.16,-2.75,0,Dd/2-0.08,BR); b.box(3.4,0.55,0.16,2.75,0,Dd/2-0.08,BR);
+  for(const sx of [-1,1]){ b.add(new THREE.CylinderGeometry(1.0,1.0,0.75,16,1,true,sx>0?Math.PI:0,Math.PI),BR,sx*(W/2-0.08),0.375,-0.6); }
+  for(const sx of [-1,1]){ b.box(1.1,0.9,0.7,sx*2.9,0,-Dd/2+0.45,BR); b.roofX(1.2,0.25,0.8,sx*2.9,0.9,-Dd/2+0.45,ROOF); } // biblioteki
+  // główny blok
+  b.box(6.2,0.12,4.6,0,0,0.2,STONE);
+  vaultHall(b,2.6,1.9,1.5,0,0.2,0.12,BR,'#cfc6b5');               // frigidarium
+  for(const x of [-0.8,0,0.8]) b.box(0.4,0.8,0.03,x,0.9,0.96,DARK);
+  b.box(3.2,0.9,0.25,0,0.12,1.95,BR);                             // ściana natatio
+  b.box(3.0,0.1,1.0,0,0.12,1.4,MARBLE); b.box(2.8,0.11,0.85,0,0.12,1.4,WATERC);
+  for(const sx of [-1,1]){ palaestra(b,sx*2.2,0.2,1.7,2.6);
+    b.box(0.5,1.2,4.6,sx*3.35,0.12,0.2,BR); b.roofZ(0.6,0.25,4.7,sx*3.35,1.32,0.2,ROOF);
+    b.box(1.8,1.2,0.5,sx*2.2,0.12,1.75,BR); b.box(1.8,1.2,0.5,sx*2.2,0.12,-1.35,BR); }
+  b.box(1.6,1.3,0.9,0,0.12,-1.0,BR); b.roofX(1.7,0.3,1.0,0,1.42,-1.0,ROOF); // tepidarium
+  // ogromne okrągłe caldarium
+  b.cyl(1.25,1.9,0,0.12,-2.2,BR,20); b.cyl(1.3,0.09,0,2.02,-2.2,STONE,20); b.hemi(1.2,0,2.08,-2.2,'#cfc6b5',0.6);
+  for(let k=0;k<7;k++){ const a=Math.PI*0.6+k*Math.PI*0.3; b.box(0.03,0.75,0.26,Math.cos(a)*1.25,0.9,-2.2+Math.sin(a)*1.25,DARK,-a); }
+  garden(b,r,W,Dd,(x,z)=>Math.abs(x)<3.7&&z>-2.4&&z<2.6 || Math.hypot(x,z+2.2)<1.6 || (Math.abs(x)>2.2&&Math.abs(x)<3.6&&z<-3.4));
+  b.cyl(0.35,0.12,-2.5,0.06,3.4,STONE,12); b.cyl(0.3,0.02,-2.5,0.18,3.4,WATERC,12);
+  b.cyl(0.35,0.12,2.5,0.06,3.4,STONE,12); b.cyl(0.3,0.02,2.5,0.18,3.4,WATERC,12);
+};
+D.diocletian=(b,r)=>{
+  const W=11.9, Dd=9.9, BR='#d9a27a';
+  b.box(W,0.06,Dd,0,0,0,'#9cc96a');
+  b.box(W,0.6,0.16,0,0,-Dd/2+0.08,BR); b.box(0.16,0.6,Dd,-W/2+0.08,0,0,BR); b.box(0.16,0.6,Dd,W/2-0.08,0,0,BR);
+  // wielka egzedra od frontu (dziś Piazza della Repubblica)
+  b.add(new THREE.CylinderGeometry(2.4,2.4,0.8,24,1,true,Math.PI/2,Math.PI),BR,0,0.4,Dd/2-0.1);
+  b.box(W/2-2.4,0.6,0.16,-(W/4+1.2),0,Dd/2-0.08,BR); b.box(W/2-2.4,0.6,0.16,(W/4+1.2),0,Dd/2-0.08,BR);
+  for(let k=0;k<9;k++){ const a=Math.PI/2+(k+0.5)/9*Math.PI; b.column(Math.sin(a)*2.2,Dd/2-0.1+Math.cos(a)*2.2,0.06,0.6,0.05,MARBLE); }
+  // główny blok
+  b.box(8.4,0.12,5.4,0,0,-0.9,STONE);
+  vaultHall(b,3.8,2.2,1.9,0,-0.9,0.12,BR,'#cfc6b5');               // frigidarium (dziś kościół)
+  for(const x of [-1.2,0,1.2]){ b.add(new THREE.CylinderGeometry(0.4,0.4,0.05,10,1,false,Math.PI/2,Math.PI),DARK,x,1.85,0.06,Math.PI/2,0,0); }
+  b.box(4.4,1.1,0.3,0,0.12,1.35,BR);
+  b.box(4.2,0.1,1.1,0,0.12,0.6,MARBLE); b.box(4.0,0.11,0.95,0,0.12,0.6,WATERC);    // natatio
+  for(const sx of [-1,1]){ palaestra(b,sx*3.0,-0.7,2.0,3.2);
+    b.box(0.6,1.4,5.4,sx*4.4,0.12,-0.9,BR); b.roofZ(0.7,0.28,5.5,sx*4.4,1.52,-0.9,ROOF);
+    b.box(2.0,1.3,0.5,sx*3.0,0.12,1.1,BR); }
+  // caldarium prostokątne z apsydami
+  b.box(3.0,1.8,1.5,0,0.12,-3.0,BR); b.add(new THREE.CylinderGeometry(0.75,0.75,3.0,12),'#cfc6b5',0,1.92,-3.0,0,0,Math.PI/2,0.45,1,1);
+  for(const x of [-1.0,0,1.0]){ b.add(new THREE.CylinderGeometry(0.42,0.42,1.6,12,1,false,Math.PI/2,Math.PI),BR,x,0.92,-3.75); b.hemi(0.42,x,1.72,-3.75,'#cfc6b5',0.6); }
+  b.box(2.0,1.4,0.9,0,0.12,-1.9,BR); b.roofX(2.1,0.3,1.0,0,1.52,-1.9,ROOF);
+  for(const sx of [-1,1]) for(const sz of [-1,1]){ b.cyl(0.55,0.9,sx*5.1,0.06,sz*3.9,BR,12); b.hemi(0.55,sx*5.1,0.96,sz*3.9,'#cfc6b5',0.6); }
+  garden(b,r,W,Dd,(x,z)=>(Math.abs(x)<4.8&&z>-3.9&&z<1.9) || Math.hypot(x,z-(Dd/2))<2.6 || (Math.abs(x)>4.5&&Math.abs(Math.abs(z)-3.9)<0.7));
+};
+
 const DEFS={
   house:{name:'Kamienice',cat:'domy',w:1,d:1,v:18,pop:8,desc:'Maluj przeciągając — każdy dom jest trochę inny'},
   domus:{name:'Domus',cat:'domy',w:2,d:2,v:6,pop:12},
@@ -511,6 +590,8 @@ const DEFS={
   curia:{name:'Kuria (senat)',cat:'publ',w:2,d:3,v:1},
   market:{name:'Targ',cat:'publ',w:4,d:4,v:4},
   baths:{name:'Termy',cat:'publ',w:6,d:6,v:1},
+  caracalla:{name:'Termy Karakalli',cat:'publ',w:9,d:9,v:1},
+  diocletian:{name:'Termy Dioklecjana',cat:'publ',w:12,d:10,v:1},
   colosseum:{name:'Koloseum',cat:'rozr',w:9,d:7,v:1},
   circus:{name:'Cyrk',cat:'rozr',w:5,d:16,v:1},
   theatre:{name:'Teatr',cat:'rozr',w:7,d:6,v:1},
@@ -544,6 +625,10 @@ function towerG(b){
   b.pyr(0.8,0.38,0,1.45,0,ROOF);
   for(const s of [-1,1]){ b.box(0.06,0.16,0.03,0,0.95,s*0.34,DARK); b.box(0.03,0.16,0.06,s*0.34,0.95,0,DARK); }
 }
+function wallStub(b){
+  b.box(0.5,1.0,0.42,0.25,0,0,WALLSTONE); b.box(0.5,0.05,0.46,0.25,0.95,0,'#e6d6b4');
+  for(const k of [0.42]){ b.box(0.17,0.15,0.08,k,1.0,0.19,WALLSTONE); b.box(0.17,0.15,0.08,k,1.0,-0.19,WALLSTONE); }
+}
 function gateX(b){
   b.add(archPanel(1.0,1.3,0.56,[{c:0,hw:0.3,spring:0.62}]),WALLSTONE,0,0,-0.28);
   b.box(1.04,0.06,0.6,0,1.25,0,'#e6d6b4');
@@ -560,7 +645,8 @@ function lineGeom(key){
   if(lineGeoCache.has(key)) return lineGeoCache.get(key);
   const b=new B(); const rotZ=fn=>b.at(0,0,0,Math.PI/2,()=>fn(b));
   if(key==='wall-x') wallX(b); else if(key==='wall-z') rotZ(wallX);
-  else if(key==='tower') towerG(b);
+  else if(key.startsWith('tower')){ towerG(b); const m=+(key.split('-')[1]||0);
+    for(const [bit,ry] of [[1,0],[2,Math.PI],[4,Math.PI/2],[8,-Math.PI/2]]) if(m&bit) b.at(0,0,0,ry,()=>wallStub(b)); }
   else if(key==='gate-x') gateX(b); else if(key==='gate-z') rotZ(gateX);
   else if(key==='aq-x') aqX(b); else if(key==='aq-z') rotZ(aqX);
   else if(key.startsWith('aqp-')){ const m=+key.slice(4);
@@ -691,15 +777,16 @@ function lineKey(i,j){
   const k=lineAt(i,j); if(!k) return null;
   const nE=lineAt(i+1,j)===k, nW=lineAt(i-1,j)===k, nN=lineAt(i,j-1)===k, nS=lineAt(i,j+1)===k;
   const hx=nE||nW, hz=nN||nS;
+  const mask=(nE?1:0)+(nW?2:0)+(nN?4:0)+(nS?8:0);
   if(k===1){
-    if(hx&&hz) return 'tower';
+    if(hx&&hz) return 'tower-'+mask;
     const r=road[I(i,j)];
     let ax=hz?'z':'x';
     if(!hx&&!hz&&r){ const rx=(inb(i+1,j)&&road[I(i+1,j)])||(inb(i-1,j)&&road[I(i-1,j)]); ax=rx?'z':'x'; }
     if(r) return 'gate-'+ax;
     const cnt=(nE?1:0)+(nW?1:0)+(nN?1:0)+(nS?1:0);
-    if(cnt<=1) return 'tower';
-    if((ax==='x'?i:j)%6===0) return 'tower';
+    if(cnt<=1) return 'tower-'+mask;
+    if((ax==='x'?i:j)%6===0) return 'tower-'+mask;
     return 'wall-'+ax;
   }
   if(hx&&hz) return 'aqp-'+((nE?1:0)+(nW?2:0)+(nN?4:0)+(nS?8:0));
@@ -1103,7 +1190,7 @@ canvas.addEventListener('pointerdown',e=>{
   pointers.set(e.pointerId,1); ensureAudio();
   if(e.pointerType==='touch'&&pointers.size>1){ cancelStroke(); return; }
   if(e.pointerType!=='touch'&&e.button!==0) return;
-  if(tool.kind==='camera') return;
+  if(tool.kind==='camera'){ camDown={x:e.clientX,y:e.clientY,id:e.pointerId,t:performance.now()}; return; }
   const c=cellAt(e); if(!c) return;
   stroke={start:{i:c.i,j:c.j},last:c,cur:c,visited:new Set(),changed:false,x0:e.clientX,y0:e.clientY,pid:e.pointerId,moved:false,snap:null};
   if(isPaint()){ stroke.snap=serialize(); paintAt(c); }
@@ -1118,8 +1205,16 @@ canvas.addEventListener('pointermove',e=>{
   }
   if(!(e.pointerType==='touch'&&!stroke)) updatePreview(c);
 });
+let camDown=null; const pulses=[];
 function endPointer(e){
   pointers.delete(e.pointerId);
+  if(camDown&&e.pointerId===camDown.id){ const cd=camDown; camDown=null;
+    if(Math.hypot(e.clientX-cd.x,e.clientY-cd.y)<8&&performance.now()-cd.t<600&&pointers.size===0){ const c=cellAt(e);
+      if(c&&c.inside){ const id=bld[I(c.i,c.j)]; let key=null;
+        if(id){ const b=buildings.get(id); key=b.type; pulses.push({m:b.mesh,t:0}); }
+        else if(line[I(c.i,c.j)]) key=line[I(c.i,c.j)]===1?'l-wall':'l-aq';
+        else if(road[I(c.i,c.j)]) key=road[I(c.i,c.j)]===2?'r-wide':'r-narrow';
+        if(key&&INFO[key]){ showInfo(key); sfx('tick'); } else hideInfo(); } } }
   if(!stroke||e.pointerId!==stroke.pid) return;
   const s=stroke; stroke=null;
   if(tool.kind==='road'||tool.kind==='line') commitPath(s.start,s.cur);
@@ -1209,7 +1304,7 @@ const TOOLS=[
   {id:'l-aq',cat:'drogi',kind:'line',val:2,name:'Akwedukt',hint:'Przeciągnij, aby poprowadzić akwedukt (może iść nad drogą i wodą)'},
   {id:'b-house',cat:'domy',kind:'brush',type:'house',name:'Kamienice',hint:'Maluj kamienice przeciągając — każda jest trochę inna i zwraca się do ulicy'},
   ...['domus','insula','taberna','garden'].map(t=>({id:'b-'+t,cat:'domy',kind:'build',type:t})),
-  ...['forum','temple','pantheon','basilica','curia','market','baths'].map(t=>({id:'b-'+t,cat:'publ',kind:'build',type:t})),
+  ...['forum','temple','pantheon','basilica','curia','market','baths','caracalla','diocletian'].map(t=>({id:'b-'+t,cat:'publ',kind:'build',type:t})),
   ...['colosseum','circus','theatre'].map(t=>({id:'b-'+t,cat:'rozr',kind:'build',type:t})),
   {id:'b-barracks',cat:'woj',kind:'build',type:'barracks'},
   {id:'l-wall',cat:'woj',kind:'line',val:1,name:'Mur miejski',hint:'Przeciągnij, aby postawić mur. Mur na drodze zamienia się w bramę'},
@@ -1238,20 +1333,23 @@ function selectTool(id){
   tool=SPECIAL[id]||TOOLS.find(t=>t.id===id)||SPECIAL.camera;
   if(tool.kind==='build'){ nextSeed=Math.floor(rnd()*1e6); ghostKey=''; }
   cancelStroke(); applyControlMode(); renderItems(); updateHint(); updatePreview(isTouch?null:hoverCell);
+  const ik=infoKeyFor(tool); if(ik&&infoAuto&&tool.kind==='build'&&!['house','cypress','pine','garden'].includes(ik)) showInfo(ik); else if(tool.kind!=='camera') hideInfo();
 }
 function updateHint(){
   let h='';
   const camHint=isTouch?'Dwa palce: zoom i przesuwanie · ⟲⟳ obrót widoku':'Prawy przycisk: obrót · kółko: zoom · WASD: przesuwanie';
-  if(tool.kind==='camera') h=isTouch?'Przeciągnij, aby obracać kamerę · dwa palce: zoom i przesuwanie':'Lewy: obrót · prawy: przesuwanie · kółko: zoom · Q/E obrót o 45°';
+  if(tool.kind==='camera') h=(isTouch?'Stuknij budynek, aby poznać jego historię · przeciągnij, aby obracać · dwa palce: zoom':'Kliknij budynek, aby poznać jego historię · lewy: obrót · prawy: przesuwanie · kółko: zoom');
   else if(tool.kind==='build') h=(DEFS[tool.type].desc||((isTouch?'Stuknij':'Kliknij')+', aby postawić: '+DEFS[tool.type].name))+' · R obraca'+(DEFS[tool.type].onRoad?' · można stawiać na drodze':'')+' · '+camHint;
   else if(tool.kind==='bulldoze') h=(isTouch?'Stuknij lub przeciągnij':'Kliknij lub przeciągnij')+', aby burzyć · '+camHint;
   else h=(tool.hint||'')+' · '+camHint;
   hintEl.textContent=h;
   document.getElementById('bRotate').classList.toggle('hide',tool.kind!=='build');
+  document.getElementById('bInfo').classList.toggle('hide',!infoKeyFor(tool));
   document.getElementById('bBrush').classList.toggle('hide',!(tool.kind==='terrain'||tool.kind==='bulldoze'));
 }
 function rotateBuilding(){ buildRot=(buildRot+1)%4; if(tool.kind==='build'){ sfx('tick'); updatePreview(hoverCell); } }
 document.getElementById('bRotate').onclick=rotateBuilding;
+document.getElementById('bInfo').onclick=()=>{ const k=infoKeyFor(tool); if(infoKey===k) hideInfo(); else showInfo(k); };
 document.getElementById('bBrush').onclick=e=>{ brushSize=brushSize===1?3:1; e.currentTarget.textContent='Pędzel: '+brushSize; };
 document.getElementById('bUndo').onclick=undo;
 document.getElementById('bRotL').onclick=()=>rotateView(-1);
@@ -1262,6 +1360,73 @@ document.getElementById('bPeople').onclick=e=>{ peopleOn=!peopleOn; e.currentTar
 document.getElementById('bSound').onclick=e=>{ muted=!muted; e.currentTarget.textContent=muted?'🔇':'🔊'; if(!muted) ensureAudio(); };
 let toastT=0; const toastEl=document.getElementById('toast');
 function toast(msg){ toastEl.textContent=msg; toastEl.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('show'),1500); }
+
+/* =========================================================
+   Ciekawostki historyczne
+   ========================================================= */
+const INFO={
+  forum:{era:'od VII–VI w. p.n.e.',text:'Serce Rzymu: plac targowy, miejsce przemówień, sądów, procesji i wyborów. Forum Romanum powstało w podmokłej dolinie między Palatynem a Kapitolem, którą osuszył wielki kanał – Cloaca Maxima.',
+    facts:['Mównica Rostra wzięła nazwę od dziobów (rostra) okrętów zdobytych w bitwie pod Ancjum w 338 p.n.e.','Przez forum biegła Via Sacra – droga, którą wodzowie przejeżdżali w pochodach triumfalnych.','Cesarze budowali obok własne fora; największe, Forum Trajana, otwarto w 112 n.e.']},
+  temple:{era:'Świątynia Jowisza na Kapitolu: wg tradycji 509 p.n.e.',text:'Rzymska świątynia stała na wysokim podium, a wchodziło się do niej tylko od frontu, po schodach – inaczej niż do greckiej, otoczonej stopniami ze wszystkich stron. W środku, w celli, stał posąg bóstwa.',
+    facts:['Ofiary składano na ołtarzu przed świątynią, a nie w jej wnętrzu.','Jedna z najlepiej zachowanych świątyń tego typu to Maison Carrée w Nîmes we Francji.','Najważniejszą świątynią Rzymu była świątynia Jowisza Najlepszego Największego na Kapitolu.']},
+  pantheon:{era:'ok. 113–125 n.e., cesarz Hadrian',text:'Świątynia „wszystkich bogów”. Obecny budynek wzniósł Hadrian na miejscu starszej świątyni Agryppy – dlatego na fryzie nadal widnieje napis M·AGRIPPA.',
+    facts:['Kopuła ma 43,3 m średnicy – dokładnie tyle, ile wynosi wysokość wnętrza, więc w środku zmieściłaby się kula.','To do dziś największa kopuła z niezbrojonego betonu na świecie; ku górze beton jest coraz lżejszy (dodawano pumeks).','Jedynym oknem jest okrągły otwór na szczycie – oculus – o średnicy ok. 8 m. Od 609 r. budynek jest kościołem i dzięki temu przetrwał.']},
+  basilica:{era:'od II w. p.n.e.',text:'Bazylika nie była świątynią, tylko wielką krytą halą: odbywały się w niej sądy, spotkania kupców i załatwiano interesy, gdy na forum padał deszcz.',
+    facts:['Bazylika Emilia powstała w 179 p.n.e., a Bazylika Julia, ufundowana przez Cezara, została poświęcona w 46 p.n.e.','Plan z wysoką nawą główną i oknami nad niższymi nawami bocznymi przejęły później kościoły chrześcijańskie.','Ogromną Bazylikę Maksencjusza ukończył ok. 312 n.e. cesarz Konstantyn.']},
+  curia:{era:'Curia Julia: 44–29 p.n.e.',text:'Siedziba senatu rzymskiego. Budowę Curii Julii rozpoczął Juliusz Cezar, a ukończył August.',
+    facts:['Budynek, który stoi dziś na forum, to odbudowa cesarza Dioklecjana po pożarze z 283 n.e.','Przetrwał niemal w całości, bo w VII w. zamieniono go w kościół.','Senatorowie nie siedzieli w ławkach, lecz na szerokich stopniach ciągnących się wzdłuż ścian.']},
+  market:{era:'macellum: od II w. p.n.e.',text:'Macellum to targ, na którym sprzedawano mięso, ryby, warzywa i owoce. Zwykle miał dziedziniec otoczony kramami i okrągły pawilon (tholos) pośrodku.',
+    facts:['Targi Trajana (ok. 100–110 n.e.) to wielopiętrowy kompleks sklepów i biur – często nazywany pierwszym „centrum handlowym”.','Nad porządkiem na targach i miarami wag czuwali urzędnicy – edylowie.']},
+  baths:{era:'pierwsze wielkie termy w Rzymie: Agryppa, ok. 25 p.n.e.',text:'Termy były czymś więcej niż łaźnią: ćwiczono tu w palestrze, rozmawiano, załatwiano interesy. Kąpiel szła po kolei: przebieralnia, ciepłe tepidarium, gorące caldarium i zimne frigidarium.',
+    facts:['Podłogi i ściany ogrzewał hypokaust: gorące powietrze z pieca płynęło pod podłogą opartą na słupkach z cegieł.','Wstęp kosztował grosze – często jednego quadransa, najmniejszą monetę. Dzieci wchodziły za darmo.','Wodę doprowadzały akwedukty, a woda zużyta w termach płukała potem kanały.']},
+  caracalla:{era:'ok. 212–216 n.e., cesarz Karakalla',text:'Jedne z największych i najwspanialszych term Rzymu. Oprócz basenów i sal kąpielowych miały ogrody, palestry i dwie biblioteki – grecką i łacińską.',
+    facts:['Mogły przyjąć jednocześnie ok. 1600 kąpiących się.','Ogromne okrągłe caldarium przykrywała kopuła zbliżona rozmiarem do kopuły Panteonu.','Działały ponad 300 lat – do 537 r., gdy Ostrogoci podczas oblężenia przecięli akwedukty. Dziś latem w ruinach wystawia się opery.']},
+  diocletian:{era:'298–306 n.e., cesarz Dioklecjan',text:'Największe termy starożytnego Rzymu – kompleks zajmował ok. 13 hektarów.',
+    facts:['Mogły pomieścić nawet ok. 3000 kąpiących się naraz.','W XVI w. Michał Anioł przebudował frigidarium na bazylikę Santa Maria degli Angeli e dei Martiri – działa do dziś.','Półkolista egzedra term wyznacza dziś kształt Piazza della Repubblica w Rzymie.']},
+  colosseum:{era:'ok. 70–80 n.e., Wespazjan i Tytus',text:'Amfiteatr Flawiuszów. Budowę zaczął cesarz Wespazjan, a otworzył go jego syn Tytus w 80 n.e. igrzyskami, które trwały 100 dni. Odbywały się tu walki gladiatorów i polowania na dzikie zwierzęta.',
+    facts:['Mieścił ok. 50 000 widzów; ma ok. 189 × 156 m i ok. 48 m wysokości.','Przed słońcem chroniło widzów velarium – płócienny dach, który rozpinali marynarze cesarskiej floty.','Pod areną znajdowało się hypogeum: korytarze, klatki i windy, którymi wypuszczano zwierzęta na arenę.']},
+  circus:{era:'wg tradycji od VI w. p.n.e.',text:'Circus Maximus – najstarszy i największy tor wyścigów rydwanów w Rzymie, długi na ok. 600 m. Mógł pomieścić ok. 150 000 widzów.',
+    facts:['Wyścig trwał 7 okrążeń; licznikiem były drewniane jaja i brązowe delfiny na spinie – delfiny dodał Agryppa w 33 p.n.e.','Kibicowano czterem stronnictwom: Czerwonym, Białym, Zielonym i Niebieskim – w grze rydwany mają te same barwy.','Obelisk na spinie sprowadził z Egiptu August w 10 p.n.e.; dziś stoi na Piazza del Popolo.']},
+  theatre:{era:'pierwszy kamienny teatr: Pompejusz, 55 p.n.e.',text:'Wcześniej teatry w Rzymie stawiano z drewna i rozbierano po przedstawieniach. Pierwszy stały, kamienny teatr zbudował Pompejusz – na szczycie widowni umieścił świątynię Wenus.',
+    facts:['Półkolistą widownię nazywano cavea, a ozdobną, wielokondygnacyjną ścianę za sceną – scaenae frons.','Teatr Marcellusa, ukończony za Augusta, stoi do dziś – w średniowieczu przerobiono go na twierdzę, a później na pałac.']},
+  barracks:{era:'castra – od czasów republiki',text:'Legion w marszu co wieczór budował obóz według tego samego planu: prostokąt z wałem i rowem oraz dwiema głównymi drogami, via principalis i via praetoria. W środku stała komendantura – principia.',
+    facts:['Ośmiu żołnierzy dzieliło namiot i muła – to contubernium. Dziesięć contubernia tworzyło centurię (80 ludzi).','Wiele miast wyrosło z obozów legionowych, np. Wiedeń (Vindobona) czy York (Eboracum).','Gwardia pretoriańska miała w Rzymie własny obóz – Castra Praetoria (ok. 23 n.e.).']},
+  domus:{era:'od czasów republiki',text:'Dom zamożnej rodziny, zwrócony do wnętrza. Przez otwór w dachu (compluvium) deszczówka spływała do basenu (impluvium) w atrium, a z tyłu domu był perystyl – ogród otoczony kolumnadą.',
+    facts:['Od strony ulicy domus często miał tylko drzwi i małe okna, a pomieszczenia od frontu wynajmowano jako sklepy.','W Pompejach przy wejściu do jednego z domów zachowała się mozaika z psem i napisem CAVE CANEM – „uważaj na psa”.']},
+  insula:{era:'od III w. p.n.e.',text:'Czynszowa kamienica, w której mieszkała większość Rzymian. Na parterze były sklepy, wyżej mieszkania – im wyżej, tym ciaśniejsze i tańsze, bez wody i bardziej zagrożone pożarem.',
+    facts:['August ograniczył wysokość budynków do ok. 70 stóp (ok. 21 m).','Spisy z IV w. podają, że w Rzymie było ok. 46 000 insul i tylko ok. 1800 domów jednorodzinnych.']},
+  taberna:{era:'cały okres rzymski',text:'Mały sklep albo warsztat na parterze, otwarty szeroko na ulicę i zamykany na noc drewnianymi okiennicami.',
+    facts:['Thermopolium było barem z gorącym jedzeniem: w murowaną ladę wpuszczano gliniane naczynia (dolia) z potrawami.','W Pompejach zachowało się ponad sto takich barów.']},
+  house:{era:'',text:'Zwykłe kamienice i domy tworzące większość zabudowy rzymskiego miasta – tynkowane, kryte czerwoną dachówką.',facts:['Rzymianie wymyślili dachówki, które zakładały się na siebie: płaskie tegulae i półokrągłe imbrices.']},
+  garden:{era:'',text:'Ogrody perystylowe były zieloną duszą domów: z fontannami, rzeźbami, ziołami i drzewami owocowymi.',facts:['W Pompejach archeolodzy odlali w gipsie ślady korzeni roślin i odtworzyli, co rosło w ogrodach sprzed 79 n.e.']},
+  arch:{era:'Łuk Tytusa ok. 81 n.e., Łuk Konstantyna 315 n.e.',text:'Łuki triumfalne wznoszono na pamiątkę zwycięstw. Przez łuk przejeżdżał pochód triumfalny wodza.',
+    facts:['Łuk Tytusa upamiętnia zdobycie Jerozolimy w 70 n.e. – na reliefie niesiona jest menora ze Świątyni Jerozolimskiej.','Łuk Konstantyna to największy zachowany łuk w Rzymie; część jego reliefów zabrano ze starszych pomników.','Wg przekazów za triumfatorem stał niewolnik, który przypominał mu, że jest tylko człowiekiem.']},
+  fountain:{era:'',text:'Większość mieszkańców nie miała wody w domu – brali ją z publicznych fontann i basenów zasilanych przez akwedukty.',facts:['Według Pliniusza Agryppa zbudował w Rzymie ok. 700 basenów i 500 fontann.','Woda w fontannach płynęła bez przerwy – nadmiar spływał do kanałów.']},
+  statue:{era:'',text:'Fora i ulice wypełniały posągi bogów, cesarzy i zasłużonych obywateli – z marmuru i brązu, często malowane na żywe kolory.',facts:['Brązowy posąg konny Marka Aureliusza (ok. 175 n.e.) przetrwał, bo przez wieki mylono go z Konstantynem, pierwszym chrześcijańskim cesarzem.']},
+  column:{era:'Kolumna Trajana, 113 n.e.',text:'Kolumny honorowe upamiętniały cesarzy i ich zwycięstwa. Najsłynniejsza, Kolumna Trajana, ma trzon wysoki na 100 rzymskich stóp (ok. 30 m).',
+    facts:['Spiralny fryz długości ok. 190 m opowiada jak komiks o wojnach Trajana z Dakami.','W środku są kręte schody na szczyt, a w cokole złożono urnę z prochami cesarza. Od 1587 r. na szczycie stoi posąg św. Piotra.']},
+  cypress:{era:'',text:'Smukłe cyprysy były w starożytności drzewami związanymi z pamięcią o zmarłych – sadzono je przy grobowcach.',facts:['Rzymianie chowali zmarłych poza murami miasta, dlatego drogi wylotowe, jak Via Appia, obstawione były grobowcami.']},
+  pine:{era:'',text:'Pinia o parasolowatej koronie to symbol krajobrazu wokół Rzymu.',facts:['Jej nasiona – orzeszki piniowe – jedzono już w starożytności.']},
+  'r-narrow':{era:'',text:'Wąskie uliczki (vici) były brukowane, z wyższymi chodnikami po bokach.',facts:['W Pompejach na ulicach leżą duże kamienie, po których przechodziło się suchą nogą, a wozy przejeżdżały między nimi.']},
+  'r-wide':{era:'Via Appia: 312 p.n.e.',text:'Rzymskie drogi budowano warstwami: podsypka z kamieni, żwir, ubita warstwa z zaprawą, a na wierzchu płyty bazaltu. Via Appia, „królowa dróg”, prowadziła z Rzymu na południe Italii.',
+    facts:['Prawo Juliusza Cezara zakazało wozom wjazdu do Rzymu w ciągu dnia (poza wyjątkami) – nocą miasto huczało od kół.','W szczytowym okresie sieć rzymskich dróg liczyła dziesiątki tysięcy kilometrów.']},
+  'l-aq':{era:'Aqua Appia: 312 p.n.e.',text:'Akwedukty doprowadzały wodę z gór do miasta wyłącznie siłą grawitacji. Większość ich długości biegła pod ziemią – na arkadach tylko przez doliny i niziny.',
+    facts:['W czasach największego rozkwitu Rzym zasilało 11 akweduktów.','Spadek kanału bywał bardzo mały – często poniżej metra na kilometr.','Aqua Virgo z 19 p.n.e. do dziś zasila Fontannę di Trevi.']},
+  'l-wall':{era:'Mur Serwiański IV w. p.n.e., Mur Aureliana 271–275 n.e.',text:'Pierwszy wielki mur Rzymu wzniesiono po złupieniu miasta przez Galów (ok. 390 p.n.e.). Przez stulecia pokoju miasto rozrosło się daleko poza niego.',
+    facts:['Mur Aureliana miał ok. 19 km długości i 383 wieże – w dużej części stoi do dziś.','Bramy stały tam, gdzie mur przecinały drogi – w grze mur na drodze sam zamienia się w bramę.']},
+};
+let infoAuto=true, infoKey=null;
+const infoEl=document.getElementById('info');
+function infoKeyFor(t){ if(!t) return null; if(t.type&&INFO[t.type]) return t.type; if(INFO[t.id]) return t.id; return null; }
+function showInfo(key){
+  const d=INFO[key]; if(!d){ hideInfo(); return; }
+  infoKey=key;
+  const name=DEFS[key]?.name||TOOLS.find(t=>t.id===key)?.name||'';
+  infoEl.innerHTML=`<button class="x" aria-label="Zamknij">×</button><div class="it">${name}</div>${d.era?`<div class="era">${d.era}</div>`:''}<p>${d.text}</p>${d.facts?.length?`<div class="dyk">Czy wiesz, że…</div><ul>${d.facts.map(f=>`<li>${f}</li>`).join('')}</ul>`:''}`;
+  infoEl.querySelector('.x').onclick=hideInfo;
+  infoEl.classList.add('show'); infoEl.scrollTop=0;
+}
+function hideInfo(){ infoEl.classList.remove('show'); infoKey=null; }
 
 /* ---- menu ---- */
 const modal=document.getElementById('modal'), card=document.getElementById('card');
@@ -1283,12 +1448,14 @@ function openMenu(){
   <div class="row"><button class="btn" id="mDemo">Wczytaj przykładowe miasto</button></div>
   <h3>Zasady</h3>
   <label class="ck"><input type="checkbox" id="mPlots" ${onlyPlots?'checked':''}> Buduj tylko na działkach (ozdoby wszędzie)</label>
+  <label class="ck"><input type="checkbox" id="mInfo" ${infoAuto?'checked':''}> Pokazuj historię przy wyborze budynku</label>
   <h3>Zapis</h3>
   <p>Miasto zapisuje się samo w tej przeglądarce. Możesz też skopiować kod i wkleić go gdzie indziej.</p>
   <div class="row"><button class="btn" id="mCopy">Kopiuj kod miasta</button><button class="btn" id="mLoad">Wczytaj z kodu</button></div>
   <textarea id="mCode" placeholder="Tu pojawi się / tu wklej kod miasta"></textarea>
   <h3>Sterowanie</h3>
   <div class="keys">Mysz: <b>lewy</b> buduje, <b>prawy</b> obraca, <b>kółko</b> zoom, <b>środkowy</b> przesuwa · <b>WASD</b> przesuwanie · <b>Q/E</b> obrót o 45° · <b>R</b> obrót budynku · <b>Ctrl+Z</b> cofnij · <b>G</b> siatka · <b>Esc</b> tryb rozglądania<br>
+  W trybie <b>✋ Rozglądaj</b> kliknij lub stuknij dowolny budynek, mur czy drogę, aby poznać jego historię.<br>
   Dotyk: <b>jeden palec</b> buduje, <b>dwa palce</b> zoom i przesuwanie, przyciski ⟲ ⟳ obracają widok, narzędzie ✋ obraca kamerę palcem.</div>
   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn main" id="mClose">Zamknij</button></div>`;
   modal.classList.remove('hidden');
@@ -1298,6 +1465,7 @@ function openMenu(){
   $('mNew').onclick=()=>{ pushUndo(); const n=+$('mN').value; resizeWorld(n); if($('mLand').checked) landscape(Math.floor(rnd()*1000)); closeModal(); };
   $('mDemo').onclick=()=>{ pushUndo(); defaultWorld(); closeModal(); };
   $('mPlots').onchange=e=>{ onlyPlots=e.target.checked; };
+  $('mInfo').onchange=e=>{ infoAuto=e.target.checked; try{ localStorage.setItem('urbs-info',infoAuto?'1':'0'); }catch(_){} };
   $('mCopy').onclick=async()=>{ const code=btoa(unescape(encodeURIComponent(serialize()))); $('mCode').value=code; try{ await navigator.clipboard.writeText(code); toast('Skopiowano kod miasta'); }catch(e){ $('mCode').select(); toast('Zaznacz i skopiuj kod z pola'); } };
   $('mLoad').onclick=()=>{ const v=$('mCode').value.trim(); if(!v){ toast('Wklej najpierw kod'); return; } try{ const snap=serialize(); deserialize(decodeURIComponent(escape(atob(v)))); pushUndo(snap); closeModal(); toast('Wczytano miasto'); }catch(e){ toast('Ten kod nie wygląda na miasto'); } };
 }
@@ -1335,7 +1503,7 @@ function renderIcons(){
     try{
       if(t.kind==='terrain'||t.kind==='road') t.icon=swatch(t.kind,t.val);
       else if(t.kind==='brush') t.icon=shot([M(getGeom('house',3),-0.5,-0.5),M(getGeom('house',7),0.5,-0.5),M(getGeom('house',11),-0.5,0.5),M(getGeom('house',14),0.5,0.5)]);
-      else if(t.id==='l-wall') t.icon=shot([M(lineGeom('tower'),-1),M(lineGeom('wall-x'),0),M(lineGeom('gate-x'),1),M(lineGeom('wall-x'),2),M(lineGeom('tower'),3)]);
+      else if(t.id==='l-wall') t.icon=shot([M(lineGeom('tower-1'),-1),M(lineGeom('wall-x'),0),M(lineGeom('gate-x'),1),M(lineGeom('wall-x'),2),M(lineGeom('tower-2'),3)]);
       else if(t.id==='l-aq') t.icon=shot([M(lineGeom('aq-x'),-1),M(lineGeom('aq-x'),0),M(lineGeom('aq-x'),1)]);
       else if(t.type) t.icon=shot([M(getGeom(t.type,0))]);
     }catch(e){ console.warn('ikona',t.id,e); }
@@ -1359,6 +1527,7 @@ function loop(now){
   camStep(dt); controls.update();
   for(let k=growing.length-1;k>=0;k--){ const g=growing[k]; g.t+=dt/0.42; const t=Math.min(1,g.t); const sy=easeOutBack(t), sxz=0.75+0.25*Math.min(1,t*1.4);
     g.m.scale.set(sxz,Math.max(0.01,sy),sxz); if(t>=1){ g.m.scale.set(1,1,1); growing.splice(k,1); } }
+  for(let k=pulses.length-1;k>=0;k--){ const p=pulses[k]; p.t+=dt/0.35; const s=1+0.07*Math.sin(Math.min(1,p.t)*Math.PI); p.m.scale.set(s,s,s); if(p.t>=1){ p.m.scale.set(1,1,1); pulses.splice(k,1); } }
   updateAgents(dt,now/1000);
   T.water.material.emissive.setRGB(0.02+Math.sin(now/900)*0.015,0.05+Math.sin(now/900)*0.02,0.07);
   statT+=dt; if(statT>0.6){ statT=0; updateStats(); }
@@ -1369,6 +1538,7 @@ window.addEventListener('resize',()=>{ renderer.setSize(innerWidth,innerHeight);
 
 /* ---- start ---- */
 function start(){
+  try{ infoAuto=localStorage.getItem('urbs-info')!=='0'; }catch(e){}
   buildBoard(); resetCamera(); applyTime();
   let loaded=false;
   try{ const s=localStorage.getItem('urbs-save-v1'); if(s){ deserialize(s); loaded=true; } }catch(e){ console.warn(e); }
