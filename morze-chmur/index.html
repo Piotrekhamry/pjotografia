@@ -110,7 +110,7 @@ button.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--l
 @keyframes spin{to{transform:rotate(360deg)}}
 .sunup{animation:sunup 6s ease-in-out infinite alternate}
 @keyframes sunup{from{transform:translateY(3px)}to{transform:translateY(-3px)}}
-.tw{transform-box:fill-box;transform-origin:center;animation:tw 3.5s ease-in-out infinite}
+.spk{transform-box:fill-box;transform-origin:center;animation:tw 3.5s ease-in-out infinite}
 @keyframes tw{0%,100%{opacity:0;transform:scale(.3)}50%{opacity:1;transform:scale(1.2)}}
 @media(max-width:480px){.scene{width:44%;-webkit-mask-image:linear-gradient(90deg,transparent 0,rgba(0,0,0,.5) 35%,#000 75%);mask-image:linear-gradient(90deg,transparent 0,rgba(0,0,0,.5) 35%,#000 75%)}.dt{padding-right:4px}}
 .score{position:relative;width:64px;height:64px;flex:none}
@@ -188,10 +188,11 @@ button.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--l
 .profile svg{width:100%;height:auto;display:block}
 .profile .cb{transform-box:fill-box;transform-origin:left center;animation:grow .7s var(--ease) both}
 @keyframes grow{from{transform:scaleX(0)}}
-.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:10px}
-table{width:100%;min-width:540px;border-collapse:collapse;font-size:14px}
-th,td{text-align:right;padding:7px 5px;border-bottom:1px solid var(--line);white-space:nowrap}
-th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--panel)}
+.mtab{margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+th,td{text-align:right;padding:7px 3px;border-bottom:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+th:first-child,td:first-child{text-align:left}
+th{font-size:11px}
 th{color:var(--muted);font-weight:500}
 .note{font-size:13px;color:var(--muted);margin-top:24px}
 @media(max-width:480px){
@@ -710,7 +711,7 @@ function sceneSVG(type,i){
       <g class="sdr">${seaRow(57,12,14,26,'#ffd6c8',.85,5)}</g>
       <g class="sdr2">${seaRow(67,11,18,30,'#fff1ea',.95,9)}</g>
       <rect y="71" width="200" height="9" fill="#fff1ea"/>
-      ${[[30,24],[70,30],[60,12],[175,18],[100,28]].map(([x,y],k)=>`<circle class="tw" cx="${x}" cy="${y}" r="1.6" fill="#fff" style="animation-delay:${k*.7}s"/>`).join('')}`;
+      ${[[30,24],[70,30],[60,12],[175,18],[100,28]].map(([x,y],k)=>`<circle class="spk" cx="${x}" cy="${y}" r="1.6" fill="#fff" style="animation-delay:${k*.7}s"/>`).join('')}`;
   }
   return`<div class="scene" aria-hidden="true"><svg viewBox="0 0 200 80" preserveAspectRatio="xMaxYMid slice"><defs>${d}</defs>${b}</svg></div>`;
 }
@@ -935,9 +936,9 @@ function detailHTML(day,i){
   <h3 class="dsec">☁️ Chmury wg wysokości</h3>
   <p class="why" style="margin-top:0">Zachmurzenie wg wysokości w chwili ${ev} (średnia z modeli) – paski to % pokrycia nieba warstwą na danej wysokości:</p>
   <div class="profile">${profileSVG(day,summit)}</div>
-  <div class="tw"><table><tr><th>Model</th><th>Morze</th><th>${state.mode==='sunrise'?'Wschód':'Zachód'}</th><th>Razem</th><th>Niskie</th><th>Średnie</th><th>Wysokie</th><th>Wiatr</th></tr>
-  ${day.per.map(p=>p.r?`<tr><td>${esc(p.name)}</td><td>${p.r.sea}</td><td>${p.r.sun}</td><td><b>${p.r.combined}</b></td><td>${f(p.r.ccLow)}%</td><td>${f(p.r.ccMid)}%</td><td>${f(p.r.ccHigh)}%</td><td>${f(p.r.wS!=null?p.r.wS:p.r.wind)} km/h</td></tr>`:`<tr><td>${esc(p.name)}</td><td colspan="7" style="color:var(--muted);text-align:left">brak danych</td></tr>`).join('')}</table></div>
-  <p class="why">„Razem” to lepsza z dwóch szans (morze chmur albo kolory nieba), z bonusem, gdy obie są dobre. Kolumny chmur: niskie / średnie / wysokie w %.</p>
+  <div class="mtab"><table><colgroup><col style="width:23%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:24%"><col style="width:14%"></colgroup><tr><th>Model</th><th>Morze</th><th>Kolory</th><th>Ocena</th><th>N/Ś/W %</th><th>Wiatr</th></tr>
+  ${day.per.map(p=>{const sn={'ECMWF IFS':'ECMWF','NOAA GFS':'GFS','DWD ICON':'ICON','Météo-France':'Météo-Fr.'}[p.name]||p.name;return p.r?`<tr><td>${esc(sn)}</td><td>${p.r.sea}</td><td>${p.r.sun}</td><td><b>${p.r.combined}</b></td><td>${f(p.r.ccLow)}/${f(p.r.ccMid)}/${f(p.r.ccHigh)}</td><td>${f(p.r.wS!=null?p.r.wS:p.r.wind)}</td></tr>`:`<tr><td>${esc(sn)}</td><td colspan="5" style="color:var(--muted);text-align:left">brak danych</td></tr>`}).join('')}</table></div>
+  <p class="why">„Ocena” to lepsza z dwóch szans (morze chmur albo kolory nieba), z bonusem, gdy obie są dobre. Chmury: niskie / średnie / wysokie w %, wiatr na szczycie w km/h.</p>
   <a class="ext" href="${co}" target="_blank" rel="noopener">🔭 Porównaj w Clear Outside (godzinowo: chmury, mgła, wilgotność) ↗</a>`;
 }
 
