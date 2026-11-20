@@ -21,8 +21,8 @@
 html{background:#f6ead5;height:100%}
 body{min-height:100%;min-height:100dvh}
 html,body{margin:0;height:100%;overflow:hidden;font-family:Nunito,system-ui,sans-serif;color:var(--ink);background:linear-gradient(180deg,var(--sky1) 0%,var(--sky2) 75%);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none;filter:saturate(1.14) contrast(1.1)}
-#vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 55%,rgba(70,40,15,.22) 100%);z-index:1}
+#c{position:fixed;left:0;top:0;width:100%;height:calc(100% + var(--vfix,0px));display:block;touch-action:none;outline:none;filter:saturate(1.14) contrast(1.1)}
+#vig{position:fixed;left:0;top:0;right:0;height:calc(100% + var(--vfix,0px));pointer-events:none;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 55%,rgba(70,40,15,.22) 100%);z-index:1}
 button{font-family:inherit;color:inherit}
 #topbar{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 0 calc(12px + env(safe-area-inset-left));pointer-events:none;z-index:5}
 #topbar>*{pointer-events:auto}
@@ -30,7 +30,7 @@ button{font-family:inherit;color:inherit}
 .seg{display:flex;background:var(--panel);border-radius:14px;box-shadow:var(--shadow);padding:3px}
 .seg button{border:0;background:transparent;border-radius:11px;padding:8px 12px;font-weight:800;font-size:13px;cursor:pointer;opacity:.6}
 .seg button.on{background:var(--terra);color:#fff;opacity:1}
-#rotbar{position:fixed;left:calc(12px + env(safe-area-inset-left));bottom:calc(var(--dockh) + 18px + env(safe-area-inset-bottom));display:flex;gap:6px;z-index:5}
+#rotbar{position:fixed;left:calc(12px + env(safe-area-inset-left));bottom:calc(var(--dockh) + 18px + env(safe-area-inset-bottom) - var(--vfix,0px));display:flex;gap:6px;z-index:5}
 #rotbar button{width:40px;height:40px;border:0;border-radius:50%;background:var(--panel);box-shadow:var(--shadow);font-size:18px;cursor:pointer}
 #items.closed{display:none}
 .cat.tool{margin-left:auto}
@@ -54,7 +54,7 @@ button{font-family:inherit;color:inherit}
 .tbtn.hide{display:none}
 .steps{margin:8px 0 0;padding-left:20px;font-size:14.5px;line-height:1.6}
 .share{display:inline-block;border:1.5px solid currentColor;border-radius:5px;width:16px;height:16px;text-align:center;line-height:12px;font-size:12px;vertical-align:-2px}
-#dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));width:min(1000px,calc(100% - 16px));background:var(--panel);border-radius:22px;box-shadow:var(--shadow);padding:6px 6px 8px;z-index:5;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom) - var(--vfix,0px));width:min(1000px,calc(100% - 16px));background:var(--panel);border-radius:22px;box-shadow:var(--shadow);padding:6px 6px 8px;z-index:5;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 #cats{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:2px}
 #cats::-webkit-scrollbar{display:none}
 .cat{flex:0 0 auto;border:0;background:transparent;border-radius:12px;padding:6px 11px;font-weight:800;font-size:13px;opacity:.62;cursor:pointer;white-space:nowrap}
@@ -65,16 +65,16 @@ button{font-family:inherit;color:inherit}
 .item .ico{display:flex;align-items:center;justify-content:center;font-size:28px;background:#f3ebdd}
 .item.on{border-color:var(--terra);transform:translateY(-3px);box-shadow:0 4px 12px rgba(200,100,59,.25)}
 .sep{flex:0 0 1px;background:rgba(74,58,44,.15);margin:8px 3px}
-#ctx{position:fixed;right:max(12px,calc(50% - 500px));bottom:calc(var(--dockh) + 18px + env(safe-area-inset-bottom));display:flex;gap:6px;z-index:5}
+#ctx{position:fixed;right:max(12px,calc(50% - 500px));bottom:calc(var(--dockh) + 18px + env(safe-area-inset-bottom) - var(--vfix,0px));display:flex;gap:6px;z-index:5}
 #ctx button{border:0;background:var(--panel);box-shadow:var(--shadow);border-radius:14px;padding:9px 13px;font-weight:800;font-size:13px;cursor:pointer}
 #ctx button.hide{display:none}
 #ctx button.done{background:var(--terra);color:#fff}
-#act{position:fixed;left:50%;transform:translateX(-50%) translateY(10px);bottom:calc(var(--dockh) + 62px + env(safe-area-inset-bottom));display:flex;gap:8px;z-index:7;opacity:0;pointer-events:none;transition:all .18s}
+#act{position:fixed;left:50%;transform:translateX(-50%) translateY(10px);bottom:calc(var(--dockh) + 62px + env(safe-area-inset-bottom) - var(--vfix,0px));display:flex;gap:8px;z-index:7;opacity:0;pointer-events:none;transition:all .18s}
 #act.show{opacity:1;transform:translateX(-50%);pointer-events:auto}
 #act button{border:0;border-radius:16px;padding:13px 18px;font-weight:800;font-size:16px;box-shadow:var(--shadow);background:var(--panel);cursor:pointer;min-width:52px}
 #act button.ok{background:#4f9a4a;color:#fff}
 #act button.ok:disabled{background:#c9b9a5;color:#fff}
-#hint{opacity:0;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockh) + 18px + env(safe-area-inset-bottom));background:rgba(60,45,32,.78);color:#fff;padding:7px 14px;border-radius:12px;font-size:12.5px;max-width:min(560px,calc(100% - 24px));text-align:center;pointer-events:none;z-index:4;transition:opacity .3s}
+#hint{opacity:0;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockh) + 18px + env(safe-area-inset-bottom) - var(--vfix,0px));background:rgba(60,45,32,.78);color:#fff;padding:7px 14px;border-radius:12px;font-size:12.5px;max-width:min(560px,calc(100% - 24px));text-align:center;pointer-events:none;z-index:4;transition:opacity .3s}
 #info{position:fixed;left:calc(12px + env(safe-area-inset-left));top:205px;width:330px;max-height:calc(100vh - var(--dockh) - 240px);overflow:auto;background:var(--panel);border-radius:18px;box-shadow:var(--shadow);padding:14px 16px 12px;z-index:6;opacity:0;transform:translateX(-14px);pointer-events:none;transition:opacity .25s,transform .25s;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 #info.show{opacity:1;transform:none;pointer-events:auto}
 #info .it{font-family:Cinzel,serif;font-weight:700;font-size:19px;color:var(--terra2);padding-right:26px;letter-spacing:.04em}
@@ -84,7 +84,7 @@ button{font-family:inherit;color:inherit}
 #info ul{margin:4px 0 0;padding-left:18px;font-size:13px;line-height:1.45}
 #info li{margin:4px 0}
 #info .x{position:absolute;top:8px;right:8px;width:30px;height:30px;border:0;border-radius:10px;background:#efe4d2;font-size:18px;cursor:pointer}
-#labels{position:fixed;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+#labels{position:fixed;left:0;top:0;right:0;height:calc(100% + var(--vfix,0px));pointer-events:none;z-index:2;overflow:hidden}
 .lbl{position:absolute;left:0;top:0;pointer-events:auto;border:0;background:rgba(252,247,238,.9);color:var(--ink);font-weight:800;font-size:12px;padding:3px 9px;border-radius:9px;box-shadow:0 2px 8px rgba(80,50,20,.22);white-space:nowrap;cursor:pointer;font-family:Nunito,sans-serif}
 .lbl::after{content:'';position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-top-color:rgba(252,247,238,.9);border-bottom:0}
 #labels.small .lbl{font-size:10px;padding:2px 6px;opacity:.9}
@@ -773,6 +773,17 @@ function lineGeom(key){
 const canvas=document.getElementById('c');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+// iOS w trybie aplikacji potrafi podać viewport krótszy o wysokość paska stanu – mierzymy i dociągamy obraz do dołu ekranu
+function fixViewport(){
+  let fix=0;
+  try{ if(navigator.standalone===true||matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches){
+    const p=document.createElement('div'); p.style.cssText='position:fixed;top:0;left:0;width:1px;height:100vh;visibility:hidden;pointer-events:none';
+    document.body.appendChild(p); const vh=p.getBoundingClientRect().height; p.remove();
+    const scr=(screen.height>screen.width)===(innerHeight>innerWidth)?screen.height:screen.width;
+    fix=Math.round(Math.max(0,Math.min(Math.max(vh,scr)-innerHeight,140))); } }catch(e){}
+  document.documentElement.style.setProperty('--vfix',fix+'px');
+}
+fixViewport();
 function viewSize(){ return [Math.max(1,canvas.clientWidth||innerWidth),Math.max(1,canvas.clientHeight||innerHeight)]; }
 renderer.setSize(...viewSize(),false);
 renderer.setClearColor(0x000000,0);
@@ -931,11 +942,12 @@ function addBuilding(type,x,z,rot,seed,anim=true,lm=null,fl=null){
   const def=DEFS[type]; const [fw,fd]=fpSize(def,rot); const id=nextId++;
   for(let j=z;j<z+fd;j++) for(let i=x;i<x+fw;i++) bld[I(i,j)]=id;
   const m=new THREE.Mesh(getGeom(type,seed,fl),bMat); m.castShadow=m.receiveShadow=true;
-  m.position.set(x+fw/2-N/2,0,z+fd/2-N/2); m.rotation.y=rot*Math.PI/2;
+  m.position.set(x+fw/2-N/2,0,z+fd/2-N/2); m.rotation.y=type==='house'?0:rot*Math.PI/2;
   if(anim){ m.scale.set(0.01,0.01,0.01); growing.push({m,t:0}); }
   buildGroup.add(m);
   buildings.set(id,{id,type,x,z,rot,seed,mesh:m,lm:lm||null,ts:1,fl:fl||null});
   if(todayMode){ applyTodayTo(buildings.get(id),true); }
+  if(type==='house') markHouses(x,z);
   labelsDirty=true;
   dirtyTerrain=true; dirtyRoads=true; dirtySave=true;
   return id;
@@ -944,7 +956,7 @@ function removeBuilding(id){
   const b=buildings.get(id); if(!b) return;
   const [fw,fd]=fpSize(DEFS[b.type],b.rot);
   for(let j=b.z;j<b.z+fd;j++) for(let i=b.x;i<b.x+fw;i++) if(inb(i,j)&&bld[I(i,j)]===id) bld[I(i,j)]=0;
-  buildGroup.remove(b.mesh); buildings.delete(id); labelsDirty=true;
+  buildGroup.remove(b.mesh); buildings.delete(id); labelsDirty=true; if(b.type==='house') markHouses(b.x,b.z);
   chariots.delete(id);
   dirtyTerrain=true; dirtyRoads=true; dirtySave=true;
 }
@@ -956,9 +968,110 @@ function frontHasRoad(x,z,fw,fd,rot){
 function bestRot(type,x,z){ const def=DEFS[type]; const order=[0,1,2,3].sort(()=>rnd()-0.5);
   for(const r of order){ const [fw,fd]=fpSize(def,r); if(canPlace(type,x,z,r)&&frontHasRoad(x,z,fw,fd,r)) return r; }
   for(const r of order) if(canPlace(type,x,z,r)) return r; return -1; }
-function setRoad(i,j,v){ const id=I(i,j); if(road[id]===v) return false; road[id]=v; dirtyTerrain=true; dirtyRoads=true; dirtySave=true; if(line[id]) markLine(i,j); return true; }
-function setLine(i,j,v){ const id=I(i,j); if(line[id]===v) return false; line[id]=v; markLine(i,j); dirtyTerrain=true; dirtySave=true; return true; }
+function setRoad(i,j,v){ const id=I(i,j); if(road[id]===v) return false; road[id]=v; dirtyTerrain=true; dirtyRoads=true; dirtySave=true; if(line[id]) markLine(i,j); markHouses(i,j); return true; }
+function setLine(i,j,v){ const id=I(i,j); if(line[id]===v) return false; line[id]=v; markHouses(i,j); markLine(i,j); dirtyTerrain=true; dirtySave=true; return true; }
 function setTerrain(i,j,v){ const id=I(i,j); if(terrain[id]===v) return false; if(v===2&&bld[id]) return false; terrain[id]=v; dirtyTerrain=true; dirtySave=true; return true; }
+/* =========================================================
+   Kamienice łączące się w bloki (jak w Townscaperze)
+   ========================================================= */
+const HDIR=[[1,0],[-1,0],[0,-1],[0,1]]; // E, W, N, S
+const FRONT_FACE=[3,0,2,1]; // rot -> indeks ściany frontowej (0:+z S, 1:+x E, 2:-z N, 3:-x W)
+const FLOWERS=['#e86a7a','#f2c14e','#b57edc','#ffffff','#f08a4b','#e94f4f'];
+function houseAt(i,j){ if(!inb(i,j)) return null; const o=bld[I(i,j)]; if(!o) return null; const b=buildings.get(o); return b&&b.type==='house'?b:null; }
+function freeRoad(i,j){ return inb(i,j)&&road[I(i,j)]>0&&!bld[I(i,j)]&&!line[I(i,j)]; }
+function houseCtx(b){
+  const fl=floorsOf(b), nf=HDIR.map(([di,dj])=>{ const n=houseAt(b.x+di,b.z+dj); return n?floorsOf(n):0; });
+  let br=0;
+  if(fl>=3){ const e=houseAt(b.x+2,b.z); if(freeRoad(b.x+1,b.z)&&e&&floorsOf(e)>=3) br|=1;
+             const s=houseAt(b.x,b.z+2); if(freeRoad(b.x,b.z+1)&&s&&floorsOf(s)>=3) br|=2; }
+  const rd=HDIR.map(([di,dj])=>isRoad(b.x+di,b.z+dj)?1:0).join('');
+  return {fl,nf,br,front:FRONT_FACE[b.rot]??0,rd};
+}
+function houseGeomFor(b){
+  const c=houseCtx(b), v=(b.seed>>>0)%DEFS.house.v;
+  const key=`H${v}|${c.fl}|${c.nf.join(',')}|${c.br}|${c.front}|${c.rd}`;
+  if(geomCache.has(key)) return geomCache.get(key);
+  let g; try{ const bb=new B(); buildHouse(bb,mulberry(v*7919+31),c); g=bb.geom(); }
+  catch(err){ console.error('kamienica',err); g=getGeom('house',b.seed,c.fl); }
+  geomCache.set(key,g); return g;
+}
+function buildHouse(b,r,c){
+  const wc=pick(WALLS,r), rc=pick(ROOFS,r), R=[]; for(let k=0;k<64;k++) R.push(r());
+  const fh=0.4, fl=c.fl, H=fl*fh+0.05, s=0.43;
+  const has=c.nf.map(n=>n>0); const [E,W,Nn,S]=has;
+  const x0=W?-0.5:-s, x1=E?0.5:s, z0=Nn?-0.5:-s, z1=S?0.5:s, cx=(x0+x1)/2, cz=(z0+z1)/2, w=x1-x0, d=z1-z0;
+  b.box(w,H,d,cx,0,cz,wc);
+  b.box(w+0.03,0.07,d+0.03,cx,0,cz,shade(wc,-0.12));
+  b.box(w+0.02,0.035,d+0.02,cx,fh-0.02,cz,shade(wc,-0.06));          // gzyms nad parterem
+  // ściany: 0:E(+x) 1:W(-x) 2:N(-z) 3:S(+z)
+  const face=(k,along,out,y,wd,ht,dp,col)=>{ // element na ścianie k, along – pozycja wzdłuż, out – wysunięcie
+    if(k===0) b.box(dp,ht,wd,x1+out,y,along,col); else if(k===1) b.box(dp,ht,wd,x0-out,y,along,col);
+    else if(k===2) b.box(wd,ht,dp,along,y,z0-out,col); else b.box(wd,ht,dp,along,y,z1+out,col); };
+  const span=k=>k<2?[z0,z1]:[x0,x1];
+  const frontWall=c.front; // indeks ściany z drzwiami
+  for(let k=0;k<4;k++){
+    const [a0,a1]=span(k), L=a1-a0, from=c.nf[k];           // piętra zasłonięte sąsiadem
+    for(let f=from;f<fl;f++){
+      const y=f*fh+0.13;
+      for(const t of [0.27,0.73]) face(k,a0+L*t,0,y,0.1,0.14,0.03,WIN);
+      if(f>=1){
+        const q=R[k*8+f];
+        if(q<0.24){ // balkon z kwiatami
+          const bw=L*0.62, ac=(a0+a1)/2;
+          face(k,ac,0.08,f*fh+0.01,bw,0.035,0.16,WOOD);
+          face(k,ac,0.155,f*fh+0.045,bw,0.1,0.02,WOOD);
+          for(let n=0;n<3;n++) face(k,ac-bw*0.33+n*bw*0.33,0.155,f*fh+0.16,0.07,0.06,0.05,FLOWERS[Math.floor(R[40+n+k]*FLOWERS.length)]);
+        } else if(q<0.42){ // skrzynki z kwiatami pod oknami
+          for(const t of [0.27,0.73]) face(k,a0+L*t,0.04,y-0.045,0.12,0.04,0.06,FLOWERS[Math.floor(R[50+k+f]*FLOWERS.length)]);
+        }
+      }
+      if(f===0&&from===0){
+        if(k===frontWall){ face(k,(a0+a1)/2,0,0.02,0.16,0.26,0.04,DOOR); }
+        else if(c.rd[k]==='1'&&R[56+k]<0.35){ // sklepik od ulicy z markizą
+          const aw=pick(['#c44a3a','#3a78a8','#d8a23a','#5c8f4a'],()=>R[60+k]);
+          face(k,(a0+a1)/2,0,0.02,0.34,0.24,0.035,DARK);
+          face(k,(a0+a1)/2,0.09,0.27,0.44,0.03,0.18,aw);
+        }
+      }
+    }
+  }
+  // dach: taras przy wyższym sąsiedzie, inaczej dwuspadowy łączący się z sąsiadami
+  const taller=c.nf.some(n=>n>fl);
+  const terrace=taller?R[30]<0.85:R[31]<0.2;
+  if(terrace){
+    const pc=shade(wc,-0.05);
+    b.box(w,0.03,d,cx,H,cz,'#d9c4a2');
+    if(!E||c.nf[0]<fl) b.box(0.05,0.1,d,x1-0.025,H,cz,pc);
+    if(!W||c.nf[1]<fl) b.box(0.05,0.1,d,x0+0.025,H,cz,pc);
+    if(!Nn||c.nf[2]<fl) b.box(w,0.1,0.05,cx,H,z0+0.025,pc);
+    if(!S||c.nf[3]<fl) b.box(w,0.1,0.05,cx,H,z1-0.025,pc);
+    const px=cx+(R[33]-0.5)*w*0.4, pz=cz+(R[34]-0.5)*d*0.4;
+    b.cyl(0.06,0.08,px,H,pz,'#b86a3c',6); b.sph(0.1,px,H+0.14,pz,GREEN);
+    b.cyl(0.045,0.06,cx-(R[35]-0.5)*w*0.6,H,cz+0.2*d,'#c98a4a',6); b.cone(0.05,0.22,cx-(R[35]-0.5)*w*0.6,H+0.05,cz+0.2*d,CYP,6);
+    if(R[36]<0.6){ const g=0.13; for(const [ox,oz] of [[x0+g,z0+g],[x1-g,z0+g],[x0+g,z1-g],[x1-g,z1-g]]) b.box(0.03,0.28,0.03,ox,H,oz,WOOD);
+      b.box(w-0.2,0.03,d-0.2,cx,H+0.28,cz,'#7da353'); b.sph(0.07,x1-0.13,H+0.3,z0+0.13,'#8fbf5a'); }
+    else { b.cyl(0.015,0.3,cx,H,cz,'#efe6d0',5); b.cone(0.2,0.08,cx,H+0.3,cz,pick(['#c44a3a','#f3ece0','#3a78a8'],()=>R[37]),8); }
+  } else {
+    const o=0.06, rx0=W?x0:x0-o, rx1=E?x1:x1+o, rz0=Nn?z0:z0-o, rz1=S?z1:z1+o;
+    const rw=rx1-rx0, rdp=rz1-rz0, rcx=(rx0+rx1)/2, rcz=(rz0+rz1)/2;
+    let alongX; if((E||W)&&!(Nn||S)) alongX=true; else if((Nn||S)&&!(E||W)) alongX=false; else if(E||W||Nn||S) alongX=(E&&W)||!(Nn&&S); else alongX=R[38]<0.5;
+    if(alongX) b.roofX(rw,0.26,rdp,rcx,H,rcz,rc); else b.roofZ(rw,0.26,rdp,rcx,H,rcz,rc);
+    if(R[39]<0.25&&fl>=2){ const lx=cx+(alongX?w*0.25:0), lz=cz+(alongX?0:d*0.25); b.box(0.16,0.14,0.16,lx,H+0.05,lz,wc); b.roofX(0.2,0.08,0.2,lx,H+0.19,lz,rc); } // lukarna/wieżyczka
+  }
+  // łuki-przejścia nad ulicą do sąsiedniej kamienicy
+  const bridge=()=>{ const bh=2*fh+0.05;
+    b.add(archPanel(1.0,bh,0.46,[{c:0,hw:0.4,spring:bh-0.47}]),wc,1.0,0,-0.23);
+    b.box(1.0,0.05,0.5,1.0,bh,0,shade(wc,-0.1));
+    b.box(1.0,0.11,0.04,1.0,bh+0.05,0.23,wc); b.box(1.0,0.11,0.04,1.0,bh+0.05,-0.23,wc);
+    b.sph(0.07,0.8,bh+0.12,0.12,GREEN); b.sph(0.06,1.2,bh+0.12,-0.12,FLOWERS[0]);
+    for(const t of [0.8,1.2]){ b.box(0.1,0.14,0.03,t,fh+0.13,0.23,WIN); b.box(0.1,0.14,0.03,t,fh+0.13,-0.23,WIN); } };
+  if(c.br&1) bridge();
+  if(c.br&2) b.at(0,0,0,-Math.PI/2,bridge);
+}
+const dirtyHouses=new Set();
+function markHouses(i,j){ for(let dj=-2;dj<=2;dj++) for(let di=-2;di<=2;di++){ if(Math.abs(di)+Math.abs(dj)>2) continue; const h=houseAt(i+di,j+dj); if(h) dirtyHouses.add(h.id); } }
+function processHouses(){ for(const id of dirtyHouses){ const b=buildings.get(id); if(!b) continue; const g=houseGeomFor(b); if(b.mesh.geometry!==g) b.mesh.geometry=g; } dirtyHouses.clear(); }
+
 const STACK={house:{min:1,max:6},insula:{min:2,max:7}};
 function floorsOf(b){
   if(b.fl) return b.fl; const v=(b.seed>>>0)%DEFS[b.type].v, r=mulberry(v*9973+typeHash(b.type));
@@ -966,7 +1079,7 @@ function floorsOf(b){
 }
 function setFloors(b,n){
   const old=floorsOf(b); if(n===old) return false;
-  b.fl=n; b.mesh.geometry=getGeom(b.type,b.seed,n);
+  b.fl=n; b.mesh.geometry=b.type==='house'?houseGeomFor(b):getGeom(b.type,b.seed,n); if(b.type==='house') markHouses(b.x,b.z);
   const gi=growing.findIndex(g=>g.m===b.mesh); if(gi>=0) growing.splice(gi,1);
   b.mesh.scale.set(1,old/n,1); growing.push({m:b.mesh,t:0,from:old/n,keepXZ:true});
   dirtySave=true; labelsDirty=true; return true;
@@ -2064,6 +2177,7 @@ function loop(now){
   requestAnimationFrame(loop);
   const dt=clamp((now-last)/1000,0,0.05); last=now;
   if(dirtyLines.size) processLines();
+  if(dirtyHouses.size) processHouses();
   if(dirtyTerrain){ rebuildTerrain(); dirtyTerrain=false; }
   camStep(dt); controls.update();
   for(let k=growing.length-1;k>=0;k--){ const g=growing[k]; g.t+=dt/0.42; const t=Math.min(1,g.t); const f=g.from||0; const sy=f+(1-f)*easeOutBack(t), sxz=g.keepXZ?1:0.75+0.25*Math.min(1,t*1.4);
@@ -2078,7 +2192,7 @@ function loop(now){
 }
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden'&&dirtySave) saveCurrent(false); });
 window.addEventListener('pagehide',()=>{ if(dirtySave) saveCurrent(false); });
-function onResize(){ const [w,h]=viewSize(); renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); renderItems(); }
+function onResize(){ fixViewport(); const [w,h]=viewSize(); renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); renderItems(); }
 window.addEventListener('resize',onResize); window.addEventListener('orientationchange',()=>setTimeout(onResize,250));
 if(window.visualViewport) visualViewport.addEventListener('resize',onResize);
 
