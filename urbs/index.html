@@ -52,6 +52,12 @@ button{font-family:inherit;color:inherit}
 #ctx{position:fixed;right:max(12px,calc(50% - 500px));bottom:calc(var(--dockh) + 18px + env(safe-area-inset-bottom));display:flex;gap:6px;z-index:5}
 #ctx button{border:0;background:var(--panel);box-shadow:var(--shadow);border-radius:14px;padding:9px 13px;font-weight:800;font-size:13px;cursor:pointer}
 #ctx button.hide{display:none}
+#ctx button.done{background:var(--terra);color:#fff}
+#act{position:fixed;left:50%;transform:translateX(-50%) translateY(10px);bottom:calc(var(--dockh) + 62px + env(safe-area-inset-bottom));display:flex;gap:8px;z-index:7;opacity:0;pointer-events:none;transition:all .18s}
+#act.show{opacity:1;transform:translateX(-50%);pointer-events:auto}
+#act button{border:0;border-radius:16px;padding:13px 18px;font-weight:800;font-size:16px;box-shadow:var(--shadow);background:var(--panel);cursor:pointer;min-width:52px}
+#act button.ok{background:#4f9a4a;color:#fff}
+#act button.ok:disabled{background:#c9b9a5;color:#fff}
 #hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockh) + 18px + env(safe-area-inset-bottom));background:rgba(60,45,32,.78);color:#fff;padding:7px 14px;border-radius:12px;font-size:12.5px;max-width:min(560px,calc(100% - 24px));text-align:center;pointer-events:none;z-index:4;transition:opacity .3s}
 #info{position:fixed;left:calc(12px + env(safe-area-inset-left));top:205px;width:330px;max-height:calc(100vh - var(--dockh) - 240px);overflow:auto;background:var(--panel);border-radius:18px;box-shadow:var(--shadow);padding:14px 16px 12px;z-index:6;opacity:0;transform:translateX(-14px);pointer-events:none;transition:opacity .25s,transform .25s;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 #info.show{opacity:1;transform:none;pointer-events:auto}
@@ -131,10 +137,12 @@ label.ck{display:flex;gap:8px;align-items:center;font-size:14px;margin:5px 0;cur
 
 <div id="hint"></div>
 <div id="ctx">
+  <button id="bDone" class="done">✕ Zakończ</button>
   <button id="bInfo">ℹ️ Historia</button>
   <button id="bBrush">Pędzel: 1</button>
   <button id="bRotate">↻ Obróć (R)</button>
 </div>
+<div id="act"></div>
 <div id="dock"><div id="cats"></div><div id="items"></div></div>
 <div id="toast"></div>
 <div id="info"></div>
@@ -1296,7 +1304,7 @@ function updatePreview(c){
     showTiles(cells,()=>ok?'#7fd36a':'#ff6a5a'); return;
   }
   if(tool.kind==='road'||tool.kind==='line'){
-    const cells=stroke?lPath(stroke.start,c):[[c.i,c.j]];
+    const cells=stroke?lPath(stroke.start,c):(pending&&pending.kind==='path')?lPath(pending.start,pending.end):[[c.i,c.j]];
     showTiles(cells,(i,j)=>pathValid(i,j)?(tool.kind==='road'?'#ffffff':'#ffe08a'):'#ff6a5a'); return;
   }
   if(tool.kind==='brush'){ showTiles([[c.i,c.j]],(i,j)=>canPlace('house',i,j,0)?'#7fd36a':'#ff6a5a'); return; }
@@ -1334,7 +1342,7 @@ function placeAt(c){
 const pointers=new Map();
 canvas.addEventListener('pointerdown',e=>{
   pointers.set(e.pointerId,1); ensureAudio();
-  if(e.pointerType==='touch'&&pointers.size>1){ cancelStroke(); return; }
+  if(e.pointerType==='touch'){ touchDown(e); return; }
   if(e.pointerType!=='touch'&&e.button!==0) return;
   if(tool.kind==='camera'){ camDown={x:e.clientX,y:e.clientY,id:e.pointerId,t:performance.now()}; return; }
   const c=cellAt(e); if(!c) return;
@@ -1343,17 +1351,19 @@ canvas.addEventListener('pointerdown',e=>{
   updatePreview(c);
 });
 canvas.addEventListener('pointermove',e=>{
+  if(e.pointerType==='touch'&&touchT&&e.pointerId===touchT.id&&!touchT.hold){ if(Math.hypot(e.clientX-touchT.x,e.clientY-touchT.y)>10){ touchT.moved=true; clearTimeout(touchT.timer); } return; }
   const c=cellAt(e); hoverCell=c;
   if(stroke&&e.pointerId===stroke.pid&&c){
     if(Math.hypot(e.clientX-stroke.x0,e.clientY-stroke.y0)>9) stroke.moved=true;
     if(isPaint()&&(c.i!==stroke.last.i||c.j!==stroke.last.j)) paintLine(stroke.last,c);
     stroke.last=c; stroke.cur=c;
   }
-  if(!(e.pointerType==='touch'&&!stroke)) updatePreview(c);
+  if(e.pointerType!=='touch') updatePreview(c); else if(stroke) updatePreview(c);
 });
 let camDown=null; const pulses=[];
 function endPointer(e){
   pointers.delete(e.pointerId);
+  if(e.pointerType==='touch'){ touchUp(e); return; }
   if(camDown&&e.pointerId===camDown.id){ const cd=camDown; camDown=null;
     if(Math.hypot(e.clientX-cd.x,e.clientY-cd.y)<8&&performance.now()-cd.t<600&&pointers.size===0){ const c=cellAt(e);
       if(c&&c.inside){ const id=bld[I(c.i,c.j)]; let key=null;
@@ -1369,14 +1379,77 @@ function endPointer(e){
   if(e.pointerType==='touch'){ ghost.visible=false; prevTiles.count=0; } else updatePreview(hoverCell);
 }
 window.addEventListener('pointerup',endPointer);
-window.addEventListener('pointercancel',e=>{ pointers.delete(e.pointerId); cancelStroke(); });
+window.addEventListener('pointercancel',e=>{ pointers.delete(e.pointerId); if(touchT){ clearTimeout(touchT.timer); touchT=null; } controls.enabled=true; cancelStroke(); });
 canvas.addEventListener('pointerleave',e=>{ if(e.pointerType==='mouse'&&!stroke){ ghost.visible=false; prevTiles.count=0; } });
 function cancelStroke(){ if(!stroke) return; const s=stroke; stroke=null; if(isPaint()&&s.changed&&s.snap) deserialize(s.snap); ghost.visible=false; prevTiles.count=0; }
+
+
+/* ---- dotyk: jeden palec przesuwa mapę, budowanie = stuknięcie + zatwierdzenie ---- */
+let touchT=null, pending=null;
+const actEl=document.getElementById('act');
+function touchDown(e){
+  if(pointers.size>1){ if(touchT){ clearTimeout(touchT.timer); if(touchT.hold){ controls.enabled=true; if(stroke){ if(isPaint()) cancelStroke(); else { stroke=null; } } } touchT=null; } return; }
+  touchT={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now(),cell:cellAt(e),moved:false,hold:false,timer:0};
+  if(tool.kind==='camera') return;
+  if(isPaint()||tool.kind==='road'||tool.kind==='line'){
+    touchT.timer=setTimeout(()=>{ const tt=touchT; if(!tt||tt.moved||pointers.size!==1) return; const c=tt.cell; if(!c) return;
+      tt.hold=true; controls.enabled=false; try{ navigator.vibrate&&navigator.vibrate(12); }catch(_){}
+      pending=null; showAct();
+      stroke={start:{i:c.i,j:c.j},last:c,cur:c,visited:new Set(),changed:false,x0:tt.x,y0:tt.y,pid:tt.id,moved:true,snap:null};
+      if(isPaint()){ stroke.snap=serialize(); paintAt(c); }
+      updatePreview(c); sfx('tick'); },380);
+  }
+}
+function touchUp(e){
+  const tt=touchT; if(!tt||e.pointerId!==tt.id) return; touchT=null; clearTimeout(tt.timer);
+  if(tt.hold){ controls.enabled=true; const s=stroke; stroke=null; if(!s) return;
+    if(isPaint()){ if(s.changed) pushUndo(s.snap); prevTiles.count=0; }
+    else { pending={kind:'path',start:s.start,end:{i:s.cur.i,j:s.cur.j}}; updatePreview(pending.end); showAct(); }
+    return; }
+  if(tt.moved||performance.now()-tt.t>700||pointers.size>0) return;
+  const c=cellAt(e); if(!c) return;
+  if(tool.kind==='camera'){ tapInfo(c); return; }
+  if(tool.kind==='build'){
+    if(pending&&pending.kind==='build'){ const rot=autoRotFor(tool.type,pending.c,buildRot); const f=footprint(pending.c,tool.type,rot);
+      if(c.i>=f.x&&c.i<f.x+f.fw&&c.j>=f.z&&c.j<f.z+f.fd){ confirmPending(); return; } }
+    pending={kind:'build',c:{i:c.i,j:c.j}}; updatePreview(pending.c); showAct(); sfx('tick'); return; }
+  if(tool.kind==='road'||tool.kind==='line'){
+    if(!pending){ pending={kind:'path',start:{i:c.i,j:c.j},end:{i:c.i,j:c.j}}; }
+    else pending.end={i:c.i,j:c.j};
+    updatePreview(pending.end); showAct(); sfx('tick'); return; }
+  if(isPaint()){ const snap=serialize(); stroke={start:c,last:c,cur:c,visited:new Set(),changed:false,pid:-1,snap};
+    paintAt(c); const ch=stroke.changed; stroke=null; if(ch) pushUndo(snap); else if(tool.kind==='brush') { toast('Tu nie zmieści się dom'); sfx('no'); }
+    updatePreview(c); setTimeout(()=>{ if(!pending&&!stroke){ prevTiles.count=0; } },350); }
+}
+function tapInfo(c){
+  if(!c.inside){ hideInfo(); return; } const id=bld[I(c.i,c.j)]; let key=null;
+  if(id){ const b=buildings.get(id); key=b.lm&&INFO[b.lm]?b.lm:b.type; pulses.push({m:b.mesh,t:0}); }
+  else if(line[I(c.i,c.j)]) key=line[I(c.i,c.j)]===1?'l-wall':'l-aq';
+  else if(road[I(c.i,c.j)]) key=road[I(c.i,c.j)]===2?'r-wide':'r-narrow';
+  if(key&&INFO[key]){ showInfo(key); sfx('tick'); } else hideInfo();
+}
+function confirmPending(){
+  if(!pending) return; const p=pending;
+  if(p.kind==='build'){ placeAt(p.c); pending=null; }
+  else { commitPath(p.start,p.end); pending=null; }
+  ghost.visible=false; prevTiles.count=0; showAct();
+}
+function cancelPending(){ pending=null; ghost.visible=false; prevTiles.count=0; showAct(); }
+function showAct(){
+  if(!pending){ actEl.classList.remove('show'); return; }
+  let ok=true, label='✓ Postaw';
+  if(pending.kind==='build'){ const rot=autoRotFor(tool.type,pending.c,buildRot); const f=footprint(pending.c,tool.type,rot); ok=canPlace(tool.type,f.x,f.z,rot); }
+  else { const n=lPath(pending.start,pending.end).filter(([i,j])=>pathValid(i,j)).length; ok=n>0; label=`✓ Zbuduj (${n} ${n===1?'pole':n<5?'pola':'pól'})`; }
+  actEl.innerHTML=`<button class="ok" ${ok?'':'disabled'}>${ok?label:'Tu nie można'}</button>${pending.kind==='build'?'<button class="rot">↻</button>':''}<button class="no">✕</button>`;
+  actEl.querySelector('.ok').onclick=confirmPending; actEl.querySelector('.no').onclick=cancelPending;
+  const r=actEl.querySelector('.rot'); if(r) r.onclick=()=>{ rotateBuilding(); };
+  actEl.classList.add('show');
+}
 
 function applyControlMode(){
   const cam=tool.kind==='camera';
   controls.mouseButtons={LEFT:cam?THREE.MOUSE.ROTATE:null,MIDDLE:THREE.MOUSE.PAN,RIGHT:cam?THREE.MOUSE.PAN:THREE.MOUSE.ROTATE};
-  controls.touches={ONE:cam?THREE.TOUCH.ROTATE:null,TWO:THREE.TOUCH.DOLLY_PAN};
+  controls.touches={ONE:THREE.TOUCH.PAN,TWO:THREE.TOUCH.DOLLY_ROTATE};
 }
 
 /* ---- kamera ---- */
@@ -1400,7 +1473,7 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&k==='z'){ e.preventDefault(); undo(); return; }
   if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)){ keys.add(k); e.preventDefault(); }
   if(k==='r') rotateBuilding(); if(k==='q') rotateView(-1); if(k==='e') rotateView(1); if(k==='g') toggleGrid();
-  if(k==='escape'){ if(!modal.classList.contains('hidden')) closeModal(); else selectTool('camera'); }
+  if(k==='escape'){ if(!modal.classList.contains('hidden')) closeModal(); else if(pending) cancelPending(); else selectTool('camera'); }
   if(k==='delete') selectTool('bulldoze');
 });
 window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
@@ -1476,6 +1549,8 @@ function renderItems(){
   requestAnimationFrame(()=>document.documentElement.style.setProperty('--dockh',document.getElementById('dock').offsetHeight+'px'));
 }
 function selectTool(id){
+  if(id!=='camera'&&tool.id===id) id='camera';
+  pending=null; if(typeof actEl!=='undefined') showAct();
   tool=SPECIAL[id]||TOOLS.find(t=>t.id===id)||SPECIAL.camera;
   if(tool.kind==='build'){ nextSeed=Math.floor(rnd()*1e6); ghostKey=''; }
   cancelStroke(); applyControlMode(); renderItems(); updateHint(); updatePreview(isTouch?null:hoverCell);
@@ -1483,18 +1558,26 @@ function selectTool(id){
 }
 function updateHint(){
   let h='';
-  const camHint=isTouch?'Dwa palce: zoom i przesuwanie · ⟲⟳ obrót widoku':'Prawy przycisk: obrót · kółko: zoom · WASD: przesuwanie';
-  if(tool.kind==='camera') h=(isTouch?'Stuknij budynek, aby poznać jego historię · przeciągnij, aby obracać · dwa palce: zoom':'Kliknij budynek, aby poznać jego historię · lewy: obrót · prawy: przesuwanie · kółko: zoom');
-  else if(tool.kind==='build') h=(DEFS[tool.type].desc||((isTouch?'Stuknij':'Kliknij')+', aby postawić: '+DEFS[tool.type].name))+' · R obraca'+(DEFS[tool.type].onRoad?' · można stawiać na drodze':'')+' · '+camHint;
-  else if(tool.kind==='bulldoze') h=(isTouch?'Stuknij lub przeciągnij':'Kliknij lub przeciągnij')+', aby burzyć · '+camHint;
+  const camHint=isTouch?'1 palec: przesuń mapę · 2 palce: przybliż i obróć':'Prawy przycisk: obrót · kółko: zoom · WASD: przesuwanie';
+  if(tool.kind==='camera') h=(isTouch?'Stuknij budynek, aby poznać jego historię · 1 palec: przesuń mapę · 2 palce: przybliż i obróć':'Kliknij budynek, aby poznać jego historię · lewy: obrót · prawy: przesuwanie · kółko: zoom');
+  else if(isTouch){
+    if(tool.kind==='build') h='Stuknij miejsce – pojawi się podgląd. Stuknij go jeszcze raz albo ✓, aby postawić · '+camHint;
+    else if(tool.kind==='road'||tool.kind==='line') h='Stuknij początek i koniec, potem ✓ · albo przytrzymaj palec i rysuj · '+camHint;
+    else if(tool.kind==='bulldoze') h='Stuknij, aby burzyć · przytrzymaj i przeciągnij, aby burzyć więcej · '+camHint;
+    else h='Stuknij, aby malować · przytrzymaj i przeciągnij, aby malować dalej · '+camHint;
+  }
+  else if(tool.kind==='build') h=(DEFS[tool.type].desc||('Kliknij, aby postawić: '+DEFS[tool.type].name))+' · R obraca'+(DEFS[tool.type].onRoad?' · można stawiać na drodze':'')+' · '+camHint;
+  else if(tool.kind==='bulldoze') h='Kliknij lub przeciągnij, aby burzyć · '+camHint;
   else h=(tool.hint||'')+' · '+camHint;
   hintEl.textContent=h;
-  document.getElementById('bRotate').classList.toggle('hide',tool.kind!=='build');
+  document.getElementById('bRotate').classList.toggle('hide',tool.kind!=='build'||isTouch);
+  document.getElementById('bDone').classList.toggle('hide',tool.kind==='camera');
   document.getElementById('bInfo').classList.toggle('hide',!infoKeyFor(tool));
   document.getElementById('bBrush').classList.toggle('hide',!(tool.kind==='terrain'||tool.kind==='bulldoze'));
 }
-function rotateBuilding(){ buildRot=(buildRot+1)%4; if(tool.kind==='build'){ sfx('tick'); updatePreview(hoverCell); } }
+function rotateBuilding(){ buildRot=(buildRot+1)%4; if(tool.kind==='build'){ sfx('tick'); if(pending&&pending.kind==='build'){ updatePreview(pending.c); showAct(); } else updatePreview(hoverCell); } }
 document.getElementById('bRotate').onclick=rotateBuilding;
+document.getElementById('bDone').onclick=()=>selectTool('camera');
 document.getElementById('bInfo').onclick=()=>{ const k=infoKeyFor(tool); if(infoKey===k) hideInfo(); else showInfo(k); };
 document.getElementById('bBrush').onclick=e=>{ brushSize=brushSize===1?3:1; e.currentTarget.textContent='Pędzel: '+brushSize; };
 document.getElementById('bUndo').onclick=undo;
@@ -1681,7 +1764,7 @@ function openMenu(){
   <h3>Sterowanie</h3>
   <div class="keys">Mysz: <b>lewy</b> buduje, <b>prawy</b> obraca, <b>kółko</b> zoom, <b>środkowy</b> przesuwa · <b>WASD</b> przesuwanie · <b>Q/E</b> obrót o 45° · <b>R</b> obrót budynku · <b>Ctrl+Z</b> cofnij · <b>G</b> siatka · <b>Esc</b> tryb rozglądania<br>
   W trybie <b>✋ Rozglądaj</b> kliknij lub stuknij dowolny budynek, mur czy drogę, aby poznać jego historię.<br>
-  Dotyk: <b>jeden palec</b> buduje, <b>dwa palce</b> zoom i przesuwanie, przyciski ⟲ ⟳ obracają widok, narzędzie ✋ obraca kamerę palcem.</div>
+  Dotyk: <b>jeden palec</b> przesuwa mapę, <b>dwa palce</b> przybliżają i obracają, ⟲ ⟳ obracają o 45°. Budowanie: stuknij miejsce i zatwierdź <b>✓</b>. Mury i drogi: stuknij początek i koniec albo przytrzymaj palec i rysuj. <b>✕ Zakończ</b> albo ponowne stuknięcie narzędzia wraca do rozglądania.</div>
   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn main" id="mClose">Zamknij</button></div>`;
   modal.classList.remove('hidden');
   const $=id=>card.querySelector('#'+id);
