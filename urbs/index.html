@@ -59,7 +59,9 @@ button{font-family:inherit;color:inherit}
 #cats::-webkit-scrollbar{display:none}
 .cat{flex:0 0 auto;border:0;background:transparent;border-radius:12px;padding:6px 11px;font-weight:800;font-size:13px;opacity:.62;cursor:pointer;white-space:nowrap}
 .cat.on{background:#fff;opacity:1;color:var(--terra2);box-shadow:0 2px 8px rgba(90,60,30,.12)}
-#items{display:flex;gap:6px;overflow-x:auto;padding:7px 2px 2px;scrollbar-width:thin}
+#items{display:flex;gap:6px;overflow-x:auto;padding:7px 2px 2px;scrollbar-width:thin;touch-action:pan-x}
+#items.dragging{opacity:.5}
+.item{touch-action:pan-x}
 .item{flex:0 0 auto;width:80px;border:2px solid transparent;background:#fff;border-radius:16px;padding:4px 2px 5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-weight:700;font-size:11px;line-height:1.15;text-align:center;transition:transform .12s,border-color .12s}
 .item img,.item .ico{width:58px;height:58px;border-radius:12px;display:block}
 .item .ico{display:flex;align-items:center;justify-content:center;font-size:28px;background:#f3ebdd}
@@ -405,7 +407,7 @@ D.forum=(b,r)=>{
   for(const [lx,lz] of [[-0.04,-0.12],[0.04,-0.12],[-0.04,0.12],[0.04,0.12]]) b.box(0.03,0.12,0.03,1.4+lx,0.44,0.9+lz,BRONZE);
   b.cyl(0.04,0.14,1.4,0.71,0.88,BRONZE,6); b.sph(0.035,1.4,0.89,0.88,BRONZE);
   // fontanna i cyprysy
-  b.cyl(0.4,0.14,0,0.06,1.35,STONE,14); b.cyl(0.35,0.02,0,0.18,1.35,WATERC,14); b.cyl(0.05,0.3,0,0.18,1.35,MARBLE,8); b.cyl(0.14,0.04,0,0.46,1.35,MARBLE,10);
+  basin(b,0,1.35,0.06,0.4,0.34,0.14,STONE,18); b.cyl(0.05,0.3,0,0.12,1.35,MARBLE,8); basin(b,0,1.35,0.42,0.15,0.11,0.05,MARBLE,12); jet(b,0,1.35,0.47,0.09);
   b.cypress(-2.6,2.6,0.7,0.06); b.cypress(2.6,2.6,0.7,0.06);
 };
 D.basilica=(b,r)=>{
@@ -544,10 +546,20 @@ D.arch=(b,r)=>{
   for(const x of [-0.09,-0.03,0.03,0.09]){ b.box(0.04,0.1,0.14,x,1.66,0.05,BRONZE); b.box(0.035,0.05,0.05,x,1.76,0.13,BRONZE); }
   b.cyl(0.03,0.11,0,1.66,-0.06,BRONZE,6); b.sph(0.03,0,1.8,-0.06,BRONZE);
 };
+function basin(b,x,z,y0,ro,ri,h,c=STONE,seg=18){
+  b.add(lathe([[ri,h*0.35],[ri,h],[ro,h],[ro,0]],seg),c,x,y0,z);
+  b.add(new THREE.CylinderGeometry(ri,ri,0.02,seg),WATERC,x,y0+h*0.72,z);
+  b.add(new THREE.CylinderGeometry(ri+0.005,ri+0.005,0.02,seg),shade(c,-0.08),x,y0+h*0.3,z);
+}
+function jet(b,x,z,y,hgt){ b.add(new THREE.CylinderGeometry(0.012,0.03,hgt,6),'#cfeef6',x,y+hgt/2,z); b.add(new THREE.ConeGeometry(0.07,0.06,8),'#cfeef6',x,y+0.03,z,Math.PI,0,0); }
 D.fountain=(b,r)=>{
-  b.cyl(0.38,0.16,0,0,0,STONE,14); b.cyl(0.33,0.02,0,0.15,0,WATERC,14);
-  b.cyl(0.06,0.42,0,0.16,0,MARBLE,8); b.cyl(0.16,0.05,0,0.5,0,MARBLE,12); b.cyl(0.13,0.02,0,0.545,0,WATERC,12);
-  b.cyl(0.03,0.14,0,0.55,0,MARBLE,6); b.sph(0.04,0,0.72,0,'#bfe6f0');
+  b.add(new THREE.CylinderGeometry(0.41,0.43,0.04,20),shade(STONE,-0.05),0,0.02,0);
+  basin(b,0,0,0.04,0.38,0.32,0.16,STONE,20);
+  b.cyl(0.07,0.36,0,0.1,0,MARBLE,10);
+  basin(b,0,0,0.46,0.17,0.13,0.06,MARBLE,14);
+  b.cyl(0.035,0.12,0,0.5,0,MARBLE,8); b.sph(0.05,0,0.66,0,MARBLE);
+  jet(b,0,0,0.7,0.1);
+  for(let k=0;k<4;k++){ const a=k*Math.PI/2+Math.PI/4; b.add(new THREE.CylinderGeometry(0.008,0.016,0.12,5),'#cfeef6',Math.cos(a)*0.1,0.46,Math.sin(a)*0.1,Math.sin(a)*0.5,0,-Math.cos(a)*0.5); }
 };
 D.statue=(b,r)=>{
   b.box(0.36,0.42,0.36,0,0,0,MARBLE); b.box(0.42,0.06,0.42,0,0,0,STONE); b.box(0.42,0.05,0.42,0,0.42,0,STONE);
@@ -891,6 +903,9 @@ function rebuildTerrain(){
 
 /* ---- linie ---- */
 function lineAt(i,j){ return inb(i,j)?line[I(i,j)]:0; }
+function wallCorner(i,j){ if(lineAt(i,j)!==1) return false; return (lineAt(i+1,j)===1||lineAt(i-1,j)===1)&&(lineAt(i,j+1)===1||lineAt(i,j-1)===1); }
+function wallEnd(i,j){ if(lineAt(i,j)!==1||road[I(i,j)]) return false; return (lineAt(i+1,j)===1)+(lineAt(i-1,j)===1)+(lineAt(i,j+1)===1)+(lineAt(i,j-1)===1)<=1; }
+function wallGate(i,j){ return lineAt(i,j)===1&&road[I(i,j)]>0; }
 function lineKey(i,j){
   const k=lineAt(i,j); if(!k) return null;
   const nE=lineAt(i+1,j)===k, nW=lineAt(i-1,j)===k, nN=lineAt(i,j-1)===k, nS=lineAt(i,j+1)===k;
@@ -903,14 +918,18 @@ function lineKey(i,j){
     if(!hx&&!hz&&r){ const rx=(inb(i+1,j)&&road[I(i+1,j)])||(inb(i-1,j)&&road[I(i-1,j)]); ax=rx?'z':'x'; }
     if(r) return 'gate-'+ax;
     const cnt=(nE?1:0)+(nW?1:0)+(nN?1:0)+(nS?1:0);
-    if(cnt<=1) return 'tower-'+mask;
-    if((ax==='x'?i:j)%6===0) return 'tower-'+mask;
+    if(cnt<=1){ // koniec muru: wieża, chyba że tuż obok stoi narożnik lub inny koniec
+      for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(wallCorner(ni,nj)) return 'wall-'+ax; if(wallEnd(ni,nj)&&(ni<i||nj<j)) return 'wall-'+ax; }
+      return 'tower-'+mask; }
+    if((ax==='x'?i:j)%6===0){ // wieże pośrednie tylko z dala od narożników, końców i bram
+      for(const d of [-2,-1,1,2]){ const ni=ax==='x'?i+d:i, nj=ax==='x'?j:j+d; if(wallCorner(ni,nj)||wallEnd(ni,nj)||wallGate(ni,nj)) return 'wall-'+ax; }
+      return 'tower-'+mask; }
     return 'wall-'+ax;
   }
   if(hx&&hz) return 'aqp-'+((nE?1:0)+(nW?2:0)+(nN?4:0)+(nS?8:0));
   return 'aq-'+(hz?'z':'x');
 }
-function markLine(i,j){ dirtyLines.add(I(i,j)); for(const [di,dj] of DIRS) if(inb(i+di,j+dj)) dirtyLines.add(I(i+di,j+dj)); }
+function markLine(i,j){ for(let d=-2;d<=2;d++){ if(inb(i+d,j)) dirtyLines.add(I(i+d,j)); if(inb(i,j+d)) dirtyLines.add(I(i,j+d)); } for(const [di,dj] of [[1,1],[1,-1],[-1,1],[-1,-1]]) if(inb(i+di,j+dj)) dirtyLines.add(I(i+di,j+dj)); }
 function processLines(){
   for(const id of dirtyLines){
     const i=id%N, j=Math.floor(id/N); const key=lineKey(i,j); const ex=lineMeshes.get(id);
@@ -1369,7 +1388,8 @@ const PP={
 };
 const _PM=new THREE.Matrix4(), _LM=new THREE.Matrix4(), _AQ=new THREE.Quaternion(), _AP=new THREE.Vector3(), _AS=new THREE.Vector3(), _C=new THREE.Color(), _Y=new THREE.Vector3(0,1,0);
 const cnt={};
-function parent(x,y,z,ry,s=1){ _AP.set(x,y,z); _AQ.setFromAxisAngle(_Y,ry); _AS.set(s,s,s); _PM.compose(_AP,_AQ,_AS); }
+const _AE=new THREE.Euler(0,0,0,'YXZ');
+function parent(x,y,z,ry,s=1,tilt=0){ _AP.set(x,y,z); if(tilt){ _AE.set(tilt,ry,0,'YXZ'); _AQ.setFromEuler(_AE); } else _AQ.setFromAxisAngle(_Y,ry); _AS.set(s,s,s); _PM.compose(_AP,_AQ,_AS); }
 function put(name,col,off){ const m=PP[name]; const k=cnt[name]++; if(off){ _LM.copy(_PM).multiply(off); m.setMatrixAt(k,_LM); } else m.setMatrixAt(k,_PM); if(col){ _C.set(col); m.setColorAt(k,_C); } }
 const offW1=new THREE.Matrix4().makeTranslation(0.115,0.06,-0.08), offW2=new THREE.Matrix4().makeTranslation(-0.115,0.06,-0.08);
 const offH1=new THREE.Matrix4().makeTranslation(0.035,0,0.17), offH2=new THREE.Matrix4().makeTranslation(-0.035,0,0.17);
@@ -1377,12 +1397,12 @@ const offDrv=new THREE.Matrix4().makeTranslation(0,0.06,0.0), offCh=new THREE.Ma
 const _lq=new THREE.Quaternion(), _lp=new THREE.Vector3(), _lo=new THREE.Matrix4(), _one=new THREE.Vector3(1,1,1), _X=new THREE.Vector3(1,0,0);
 function limb(name,col,x,y,ang){ _lp.set(x,y,0); _lq.setFromAxisAngle(_X,ang); _lo.compose(_lp,_lq,_one); put(name,col,_lo); }
 const SANDAL='#6b4a35';
-function person(x,y,z,ry,s,body,skin,ph,carry,legion,amp=1){
-  const sw=Math.sin(ph)*0.55*amp, bob=Math.abs(Math.cos(ph))*0.007*s*amp; parent(x,y+bob,z,ry,s);
+function person(x,y,z,ry,s,body,skin,ph,carry,legion,amp=1,tilt=0,flail=0){
+  const sw=Math.sin(ph)*0.55*amp, bob=Math.abs(Math.cos(ph))*0.007*s*amp; parent(x,y+bob,z,ry,s,tilt);
   if(cnt.body>=PCAP) return;
   put('body',body); put('head',skin);
   limb('leg',legion?'#c9a07a':skin,0.017,0.085,sw); limb('leg',legion?'#c9a07a':skin,-0.017,0.085,-sw);
-  limb('arm',body,0.047,0.19,carry?-2.6:-sw*0.8); limb('arm',body,-0.047,0.19,legion?-0.9:sw*0.8);
+  limb('arm',body,0.047,0.19,flail?-1.6-flail:(carry?-2.6:-sw*0.8)); limb('arm',body,-0.047,0.19,flail?-1.4+flail*0.5:(legion?-0.9:sw*0.8));
   if(carry&&cnt.carry<PCAP) put('carry',carry);
   if(legion&&cnt.helm<LCAP){ put('helm','#a8a6a0'); put('crest',RED); put('shield','#a9302a'); put('spear','#6b4a35'); }
 }
@@ -1422,14 +1442,21 @@ function updateAgents(dt,time){
       _LM.copy(_PM).multiply(offCh); _AP.setFromMatrixPosition(_LM); person(_AP.x,_AP.y-0.06,_AP.z,a.ry,0.9,a.driver,a.skin,0,null,false,0); }
   }
   for(const p of patrols){
-    const l=p.lead; person(l.rx,l.y,l.rz,l.ry,1.05,'#b3332b',p.skins[0],l.ph,null,true);
+    const l=p.lead;
+ person(l.rx,l.y,l.rz,l.ry,1.05,'#b3332b',p.skins[0],l.ph,null,true);
     const tr=p.trail; if(tr.length<2) continue;
-    let idx=tr.length-1;
-    for(let f=0;f<6;f++){ const row=1+Math.floor(f/2), side=f%2?1:-1, lag=row*0.2; const target=p.dist-lag;
-      while(idx>0 && tr[idx].d>target) idx--; const A=tr[idx], Bp=tr[Math.min(idx+1,tr.length-1)];
-      let dx=Bp.x-A.x, dz=Bp.z-A.z; const L=Math.hypot(dx,dz)||1; dx/=L; dz/=L;
+    // potknięcie: co jakiś czas jeden z legionistów zahacza nogą, przechyla się, łapie równowagę i dogania szyk
+    if(!p.trip&&!todayMode&&rnd()<dt*0.07) p.trip={f:Math.floor(rnd()*6),t:0};
+    let tf=-1, tilt=0, extra=0, flail=0, tamp=1;
+    if(p.trip){ p.trip.t+=dt; const u=p.trip.t/1.8; if(u>=1) p.trip=null; else { tf=p.trip.f;
+      const fall=u<0.45?Math.sin(u/0.45*Math.PI):0; tilt=fall*0.85; flail=fall*0.9; tamp=u<0.45?0.2:1.6;
+      extra=0.22*Math.sin(Math.min(1,u/0.75)*Math.PI*0.5)*(u<0.75?1:Math.max(0,1-(u-0.75)/0.25)); } }
+    for(let f=0;f<6;f++){ const row=1+Math.floor(f/2), side=f%2?1:-1, lag=row*0.2+(f===tf?extra:0); const target=p.dist-lag;
       if(target<0) continue;
-      person(A.x+(-dz)*side*0.085,A.y,A.z+dx*side*0.085,Math.atan2(dx,dz),1.0,'#b3332b',p.skins[f+1],l.ph,null,true); }
+      let idx=tr.length-1; while(idx>0 && tr[idx].d>target) idx--; const A=tr[idx], Bp=tr[Math.min(idx+1,tr.length-1)];
+      let dx=Bp.x-A.x, dz=Bp.z-A.z; const L=Math.hypot(dx,dz)||1; dx/=L; dz/=L;
+      const me=f===tf;
+      person(A.x+(-dz)*side*0.085,A.y,A.z+dx*side*0.085,Math.atan2(dx,dz),1.0,'#b3332b',p.skins[f+1],me?l.ph*1.7:l.ph,null,true,me?tamp:1,me?tilt:0,me?flail:0); }
   }
   // rydwany w cyrkach
   for(const b of buildings.values()){
@@ -1532,6 +1559,10 @@ canvas.addEventListener('pointerdown',e=>{
   updatePreview(c);
 });
 canvas.addEventListener('pointermove',e=>{
+  if(ghostDrag&&e.pointerId===ghostDrag.id){
+    if(Math.hypot(e.clientX-ghostDrag.x,e.clientY-ghostDrag.y)>8) ghostDrag.moved=true;
+    if(ghostDrag.moved){ const c=cellAt({clientX:e.clientX,clientY:e.clientY-FINGER}); if(c){ const ni=clamp(c.i,0,N-1), nj=clamp(c.j,0,N-1); if(ni!==pending.c.i||nj!==pending.c.j){ pending.c={i:ni,j:nj}; updatePreview(pending.c); showAct(); } } }
+    return; }
   if(e.pointerType==='touch'&&touchT&&e.pointerId===touchT.id&&!touchT.hold){ if(Math.hypot(e.clientX-touchT.x,e.clientY-touchT.y)>10){ touchT.moved=true; clearTimeout(touchT.timer); } return; }
   const c=cellAt(e); hoverCell=c;
   if(stroke&&e.pointerId===stroke.pid&&c){
@@ -1559,6 +1590,24 @@ function endPointer(e){
   else if(isPaint()&&s.changed) pushUndo(s.snap);
   if(e.pointerType==='touch'){ ghost.visible=false; prevTiles.count=0; } else updatePreview(hoverCell);
 }
+window.addEventListener('pointermove',e=>{
+  if(dockDown&&e.pointerId===dockDown.id&&!dockDrag){ const dx=e.clientX-dockDown.x, dy=e.clientY-dockDown.y;
+    if(dy<-14&&Math.abs(dy)>Math.abs(dx)){ dockDrag=dockDown; if(tool.id!==dockDrag.t.id) selectTool(dockDrag.t.id); hideInfo(); itemsEl.classList.add('dragging'); } }
+  if(dockDrag&&e.pointerId===dockDrag.id){ const c=cellAt({clientX:e.clientX,clientY:e.clientY-(dockDrag.touch?FINGER:0)});
+    if(c){ pending={kind:'build',c:{i:clamp(c.i,0,N-1),j:clamp(c.j,0,N-1)}}; updatePreview(pending.c); actEl.classList.remove('show'); } }
+},{passive:true});
+window.addEventListener('pointerup',e=>{
+  if(dockDown&&e.pointerId===dockDown.id) dockDown=null;
+  if(!dockDrag||e.pointerId!==dockDrag.id) return;
+  const d=dockDrag; dockDrag=null; itemsEl.classList.remove('dragging'); ignoreClickUntil=performance.now()+400;
+  const dockR=document.getElementById('dock').getBoundingClientRect();
+  if(e.clientY>dockR.top){ pending=null; ghost.visible=false; prevTiles.count=0; showAct(); return; }
+  if(!pending) return;
+  const f=pendingFoot(), rot=autoRotFor(tool.type,pending.c,buildRot);
+  if(canPlace(tool.type,f.x,f.z,rot)){ placeAt(pending.c); pending=null; ghost.visible=false; prevTiles.count=0; showAct(); }
+  else { if(d.touch) showAct(); else { pending=null; toast('Tu nie da się zbudować'); sfx('no'); } }
+});
+window.addEventListener('pointercancel',e=>{ if(dockDrag&&e.pointerId===dockDrag.id){ dockDrag=null; itemsEl.classList.remove('dragging'); } if(dockDown&&e.pointerId===dockDown.id) dockDown=null; if(ghostDrag&&e.pointerId===ghostDrag.id){ ghostDrag=null; controls.enabled=true; } });
 window.addEventListener('pointerup',endPointer);
 window.addEventListener('pointercancel',e=>{ pointers.delete(e.pointerId); if(touchT){ clearTimeout(touchT.timer); touchT=null; } controls.enabled=true; cancelStroke(); });
 canvas.addEventListener('pointerleave',e=>{ if(e.pointerType==='mouse'&&!stroke){ ghost.visible=false; prevTiles.count=0; } });
@@ -1568,7 +1617,15 @@ function cancelStroke(){ if(!stroke) return; const s=stroke; stroke=null; if(isP
 /* ---- dotyk: jeden palec przesuwa mapę, budowanie = stuknięcie + zatwierdzenie ---- */
 let touchT=null, pending=null;
 const actEl=document.getElementById('act');
+let ghostDrag=null, dockDrag=null, dockDown=null, ignoreClickUntil=0;
+const FINGER=55;
+function pendingFoot(){ const rot=autoRotFor(tool.type,pending.c,buildRot); return footprint(pending.c,tool.type,rot); }
 function touchDown(e){
+  if(pointers.size>1&&ghostDrag){ ghostDrag=null; controls.enabled=true; }
+  if(pointers.size===1&&tool.kind==='build'&&pending&&pending.kind==='build'){
+    const c=cellAt(e), f=pendingFoot();
+    if(c&&c.i>=f.x-1&&c.i<=f.x+f.fw&&c.j>=f.z-1&&c.j<=f.z+f.fd){
+      ghostDrag={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false,di:c.i-pending.c.i,dj:c.j-pending.c.j}; controls.enabled=false; return; } }
   if(pointers.size>1){ if(touchT){ clearTimeout(touchT.timer); if(touchT.hold){ controls.enabled=true; if(stroke){ if(isPaint()) cancelStroke(); else { stroke=null; } } } touchT=null; } return; }
   touchT={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now(),cell:cellAt(e),moved:false,hold:false,timer:0};
   if(tool.kind==='camera') return;
@@ -1582,6 +1639,7 @@ function touchDown(e){
   }
 }
 function touchUp(e){
+  if(ghostDrag&&e.pointerId===ghostDrag.id){ const g=ghostDrag; ghostDrag=null; controls.enabled=true; if(!g.moved) confirmPending(); else { sfx('tick'); showAct(); } return; }
   const tt=touchT; if(!tt||e.pointerId!==tt.id) return; touchT=null; clearTimeout(tt.timer);
   if(tt.hold){ controls.enabled=true; const s=stroke; stroke=null; if(!s) return;
     if(isPaint()){ if(s.changed) pushUndo(s.snap); prevTiles.count=0; }
@@ -1726,20 +1784,24 @@ function itemBtn(t){
   if(t.icon){ const im=document.createElement('img'); im.src=t.icon; im.alt=''; b.appendChild(im); }
   else { const d=document.createElement('div'); d.className='ico'; d.textContent=t.emoji||'?'; b.appendChild(d); }
   const s=document.createElement('span'); s.textContent=t.name; b.appendChild(s);
-  b.onclick=()=>selectTool(t.id); return b;
+  b.onclick=()=>{ if(performance.now()<ignoreClickUntil) return; selectTool(t.id); };
+  if(t.kind==='build') b.addEventListener('pointerdown',e=>{ dockDown={t,x:e.clientX,y:e.clientY,id:e.pointerId,touch:e.pointerType!=='mouse'}; });
+  return b;
 }
 function renderItems(){
   itemsEl.innerHTML=''; itemsEl.classList.toggle('closed',!itemsOpen);
   for(const t of TOOLS) if(t.cat===curCat) itemsEl.appendChild(itemBtn(t));
   requestAnimationFrame(()=>document.documentElement.style.setProperty('--dockh',document.getElementById('dock').offsetHeight+'px'));
 }
+let seenInfo=new Set(); try{ seenInfo=new Set(JSON.parse(localStorage.getItem('urbs-seen')||'[]')); }catch(e){}
 function selectTool(id){
   if(id!=='camera'&&tool.id===id) id='camera';
   pending=null; if(typeof actEl!=='undefined') showAct();
   tool=SPECIAL[id]||TOOLS.find(t=>t.id===id)||SPECIAL.camera;
   if(tool.kind==='build'){ nextSeed=Math.floor(rnd()*1e6); ghostKey=''; }
   cancelStroke(); applyControlMode(); renderCats(); renderItems(); updateHint(); updatePreview(isTouch?null:hoverCell);
-  const ik=infoKeyFor(tool); if(ik&&infoAuto&&tool.kind==='build'&&!['house','cypress','pine','garden'].includes(ik)) showInfo(ik); else if(tool.kind!=='camera') hideInfo();
+  const ik=infoKeyFor(tool); if(ik&&infoAuto&&tool.kind==='build'&&!['house','cypress','pine','garden'].includes(ik)&&!seenInfo.has(ik)){ seenInfo.add(ik); try{ localStorage.setItem('urbs-seen',JSON.stringify([...seenInfo])); }catch(_){} showInfo(ik); } else if(tool.kind!=='camera') hideInfo();
+  if(isTouch&&tool.kind==='build'&&!pending&&!dockDrag){ const c=cellAt({clientX:innerWidth/2,clientY:innerHeight*0.42}); if(c){ pending={kind:'build',c:{i:clamp(c.i,0,N-1),j:clamp(c.j,0,N-1)}}; updatePreview(pending.c); showAct(); } }
 }
 let hintT=0, hintShown=false;
 function updateHint(){
@@ -1747,12 +1809,12 @@ function updateHint(){
   const camHint=isTouch?'1 palec: przesuń mapę · 2 palce: przybliż i obróć':'Prawy przycisk: obrót · kółko: zoom · WASD: przesuwanie';
   if(tool.kind==='camera') h=(isTouch?'Stuknij budynek, aby poznać jego historię · 1 palec: przesuń mapę · 2 palce: przybliż i obróć':'Kliknij budynek, aby poznać jego historię · lewy: obrót · prawy: przesuwanie · kółko: zoom');
   else if(isTouch){
-    if(tool.kind==='build') h='Stuknij miejsce – pojawi się podgląd. Stuknij go jeszcze raz albo ✓, aby postawić · '+camHint;
+    if(tool.kind==='build') h='Przeciągnij podgląd palcem w wybrane miejsce (albo wyciągnij budynek z paska w górę na mapę), potem ✓ · '+camHint;
     else if(tool.kind==='road'||tool.kind==='line') h='Stuknij początek i koniec, potem ✓ · albo przytrzymaj palec i rysuj · '+camHint;
     else if(tool.kind==='bulldoze') h='Stuknij, aby burzyć · przytrzymaj i przeciągnij, aby burzyć więcej · '+camHint;
     else h='Stuknij, aby malować · przytrzymaj i przeciągnij, aby malować dalej · '+camHint;
   }
-  else if(tool.kind==='build') h=(DEFS[tool.type].desc||('Kliknij, aby postawić: '+DEFS[tool.type].name))+' · R obraca'+(DEFS[tool.type].onRoad?' · można stawiać na drodze':'')+' · '+camHint;
+  else if(tool.kind==='build') h=(DEFS[tool.type].desc||('Kliknij albo przeciągnij z paska na mapę: '+DEFS[tool.type].name))+' · R obraca'+(DEFS[tool.type].onRoad?' · można stawiać na drodze':'')+' · '+camHint;
   else if(tool.kind==='bulldoze') h='Kliknij lub przeciągnij, aby burzyć · '+camHint;
   else h=(tool.hint||'')+' · '+camHint;
   hintEl.textContent=h; hintEl.style.opacity=tool.kind==='camera'&&hintShown?0:1; clearTimeout(hintT); hintT=setTimeout(()=>{ hintEl.style.opacity=0; },tool.kind==='camera'?3500:5000); if(tool.kind==='camera') hintShown=true;
