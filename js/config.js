@@ -36,7 +36,7 @@ window.SITE = {
     },
     {
       name: "W Formie",
-      url: "",
+      url: "https://trening-appp.vercel.app/",
       icon: "img/w-formie.png",
       text: "Aplikacja treningowa dla ludzi gór – siła i kondycja, żeby szlak był przyjemnością."
     }
