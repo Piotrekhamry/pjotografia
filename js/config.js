@@ -22,6 +22,26 @@ window.SITE = {
 
   featuredTag: "wyrozniane",
 
+  // Link do dobrowolnej wpłaty (np. buycoffee.to/pjotografia). Puste = przycisk się nie pokazuje.
+  donate: "",
+
+  // Moje aplikacje — pokazują się na stronie głównej, w menu i na stronie /linki.
+  // Puste "url" = aplikacja jest ukryta.
+  apps: [
+    {
+      name: "Morze chmur",
+      url: "/morze-chmur/",
+      icon: "morze-chmur/icons/icon-192.png",
+      text: "Prognoza morza chmur i wschodów słońca dla szczytów. Sprawdzisz, czy warto wstać o 4 rano."
+    },
+    {
+      name: "W Formie",
+      url: "",
+      icon: "img/w-formie.png",
+      text: "Aplikacja treningowa dla ludzi gór – siła i kondycja, żeby szlak był przyjemnością."
+    }
+  ],
+
   galleries: [
     {
       id: "Babia góra",

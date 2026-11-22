@@ -12,6 +12,7 @@
   const sub = (items) => `<ul class="dropdown-menu">${items.map(([href, t]) => `<li><a href="${href}">${t}</a></li>`).join('')}</ul>`;
   const link = (file, text, current) => `<a href="${file}"${(current !== undefined ? current : page === file) ? ' class="current"' : ''}>${text}</a>`;
 
+  const apps = (S.apps || []).filter((a) => a.url);
   const galleriesSub = sub(S.galleries.map((g) => [`galeria.html?g=${encodeURIComponent(g.id)}`, esc(g.title)]));
   const aboutSub = sub([['o-mnie.html#biografia', 'Biografia'], ['o-mnie.html#sprzet', 'Sprzęt fotograficzny'], ['o-mnie.html#osiagniecia', 'Osiągnięcia']]);
 
@@ -29,6 +30,7 @@
         <li>${link('cennik.html', 'Cennik')}</li>
         <li>${link('warsztaty.html', 'Warsztaty')}</li>
         <li>${link('wydruki.html', 'Wydruki zdjęć')}</li>
+        ${apps.length ? `<li class="has-dropdown">${link('index.html#aplikacje', 'Aplikacje &#9663;', false)}${sub(apps.map((a) => [esc(a.url), esc(a.name)]))}</li>` : ''}
         <li>${link('wspolpraca.html', 'Współpraca')}</li>
         <li>${link('kontakt.html', 'Kontakt')}</li>
       </ul></nav>
@@ -157,6 +159,21 @@
   const tilesHtml = () => S.galleries.map((g) => `
       <a class="tile" href="galeria.html?g=${encodeURIComponent(g.id)}" data-cover="${esc(g.tag)}"><span>${esc(g.title)}</span></a>`).join('');
   document.querySelectorAll('[data-gallery-tiles]').forEach((el) => { el.classList.add('tiles'); el.innerHTML = tilesHtml(); });
+
+  /* ---------- Aplikacje i wpłata (strona główna) ---------- */
+  document.querySelectorAll('[data-apps]').forEach((el) => {
+    el.className = 'apps';
+    el.innerHTML = apps.map((a) => `
+      <a class="app-card" href="${esc(a.url)}">
+        ${a.icon ? `<img src="${esc(a.icon)}" alt="" loading="lazy">` : ''}
+        <div><h3>${esc(a.name)}</h3><p>${esc(a.text || '')}</p><span class="app-go">Otwórz &rarr;</span></div>
+      </a>`).join('');
+  });
+  document.querySelectorAll('[data-donate]').forEach((el) => {
+    if (!S.donate) { el.remove(); return; }
+    el.innerHTML = `<p class="donate-note">Aplikacje są darmowe. Jeśli Ci się przydają, możesz postawić mi kawę.</p>
+      <a class="btn" href="${esc(S.donate)}" target="_blank" rel="noopener">&#9749; Postaw kawę</a>`;
+  });
 
   /* ---------- Pojedyncza galeria: galeria.html?g=tatry ---------- */
   const galPage = document.querySelector('[data-gallery-page]');
