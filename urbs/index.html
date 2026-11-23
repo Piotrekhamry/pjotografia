@@ -469,21 +469,6 @@ D.baths=(b,r)=>{
   b.box(0.3,0.3,0.3,-1.9,0.12,0.0,MARBLE); b.cyl(0.05,0.2,-1.9,0.42,0.0,BRONZE,6); b.sph(0.045,-1.9,0.68,0.0,BRONZE);
   b.cypress(1.9,0.1,0.6,0.12);
 };
-D.colosseum=(b,r)=>{
-  const a=4.25, s=3.3/4.25;
-  b.add(new THREE.CylinderGeometry(a,a,2.25,56,1,true),TRAV,0,1.125,0,0,0,0,1,1,s);
-  const pts=[[1.95,0],[1.95,0.42],[2.25,0.42],[2.25,0.72],[2.6,0.72],[2.6,1.02],[2.95,1.02],[2.95,1.32],[3.3,1.32],[3.3,1.62],[3.65,1.62],[3.65,1.92],[4.0,1.92],[4.0,2.2],[4.24,2.2]];
-  b.add(lathe(pts,56),STONE2,0,0,0,0,0,0,1,1,s);
-  b.add(new THREE.CylinderGeometry(1.96,1.96,0.06,40),SAND,0,0.03,0,0,0,0,1,1,s);
-  b.add(lathe([[4.1,2.2],[4.33,2.2],[4.33,2.36],[4.1,2.36],[4.1,2.2]],56),'#f0e6cf',0,0,0,0,0,0,1,1,s);
-  for(const y of [0.66,1.38]) b.add(lathe([[a,y],[a+0.05,y],[a+0.05,y+0.06],[a,y+0.06]],56),'#f0e6cf',0,0,0,0,0,0,1,1,s);
-  const n=40;
-  for(let t=0;t<4;t++){ const y=[0.1,0.82,1.52,2.0][t], h=[0.5,0.48,0.44,0.12][t], w=t===3?0.11:0.23;
-    for(let k=0;k<n;k++){ if(t===3 && k%2) continue; const th=(k+0.5)/n*Math.PI*2; const px=Math.cos(th)*a, pz=Math.sin(th)*a*s;
-      const nx=Math.cos(th)/a, nz=Math.sin(th)/(a*s), nl=Math.hypot(nx,nz);
-      b.add(G.box,'#9b8466',px+nx/nl*0.012,y+h/2,pz+nz/nl*0.012,0,Math.atan2(nx,nz),0,w,h,0.05); } }
-  b.box(2.6,0.012,0.06,0,0.06,0,'#cfae74'); b.box(0.06,0.012,2.0,0,0.06,0,'#cfae74');
-};
 D.circus=(b,r)=>{
   b.box(4.0,0.05,12.5,0,0,0.75,SAND);
   b.add(new THREE.CylinderGeometry(2.0,2.0,0.05,24,1,false,Math.PI/2,Math.PI),SAND,0,0.025,-5.5);
@@ -573,6 +558,142 @@ D.column=(b,r)=>{
   for(let k=0;k<7;k++) b.cyl(0.148,0.035,0,0.5+k*0.27,0,'#e3d6bd',12);
   b.box(0.34,0.08,0.34,0,2.42,0,MARBLE); b.cyl(0.05,0.2,0,2.5,0,BRONZE,6); b.sph(0.045,0,2.75,0,BRONZE);
 };
+/* ---- Koloseum: szczegółowa fasada, trybuny z widzami, loża cesarza ---- */
+D.colosseum=(b,r)=>{
+  const a=4.25, s=3.3/4.25, n=40;
+  const E=(geom,c,y=0)=>b.add(geom,c,0,y,0,0,0,0,1,1,s);
+  const onE=(th,rad,y,w,h,dp,c,out=0)=>{ const nx=Math.cos(th), nz=Math.sin(th)/s, nl=Math.hypot(nx,nz);
+    b.add(G.box,c,Math.cos(th)*rad+nx/nl*out,y+h/2,Math.sin(th)*rad*s+nz/nl*out,0,Math.atan2(nx,nz),0,w,h,dp); };
+  // mur zewnętrzny i gzymsy między kondygnacjami
+  E(new THREE.CylinderGeometry(a,a,2.25,80,1,true),TRAV,1.125);
+  for(const y of [0.66,1.38,1.98]) E(lathe([[a-0.02,y],[a+0.06,y],[a+0.06,y+0.06],[a-0.02,y+0.06]],80),'#f1e7d0');
+  E(lathe([[4.08,2.2],[4.34,2.2],[4.34,2.36],[4.08,2.36],[4.08,2.2]],80),'#f1e7d0');
+  // arkady, półkolumny (3 porządki) i posągi w arkadach 2. i 3. kondygnacji
+  const tiers=[[0.1,0.5],[0.82,0.48],[1.52,0.44]];
+  tiers.forEach(([y,h],t)=>{ for(let k=0;k<n;k++){ const th=(k+0.5)/n*Math.PI*2;
+    const big=t===0&&(k===0||k===n/2-1||k===n/2||k===n-1);
+    onE(th,a,y,big?0.3:0.22,big?h+0.06:h,0.05,big?'#5d4c3c':'#8f7a5e',0.01);
+    if(t>0){ const nx=Math.cos(th), nz=Math.sin(th)/s, nl=Math.hypot(nx,nz), px=Math.cos(th)*a+nx/nl*0.04, pz=Math.sin(th)*a*s+nz/nl*0.04;
+      b.cyl(0.035,0.2,px,y+0.05,pz,'#f6f2ea',6,0.028); b.sph(0.03,px,y+0.29,pz,'#f6f2ea'); }
+    const th2=k/n*Math.PI*2; onE(th2,a,y-0.04,0.05,h+0.1,0.05,['#efe3c6','#f3e8cf','#f7eed9'][t],0.02); } });
+  // attyka: pilastry, okienka, maszty do velarium
+  for(let k=0;k<n;k++){ const th=(k+0.5)/n*Math.PI*2; if(k%2===0) onE(th,a,2.05,0.1,0.1,0.04,'#8f7a5e',0.01);
+    onE(k/n*Math.PI*2,a,2.0,0.05,0.2,0.05,'#f3e8cf',0.02); onE(k/n*Math.PI*2,a,2.36,0.025,0.32,0.025,WOOD,0.0); }
+  // trybuny: podium (marmur), trzy strefy schodów w różnych kolorach, murki między strefami
+  const zones=[[MARBLE,4],[STONE2,4],['#d9c6a2',4]]; let rr=1.95, yy=0.5;
+  E(lathe([[1.95,0],[1.95,0.5],[2.05,0.5]],72),'#f4eee2');
+  E(lathe([[1.93,0.42],[1.97,0.42],[1.97,0.5],[1.93,0.5]],72),RED);
+  const steps=[];
+  zones.forEach(([c,cntS],zi)=>{ const pts=[[rr,yy]]; for(let k=0;k<cntS;k++){ rr+=0.18; pts.push([rr,yy]); yy+=0.135; pts.push([rr,yy]); steps.push([rr-0.09,yy-0.135]); }
+    E(lathe(pts,72),c); if(zi<2) E(lathe([[rr,yy],[rr,yy+0.12],[rr+0.04,yy+0.12],[rr+0.04,yy]],72),'#efe4cc'); });
+  E(lathe([[rr,yy],[4.24,yy],[4.24,2.2]],72),'#e6d8bb');
+  // widzowie na trybunach
+  const CROWD=['#efe8d8','#efe8d8','#f4f0e6','#c9a36b','#b85c3c','#6e8fae','#a7b36b','#d9b25f','#9b6b8e','#c77d5a'];
+  steps.forEach(([rad,y],si)=>{ const cntP=22+si*3; for(let m=0;m<cntP;m++){ const th=r()*Math.PI*2; if(Math.abs(Math.sin(th)-1)<0.06&&si<3) continue;
+      if(r()<0.25) continue; const x=Math.cos(th)*rad, z=Math.sin(th)*rad*s;
+      b.box(0.06,0.07,0.06,x,y,z,CROWD[Math.floor(r()*CROWD.length)]); b.box(0.04,0.04,0.04,x,y+0.07,z,pick(['#e9c19c','#d9a97c','#c58c62'],r)); } });
+  // wejścia na arenę (Porta Triumphalis i Libitinaria) i otwory vomitoriów
+  for(const th of [0,Math.PI]) onE(th,1.96,0.06,0.34,0.36,0.04,'#4a3c30',0.01);
+  for(let k=0;k<16;k++){ const th=(k+0.5)/16*Math.PI*2; onE(th,2.69,1.04,0.16,0.12,0.03,'#5d4c3c',0.0); onE(th,3.41,2.12-0.5,0.16,0.12,0.03,'#5d4c3c',0.0); }
+  // loża cesarza (pulvinar) i loża magistratów naprzeciwko
+  for(const [side,col] of [[1,'#7a3b6e'],[-1,'#b8382e']]){ const z=side*2.12*s;
+    b.box(0.7,0.16,0.32,0,0.5,z,MARBLE); b.box(0.66,0.1,0.28,0,0.66,z,col);
+    for(const x of [-0.3,0.3]) b.cyl(0.02,0.36,x,0.66,z-side*0.1,MARBLE,6);
+    b.box(0.74,0.05,0.34,0,1.02,z,col); b.box(0.06,0.06,0.06,0,0.76,z,'#f6f2ea'); }
+  // arena
+  E(new THREE.CylinderGeometry(1.96,1.96,0.06,48),SAND,0.03);
+  b.box(2.6,0.01,0.05,0,0.06,0,'#cfae74'); b.box(0.05,0.01,1.9,0,0.06,0,'#cfae74');
+  b.box(0.14,0.3,0.14,-0.9,0.06,0.45,WOOD); b.box(0.14,0.3,0.14,0.9,0.06,-0.45,WOOD);
+};
+
+/* ---- Obóz legionowy (castra legionis) ---- */
+function campWalls(b,W,Dd,rc,h,t,gates,WS){
+  const hw=W/2, hd=Dd/2, gap=0.9;
+  const seg=(x0,x1,z,along)=>{ const L=x1-x0; if(L<=0.01) return; if(along==='x') b.box(L,h,t,(x0+x1)/2,0,z,WS); else b.box(t,h,L,z,0,(x0+x1)/2,WS); };
+  const side=(len,c,fixed,along,hasGate,gpos=0)=>{ const a0=-len/2+rc, a1=len/2-rc; if(hasGate){ seg(a0,gpos-gap/2,fixed,along); seg(gpos+gap/2,a1,fixed,along); } else seg(a0,a1,fixed,along); };
+  side(W,0,hd-t/2,'x',gates.s); side(W,0,-hd+t/2,'x',gates.n); side(Dd,0,hw-t/2,'z',gates.e,gates.ez||0); side(Dd,0,-hw+t/2,'z',gates.w,gates.ez||0);
+  for(const [sx,sz,th] of [[1,1,0],[-1,1,-Math.PI/2],[-1,-1,Math.PI],[1,-1,Math.PI/2]]){
+    b.add(new THREE.CylinderGeometry(rc,rc,h,10,1,true,th,Math.PI/2),WS,sx*(hw-rc),h/2,sz*(hd-rc));
+    b.add(new THREE.CylinderGeometry(rc-t,rc-t,h,10,1,true,th,Math.PI/2),shade(WS,-0.05),sx*(hw-rc),h/2,sz*(hd-rc));
+    const tx=sx*(hw-rc*0.55), tz=sz*(hd-rc*0.55); b.box(0.42,h+0.35,0.42,tx,0,tz,WS); b.pyr(0.52,0.26,tx,h+0.35,tz,ROOF); }
+  const gate=(x,z,ry)=>b.at(x,0,z,ry,()=>{ for(const sx of [-1,1]){ b.box(0.42,h+0.4,0.46,sx*0.66,0,0,WS); b.pyr(0.52,0.26,sx*0.66,h+0.4,0,ROOF); } b.box(0.9,0.2,0.36,0,h,0,WS); b.box(0.9,0.06,0.4,0,h+0.2,0,'#e6d6b4'); });
+  if(gates.s) gate(0,hd-t/2,0); if(gates.n) gate(0,-hd+t/2,0); if(gates.e) gate(hw-t/2,gates.ez||0,Math.PI/2); if(gates.w) gate(-hw+t/2,gates.ez||0,Math.PI/2);
+}
+function barrackBlock(b,x,z,len){ b.box(len,0.36,0.34,x,0.04,z,'#efe2c6'); b.roofX(len+0.06,0.17,0.44,x,0.4,z,ROOF);
+  b.box(0.36,0.46,0.42,x+len/2-0.18,0.04,z,'#e9d7b6'); b.roofX(0.42,0.2,0.5,x+len/2-0.18,0.5,z,ROOF);
+  for(let k=0;k<5;k++) b.box(0.06,0.16,0.03,x-len/2+0.15+k*(len-0.5)/4,0.04,z+0.17,DOOR); }
+D.castra=(b,r)=>{
+  const W=9.8, Dd=7.8;
+  b.box(W,0.04,Dd,0,0,0,'#d9c08f');
+  campWalls(b,W,Dd,0.9,0.65,0.18,{n:1,s:1,e:1,w:1,ez:-0.3},WALLSTONE);
+  b.box(W-0.4,0.045,0.55,0,0,-0.3,'#e9dcc0'); b.box(0.55,0.045,Dd/2+0.2,0,0,Dd/4-0.15,'#e9dcc0'); b.box(0.45,0.045,1.6,0,0,-2.9,'#e9dcc0');
+  // principia z bazyliką i kaplicą znaków
+  b.box(2.4,0.04,1.7,0,0.04,-1.65,'#ece2cc');
+  b.box(2.4,0.75,0.45,0,0.04,-2.3,MARBLE); b.roofX(2.5,0.3,0.55,0,0.79,-2.3,ROOF);
+  b.box(0.45,0.5,1.3,-0.98,0.04,-1.55,'#efe2c6'); b.box(0.45,0.5,1.3,0.98,0.04,-1.55,'#efe2c6');
+  b.roofZ(0.55,0.2,1.35,-0.98,0.54,-1.55,ROOF); b.roofZ(0.55,0.2,1.35,0.98,0.54,-1.55,ROOF);
+  for(const x of [-0.45,-0.15,0.15,0.45]) b.column(x,-0.88,0.04,0.55,0.035,MARBLE);
+  b.cyl(0.02,1.1,0,0.04,-1.4,WOOD,5); b.sph(0.07,0,1.18,-1.4,GOLD); b.box(0.18,0.05,0.04,0,1.08,-1.4,GOLD);
+  // pretorium – dom legata
+  b.box(1.4,0.6,1.0,2.0,0.04,-2.3,'#efd9b8'); b.roofX(1.5,0.26,1.1,2.0,0.64,-2.3,ROOF); b.box(0.7,0.03,0.4,2.0,0.04,-1.6,'#93c06a');
+  // spichlerze (horrea) z przyporami
+  for(const z of [-2.6,-1.8]){ b.box(1.5,0.5,0.55,-2.4,0.04,z,'#e6d3b0'); b.roofX(1.6,0.2,0.65,-2.4,0.54,z,ROOF); for(let k=0;k<5;k++) b.box(0.06,0.38,0.08,-3.0+k*0.3,0.04,z+0.31,'#d6c39e'); }
+  // baraki centurii
+  for(const x of [-2.75,2.75]) for(const z of [0.35,0.95,1.55,2.15,2.75,3.3]) barrackBlock(b,x,z,2.3);
+  for(const x of [-4.1,4.1]) for(const z of [-2.6,-1.9,-1.2]) barrackBlock(b,x,z,0.9);
+  // plac ćwiczeń, warsztat (fabrica), szpital (valetudinarium)
+  b.box(1.9,0.05,2.6,0,0,2.1,SAND);
+  b.box(1.0,0.45,0.7,3.4,0.04,-1.6,'#e3cfae'); b.roofX(1.1,0.2,0.8,3.4,0.49,-1.6,ROOF); b.cyl(0.05,0.3,3.7,0.49,-1.5,'#5a4636',6);
+  b.box(1.2,0.45,0.9,-2.0,0.04,-0.95,'#efe6d0'); b.roofX(1.3,0.2,1.0,-2.0,0.49,-0.95,ROOF);
+  for(let k=0;k<4;k++) b.cyl(0.03,0.3,-0.8+k*0.53,0.04,3.45,WOOD,5);
+};
+/* ---- Placówka (castellum) ---- */
+D.castellum=(b,r)=>{
+  const W=3.8, Dd=3.8;
+  b.box(W,0.04,Dd,0,0,0,'#d9c08f');
+  campWalls(b,W,Dd,0.45,0.6,0.16,{s:1},WALLSTONE);
+  b.box(0.5,0.045,1.9,0,0,0.95,'#e9dcc0');
+  b.box(1.1,0.55,0.8,0,0.04,-0.95,'#efe2c6'); b.roofX(1.2,0.24,0.9,0,0.59,-0.95,ROOF); b.box(0.3,0.3,0.03,0,0.04,-0.54,DOOR);
+  barrackBlock(b,-1.05,0.4,1.1); barrackBlock(b,1.05,0.4,1.1); barrackBlock(b,-1.05,1.1,1.1); barrackBlock(b,1.05,1.1,1.1);
+  b.box(0.5,0.4,0.5,1.25,0.04,-1.2,'#e6d3b0'); b.roofX(0.6,0.18,0.6,1.25,0.44,-1.2,ROOF);
+  b.cyl(0.02,0.9,-0.9,0.04,-0.4,WOOD,5); b.box(0.22,0.15,0.015,-0.78,0.75,-0.4,RED);
+  b.cyl(0.07,0.07,-1.3,0.04,-1.3,'#5a4636',8); b.sph(0.06,-1.3,0.14,-1.3,'#ff9a3c',1.3);
+};
+/* ---- Port rzymski (jak w Ostii) ---- */
+function shipParts(b,x,y,z,ry,sail){
+  b.at(x,y,z,ry,()=>{
+    b.box(0.4,0.14,1.1,0,0,0,'#7a5234'); b.box(0.44,0.05,1.14,0,0.12,0,'#5e3f27');
+    b.add(G.prism,'#7a5234',0,0,0.62,0,Math.PI/2,0,0.3,0.16,0.4); b.add(G.prism,'#7a5234',0,0,-0.6,0,-Math.PI/2,0,0.26,0.2,0.4);
+    b.box(0.34,0.02,1.0,0,0.14,0,'#b48a5a'); b.box(0.24,0.12,0.22,0,0.16,-0.38,'#a8784e');
+    b.cyl(0.025,0.95,0,0.16,0.08,WOOD,6); b.box(0.72,0.03,0.03,0,0.98,0.08,WOOD);
+    b.box(0.64,0.52,0.02,0,0.44,0.1,sail); b.box(0.66,0.03,0.025,0,0.44,0.1,shade(sail,-0.15));
+    b.cyl(0.02,0.25,0,0.2,-0.62,'#5e3f27',5,0.01); b.box(0.12,0.04,0.06,0,0.42,-0.62,GOLD);
+    for(let k=0;k<3;k++) b.cyl(0.04,0.1,0.08-k*0.08,0.16,0.35+k*0.07,'#b86a3c',6,0.02); });
+}
+D.port=(b,r)=>{
+  // ląd: plac, magazyny (horrea), amfory, dźwig
+  b.box(5.9,0.12,2.5,0,0,-1.25,'#e3d6bc');
+  for(const x of [-1.55,1.55]){ b.box(2.4,0.9,1.1,x,0.12,-1.8,'#e3b48c'); b.roofX(2.5,0.3,1.2,x,1.02,-1.8,ROOF);
+    for(let k=0;k<5;k++) b.box(0.26,0.4,0.03,x-0.96+k*0.48,0.12,-1.24,DARK); windows(b,2.4,1.1,x,-1.8,0.75,5,2); }
+  for(let k=0;k<14;k++){ const x=-2.6+(k%7)*0.22, z=-0.7+Math.floor(k/7)*0.18; b.cyl(0.05,0.17,x,0.12,z,pick(['#b86a3c','#c98a4a','#a95f35'],r),7,0.03); }
+  for(let k=0;k<4;k++) b.box(0.26,0.18,0.22,1.0+k*0.3,0.12,-0.6,pick(['#c9b08a','#a7b36b','#d9b25f'],r));
+  // nabrzeże z kamienia, pachołki
+  b.box(5.9,0.3,0.55,0,-0.14,0.27,STONE); b.box(5.9,0.04,0.6,0,0.16,0.27,'#efe4cc');
+  for(let k=0;k<6;k++) b.cyl(0.04,0.1,-2.5+k*1.0,0.2,0.45,'#5a4636',6);
+  // dźwig z kołem deptakowym
+  b.add(new THREE.CylinderGeometry(0.32,0.32,0.08,14),WOOD,2.3,0.55,-0.25,0,0,Math.PI/2);
+  b.box(0.05,0.9,0.05,2.3,0.2,-0.25,WOOD); b.add(G.box,WOOD,2.3,1.05,0.25,0.9,0,0,0.05,1.15,0.05); b.box(0.01,0.5,0.01,2.3,0.9,0.75,'#3d3a36'); b.box(0.16,0.12,0.16,2.3,0.85,0.75,'#c9a36b');
+  // molo z latarnią (pharos)
+  b.box(0.6,0.24,2.1,-2.6,-0.08,1.55,STONE); b.box(0.64,0.04,2.14,-2.6,0.16,1.55,'#efe4cc');
+  b.box(0.55,0.7,0.55,-2.6,0.2,2.25,'#efe6d6'); b.box(0.42,0.5,0.42,-2.6,0.9,2.25,'#efe6d6'); b.cyl(0.15,0.32,-2.6,1.4,2.25,'#efe6d6',10);
+  b.sph(0.13,-2.6,1.82,2.25,'#ffb347',1.1); b.cone(0.17,0.15,-2.6,1.94,2.25,BRONZE,10);
+  for(const z of [1.0,1.5]) b.box(0.08,0.14,0.03,-2.6,0.35,z,DARK);
+  // statki przy nabrzeżu
+  shipParts(b,0.3,0.02,1.25,Math.PI/2,'#f1e6cf');
+  shipParts(b,0.6,0.02,2.05,Math.PI/2+0.08,'#d98a5a');
+  b.box(0.02,0.02,0.6,-0.6,0.18,0.75,'#8a6a48');
+};
+
 D.watchtower=(b,r)=>{
   b.box(0.74,0.14,0.74,0,0,0,STONE);
   b.box(0.6,1.5,0.6,0,0.12,0,WALLSTONE);
@@ -725,6 +846,9 @@ const DEFS={
   theatre:{name:'Teatr',cat:'rozr',w:7,d:6,v:1},
   barracks:{name:'Koszary',cat:'woj',w:5,d:5,v:1,pop:480},
   watchtower:{name:'Wieża strażnicza',cat:'woj',w:1,d:1,v:1,pop:4},
+  castra:{name:'Obóz legionowy',cat:'woj',w:10,d:8,v:1,pop:5000},
+  castellum:{name:'Placówka (castellum)',cat:'woj',w:4,d:4,v:1,pop:120},
+  port:{name:'Port',cat:'drogi',w:6,d:5,v:2,pop:60,onWater:true},
   palace:{name:'Pałac cesarski',cat:'publ',w:8,d:6,v:1,pop:300},
   trajanbaths:{name:'Termy Trajana',cat:'publ',w:9,d:9,v:1},
   mausoleum:{name:'Mauzoleum',cat:'ozd',w:4,d:4,v:1,decor:true},
@@ -956,7 +1080,7 @@ function toggleDrawAt(c){
 }
 
 function rebuildTerrain(){
-  aoDirty=true;
+  aoDirty=true; dirtyWater=true;
   const n={}; for(const k in T) n[k]=0; for(const k in TR) n[k]=0;
   const tile=(k,x,z,y0,h)=>setInst(T[k],n[k]++,x,y0+h/2,z,1,h,1);
   for(let j=0;j<N;j++) for(let i=0;i<N;i++){
@@ -1034,15 +1158,23 @@ function processLines(){
 
 /* ---- budynki ---- */
 function fpSize(def,rot){ return rot%2?[def.d,def.w]:[def.w,def.d]; }
+function portWater(x,z,fw,fd,rot){ // ile wody w przedniej (morskiej) i tylnej (lądowej) części portu
+  let front=0, back=0;
+  for(let j=z;j<z+fd;j++) for(let i=x;i<x+fw;i++){ if(!inb(i,j)) continue; const w=terrain[I(i,j)]===2;
+    const u=rot===0?(j-z)/(fd-1):rot===2?1-(j-z)/(fd-1):rot===1?(i-x)/(fw-1):1-(i-x)/(fw-1);
+    if(u>=0.55){ if(w) front++; } else if(u<0.45&&w) back++; }
+  return {front,back};
+}
 function canPlace(type,x,z,rot){
   const def=DEFS[type]; const [fw,fd]=fpSize(def,rot);
   for(let j=z;j<z+fd;j++) for(let i=x;i<x+fw;i++){
     if(!inb(i,j)) return false; const id=I(i,j);
     if(bld[id]||line[id]) return false;
     if(road[id]&&!def.onRoad) return false;
-    if(terrain[id]===2) return false;
-    if(onlyPlots && !def.decor && terrain[id]!==1) return false;
+    if(terrain[id]===2&&!def.onWater) return false;
+    if(onlyPlots && !def.decor && !def.onWater && terrain[id]!==1) return false;
   }
+  if(def.onWater){ const wt=portWater(x,z,fw,fd,rot); if(wt.front<4||wt.back>2) return false; }
   return true;
 }
 function addBuilding(type,x,z,rot,seed,anim=true,lm=null,fl=null){
@@ -1077,7 +1209,7 @@ function bestRot(type,x,z){ const def=DEFS[type]; const order=[0,1,2,3].sort(()=
   for(const r of order) if(canPlace(type,x,z,r)) return r; return -1; }
 function setRoad(i,j,v){ const id=I(i,j); if(road[id]===v) return false; road[id]=v; dirtyTerrain=true; dirtyRoads=true; dirtySave=true; if(line[id]) markLine(i,j); markHouses(i,j); return true; }
 function setLine(i,j,v){ const id=I(i,j); if(line[id]===v) return false; line[id]=v; dirtyWalls=true; markHouses(i,j); markLine(i,j); dirtyTerrain=true; dirtySave=true; return true; }
-function setTerrain(i,j,v){ const id=I(i,j); if(terrain[id]===v) return false; if(v===2&&bld[id]) return false; terrain[id]=v; dirtyTerrain=true; dirtySave=true; return true; }
+function setTerrain(i,j,v){ const id=I(i,j); if(terrain[id]===v) return false; if(v===2&&bld[id]) return false; terrain[id]=v; dirtyWater=true; dirtyTerrain=true; dirtySave=true; return true; }
 /* =========================================================
    Kamienice łączące się w bloki (jak w Townscaperze)
    ========================================================= */
@@ -1213,6 +1345,7 @@ function rle(a){ const out=[]; let prev=a[0],c=0; for(let k=0;k<a.length;k++){ i
 function unrle(s,n){ const a=new Uint8Array(n); let p=0; for(const part of s.split(',')){ const [v,c]=part.split('*').map(Number); a.fill(v,p,p+c); p+=c; } return a; }
 function serialize(){ const bl=[]; for(const b of buildings.values()) bl.push(b.fl?[b.type,b.x,b.z,b.rot,b.seed,b.lm||0,b.fl]:b.lm?[b.type,b.x,b.z,b.rot,b.seed,b.lm]:[b.type,b.x,b.z,b.rot,b.seed]); return JSON.stringify({v:2,N,t:rle(terrain),r:rle(road),l:rle(line),b:bl}); }
 function clearWorld(){
+  if(typeof ships!=='undefined') ships.length=0;
   if(typeof drawbridges!=='undefined') for(const id of [...drawbridges.keys()]) removeDraw(id);
   if(typeof wallGuards!=='undefined') wallGuards.length=0; dirtyWalls=true;
   for(const b of buildings.values()) buildGroup.remove(b.mesh); buildings.clear();
@@ -1364,6 +1497,7 @@ function romeTrajan(){
   P('pyramid',24,60,0,'cestius');
   P('barracks',56,4,0,'castraPraetoria');
   P('trajanbaths',48,23,0,'trajanBaths');
+  { let ok=false; for(const rr of [3,1,0,2]){ for(let dz=0;dz<6&&!ok;dz++) for(let dx=0;dx<4&&!ok;dx++){ const x=15+dx, z=46+dz; if(canPlace('port',x,z,rr)){ addBuilding('port',x,z,rr,Math.floor(rnd()*1e6),false,'emporium'); ok=true; } } if(ok) break; } }
   // groby i cyprysy przy Via Appia
   for(let x=39;x<64;x+=2){ if(canPlace('cypress',x,56,0)) addBuilding('cypress',x,56,0,Math.floor(rnd()*100),false); if(x%4===1&&canPlace('statue',x,58,0)) addBuilding('statue',x,58,2,Math.floor(rnd()*100),false); else if(canPlace('cypress',x,58,0)) addBuilding('cypress',x,58,0,Math.floor(rnd()*100),false); }
   // dzielnice mieszkalne
@@ -1431,6 +1565,32 @@ function spawnCart(){
   if(!wideList.length) return; const s=pickArr(wideList);
   agents.push({kind:'cart',ax:s.i,az:s.j,bx:s.i,bz:s.j,t:1,speed:0.16+rnd()*0.06,lane:0.17,col:pickArr(['#c9b08a','#b86a3c','#8f6040','#d9b24c','#a7b36b']),
     animal:pickArr(['#8a6a4a','#6b4a35','#9a9086','#c9b9a0']),driver:pickArr(TUNICS),skin:pickArr(SKINS),life:1e9,ph:0,pause:0,hx:0,hz:1,init:false,rx:0,rz:0,ry:0});
+}
+
+/* ---- statki kupieckie pływające po wodzie (gdy w mieście jest port) ---- */
+let shipMesh=null; const ships=[]; let waterList=[], dirtyWater=true;
+function shipOk(i,j){ if(!inb(i,j)) return false; const id=I(i,j); return terrain[id]===2&&!road[id]&&!line[id]&&!bld[id]; }
+function updateShips(dt,time){
+  if(!shipMesh){ const bb=new B(); shipParts(bb,0,0,0,0,'#f1e6cf'); shipMesh=new THREE.InstancedMesh(bb.geom(),bMat,24); shipMesh.count=0; shipMesh.frustumCulled=false; shipMesh.castShadow=true; scene.add(shipMesh); }
+  if(dirtyWater){ dirtyWater=false; waterList=[]; for(let j=0;j<N;j++) for(let i=0;i<N;i++) if(shipOk(i,j)){ let n=0; for(const [di,dj] of DIRS) if(shipOk(i+di,j+dj)) n++; if(n>=1) waterList.push({i,j}); } }
+  let ports=0; for(const b of buildings.values()) if(b.type==='port') ports++;
+  const target=ports&&peopleOn&&!todayMode?Math.min(24,ports*3,Math.floor(waterList.length/14)):0;
+  while(ships.length<target&&waterList.length){ const c=pickArr(waterList); ships.push({ax:c.i,az:c.j,bx:c.i,bz:c.j,t:1,speed:0.06+rnd()*0.04,rx:wx(c.i),rz:wx(c.j),ry:0,ph:rnd()*6,hx:0,hz:1}); }
+  while(ships.length>target) ships.pop();
+  let n=0;
+  for(let k=ships.length-1;k>=0;k--){ const a=ships[k];
+    if(!shipOk(a.bx,a.bz)){ ships.splice(k,1); continue; }
+    a.t+=dt*a.speed;
+    if(a.t>=1){ const opts=[]; for(const [di,dj] of DIRS){ const ni=a.bx+di, nj=a.bz+dj; if(shipOk(ni,nj)&&!(ni===a.ax&&nj===a.az)) opts.push({i:ni,j:nj,st:di===a.bx-a.ax&&dj===a.bz-a.az}); }
+      let nx; if(!opts.length) nx={i:a.ax,j:a.az}; else { const st=opts.find(o=>o.st); nx=st&&rnd()<0.85?st:pickArr(opts); }
+      if(!shipOk(nx.i,nx.j)) nx={i:a.bx,j:a.bz}; a.ax=a.bx; a.az=a.bz; a.bx=nx.i; a.bz=nx.j; a.t=0; }
+    const t=Math.min(a.t,1), x0=wx(a.ax), z0=wx(a.az), x1=wx(a.bx), z1=wx(a.bz); let dx=x1-x0, dz=z1-z0; const L=Math.hypot(dx,dz);
+    if(L>0){ dx/=L; dz/=L; a.hx=dx; a.hz=dz; } else { dx=a.hx; dz=a.hz; }
+    const kk=1-Math.exp(-dt*3); a.rx+=(x0+(x1-x0)*t-a.rx)*kk; a.rz+=(z0+(z1-z0)*t-a.rz)*kk;
+    let dr=Math.atan2(dx,dz)-a.ry; dr=Math.atan2(Math.sin(dr),Math.cos(dr)); a.ry+=dr*Math.min(1,dt*1.5);
+    _AE.set(Math.sin(time*1.3+a.ph)*0.04,a.ry,Math.sin(time*1.1+a.ph)*0.05,'YXZ'); _AQ.setFromEuler(_AE);
+    _AP.set(a.rx,0.0+Math.sin(time*1.7+a.ph)*0.012,a.rz); _AS.set(0.62,0.62,0.62); _PM.compose(_AP,_AQ,_AS); shipMesh.setMatrixAt(n++,_PM); }
+  shipMesh.count=n; shipMesh.instanceMatrix.needsUpdate=true;
 }
 const wallGuards=[]; let wallCells=[];
 function isWallWalk(i,j){ return inb(i,j)&&line[I(i,j)]===1; }
@@ -1589,6 +1749,37 @@ function updateAgents(dt,time){
     const a=time*0.22+b.id*1.7, rr=0.24, wob=Math.sin(time*0.8+b.id)*0.5;
     const x=b.mesh.position.x+Math.cos(a)*rr, z=b.mesh.position.z+Math.sin(a)*rr, walk=Math.abs(Math.sin(time*0.35+b.id))>0.45;
     person(x,1.69,z,walk?Math.atan2(-Math.sin(a),Math.cos(a)):Math.atan2(Math.cos(a),Math.sin(a))+wob,0.95,'#b3332b',SKINS[b.id%SKINS.length],time*6,null,true,walk?1:0); }
+
+  // gladiatorzy ćwiczą na arenie Koloseum, a sędzia (summa rudis) pilnuje walki
+  // musztra w obozie legionowym i wartownicy na murach placówek
+  for(const b of buildings.values()){
+    if(todayMode||!b.mesh.visible) continue;
+    const th=b.rot*Math.PI/2, c=Math.cos(th), sn=Math.sin(th), cx=b.mesh.position.x, cz=b.mesh.position.z, sc=b.mesh.scale.y;
+    const W=(lx,lz)=>[cx+lx*c+lz*sn, cz-lx*sn+lz*c];
+    if(b.type==='colosseum'&&sc>0.98){
+      for(let k=0;k<3;k++){
+        const ph=time*0.07+k*2.1+b.id, ccx=Math.cos(ph)*0.85, ccz=Math.sin(ph*1.3)*0.55;
+        const dir=time*0.25+k*1.9, ux=Math.cos(dir), uz=Math.sin(dir);
+        const lunge=Math.max(0,Math.sin(time*2.6+k*1.7)), lunge2=Math.max(0,Math.sin(time*2.6+k*1.7+Math.PI));
+        const g1=[ccx-ux*(0.15-lunge*0.07),ccz-uz*(0.15-lunge*0.07)], g2=[ccx+ux*(0.15-lunge2*0.07),ccz+uz*(0.15-lunge2*0.07)];
+        const [x1,z1]=W(...g1), [x2,z2]=W(...g2); const face=Math.atan2(x2-x1,z2-z1);
+        person(x1,0.09,z1,face,1.0,'#c9a36b',SKINS[(k+1)%5],time*5+k,null,true,0.5,lunge*0.25,lunge*0.8);
+        person(x2,0.09,z2,face+Math.PI,1.0,'#3a78a8',SKINS[(k+3)%5],time*5+k+1,null,false,0.6,lunge2*0.2,lunge2*1.0);
+        if(k===0){ const [xr,zr]=W(ccx+uz*0.3,ccz-ux*0.3); person(xr,0.09,zr,face+Math.PI/2,1.0,'#f4f0e6',SKINS[4],0,null,false,0); }
+      }
+    }
+    else if(b.type==='castra'&&sc>0.98){
+      const u=((time*0.1+b.id*0.37)%2), fwd=u<1, zz=0.95+2.2*(fwd?u:2-u), ry=th+(fwd?0:Math.PI);
+      for(let row=0;row<4;row++) for(let col=0;col<3;col++){ const [x,z]=W(-0.24+col*0.24,zz+(fwd?-1:1)*row*0.22); person(x,0.05,z,ry,0.95,'#b3332b',SKINS[(row*3+col)%5],time*6.5,null,true,1); }
+      const [xc,zc]=W(-0.6,zz+(fwd?-0.3:0.3)); person(xc,0.05,zc,ry+(fwd?0:0),1.05,'#b3332b',SKINS[2],time*6.5,null,true,1);
+      for(const [gx,gz] of [[-0.75,3.85],[0.75,3.85]]){ const [x,z]=W(gx,gz); person(x,0.05,z,th,0.95,'#b3332b',SKINS[1],0,null,true,0); }
+    }
+    else if(b.type==='castellum'&&sc>0.98){
+      for(let k=0;k<2;k++){ const v=Math.sin(time*0.35+k*2+b.id), lx=(k?0.95:-0.95)+v*0.45, [x,z]=W(lx,1.82);
+        person(x,0.62,z,th+(Math.cos(time*0.35+k*2+b.id)>0?Math.PI/2:-Math.PI/2)*(k?1:-1),0.95,'#b3332b',SKINS[k+2],time*5,null,true,Math.abs(Math.cos(time*0.35+k*2+b.id))); }
+    }
+  }
+  updateShips(dt,time);
   // rydwany w cyrkach
   for(const b of buildings.values()){
     if(b.type!=='circus'||todayMode) continue;
@@ -1617,7 +1808,8 @@ function showTiles(cells,colFn){
 function brushCells(c){ const out=[]; const r=brushSize===3?1:0; for(let dj=-r;dj<=r;dj++) for(let di=-r;di<=r;di++) out.push([c.i+di,c.j+dj]); return out; }
 function footprint(c,type,rot){ const def=DEFS[type]; const [fw,fd]=fpSize(def,rot); return {x:c.i-Math.floor((fw-1)/2), z:c.j-Math.floor((fd-1)/2), fw, fd}; }
 function autoRotFor(type,c,rot){
-  const def=DEFS[type]; if(def.onRoad && inb(c.i,c.j) && road[I(c.i,c.j)]){ return (isRoad(c.i+1,c.j)||isRoad(c.i-1,c.j))?1:0; } return rot;
+  const def=DEFS[type];
+  if(def.onWater){ let best=rot, bw=-1; for(const rr of [rot,(rot+1)%4,(rot+2)%4,(rot+3)%4]){ const f=footprint(c,type,rr); const [fw,fd]=fpSize(def,rr); const wt=portWater(f.x,f.z,fw,fd,rr); const sc=wt.front*2-wt.back*3+(canPlace(type,f.x,f.z,rr)?100:0); if(sc>bw){ bw=sc; best=rr; } } return best; } if(def.onRoad && inb(c.i,c.j) && road[I(c.i,c.j)]){ return (isRoad(c.i+1,c.j)||isRoad(c.i-1,c.j))?1:0; } return rot;
 }
 let nextSeed=Math.floor(rnd()*1e6);
 function pathValid(i,j){
@@ -1675,7 +1867,7 @@ function commitPath(a,b){
 }
 function placeAt(c){
   const rot=autoRotFor(tool.type,c,buildRot); const f=footprint(c,tool.type,rot);
-  if(!canPlace(tool.type,f.x,f.z,rot)){ toast(onlyPlots&&!DEFS[tool.type].decor?'Buduj na działkach (albo wyłącz tę zasadę w menu)':'Tu nie da się zbudować'); sfx('no'); return; }
+  if(!canPlace(tool.type,f.x,f.z,rot)){ if(DEFS[tool.type].onWater){ toast('Port stawiaj na brzegu: przodem na wodę (rzeka, fosa, jezioro)'); sfx('no'); return; } toast(onlyPlots&&!DEFS[tool.type].decor?'Buduj na działkach (albo wyłącz tę zasadę w menu)':'Tu nie da się zbudować'); sfx('no'); return; }
   pushUndo(); addBuilding(tool.type,f.x,f.z,rot,nextSeed); nextSeed=Math.floor(rnd()*1e6); ghostKey=''; sfx('pop');
 }
 const pointers=new Map();
@@ -1878,7 +2070,7 @@ timeInput.addEventListener('input',applyTime);
 /* =========================================================
    Interfejs
    ========================================================= */
-const CATS=[{id:'teren',l:'🌿 Teren'},{id:'drogi',l:'🛣️ Drogi'},{id:'domy',l:'🏠 Domy'},{id:'publ',l:'🏛️ Forum i świątynie'},{id:'rozr',l:'🏟️ Rozrywka'},{id:'woj',l:'🛡️ Wojsko i mury'},{id:'ozd',l:'🌲 Ozdoby'}];
+const CATS=[{id:'teren',l:'🌿 Teren'},{id:'drogi',l:'🛣️ Drogi i port'},{id:'domy',l:'🏠 Domy'},{id:'publ',l:'🏛️ Forum i świątynie'},{id:'rozr',l:'🏟️ Rozrywka'},{id:'woj',l:'🛡️ Wojsko i mury'},{id:'ozd',l:'🌲 Ozdoby'}];
 const TOOLS=[
   {id:'t-grass',cat:'teren',kind:'terrain',val:0,name:'Łąka',hint:'Maluj teren przeciągając'},
   {id:'t-plot',cat:'teren',kind:'terrain',val:1,name:'Działka',hint:'Wyznacz działki pod zabudowę'},
@@ -1887,11 +2079,14 @@ const TOOLS=[
   {id:'t-field',cat:'teren',kind:'terrain',val:4,name:'Pole',hint:'Złote pola zboża'},
   {id:'r-narrow',cat:'drogi',kind:'road',val:1,name:'Ulica',hint:'Przeciągnij od punktu do punktu — ulica biegnie prosto, z jednym zakrętem pod kątem prostym'},
   {id:'r-wide',cat:'drogi',kind:'road',val:2,name:'Via (szeroka)',hint:'Szeroka droga — jeżdżą nią wozy, piesi idą poboczem'},
+  {id:'b-port',cat:'drogi',kind:'build',type:'port'},
   {id:'l-aq',cat:'drogi',kind:'line',val:2,name:'Akwedukt',hint:'Przeciągnij, aby poprowadzić akwedukt (może iść nad drogą i wodą)'},
   {id:'b-house',cat:'domy',kind:'brush',type:'house',name:'Kamienice',hint:'Puste pole – nowy dom, dom lub insula – kolejne piętro · przeciągnij, by budować całe kwartały · ⛏️ Burz zdejmuje piętra'},
   ...['domus','insula','taberna','garden'].map(t=>({id:'b-'+t,cat:'domy',kind:'build',type:t})),
   ...['forum','temple','pantheon','basilica','curia','market','palace','baths','trajanbaths','caracalla','diocletian'].map(t=>({id:'b-'+t,cat:'publ',kind:'build',type:t})),
   ...['colosseum','circus','theatre'].map(t=>({id:'b-'+t,cat:'rozr',kind:'build',type:t})),
+  {id:'b-castra',cat:'woj',kind:'build',type:'castra'},
+  {id:'b-castellum',cat:'woj',kind:'build',type:'castellum'},
   {id:'b-barracks',cat:'woj',kind:'build',type:'barracks'},
   {id:'b-watchtower',cat:'woj',kind:'build',type:'watchtower'},
   {id:'l-wall',cat:'woj',kind:'line',val:1,name:'Mur miejski',hint:'Przeciągnij, aby postawić mur. Mur na drodze zamienia się w bramę, a droga z bramy przez fosę – w most zwodzony'},
@@ -2024,6 +2219,19 @@ const INFO={
   'l-wall':{era:'Mur Serwiański IV w. p.n.e., Mur Aureliana 271–275 n.e.',text:'Pierwszy wielki mur Rzymu wzniesiono po złupieniu miasta przez Galów (ok. 390 p.n.e.). Przez stulecia pokoju miasto rozrosło się daleko poza niego.',
     facts:['Mur Aureliana miał ok. 19 km długości i 383 wieże – w dużej części stoi do dziś.','Bramy stały tam, gdzie mur przecinały drogi – w grze mur na drodze sam zamienia się w bramę.']},
 };
+
+INFO.castra={name:'Obóz legionowy (castra)',era:'od czasów republiki; stałe twierdze od I w. n.e.',text:'Stała twierdza legionu – ok. 5000 żołnierzy na ok. 20 hektarach. Plan w kształcie karty do gry: zaokrąglone narożniki, cztery bramy, dwie główne ulice (via principalis i via praetoria), pośrodku principia ze sztandarami, obok dom dowódcy, spichlerze, szpital, warsztaty i rzędy baraków.',
+  facts:['Z obozów legionowych wyrosło wiele miast: Wiedeń (Vindobona), York (Eboracum), Chester (Deva), Bonn, Moguncja, Strasburg czy Ratyzbona (Castra Regina).','Londyn i Paryż zaczynały inaczej – Londinium jako osada handlowa nad Tamizą, a Lutecja jako gród galijskiego plemienia Parysjów.','Najważniejszym miejscem obozu była kaplica w principiach, gdzie przechowywano orła legionu i kasę żołdu.'],
+  today:'W wielu miastach ślady obozu widać w układzie ulic starego miasta, np. w Chester czy Ratyzbonie.',legacy:'Prostokątna siatka ulic obozu to jeden z wzorów dla planów miast aż do dziś.'};
+INFO.castellum={name:'Placówka (castellum)',era:'I–IV w. n.e.',text:'Mały fort na granicy imperium dla oddziału posiłkowego – od kilkudziesięciu do ok. 500 żołnierzy. Strzegł dróg, brodów i przejść przez limes.',
+  facts:['Między fortami stały wieże strażnicze, a całość łączyły drogi i system sygnałów.','Z niektórych placówek też wyrosły miasta – np. Koblencja (Confluentes).'],
+  today:'Fort Saalburg w Niemczech zrekonstruowano na początku XX w. – można go zwiedzać.'};
+INFO.port={name:'Port rzymski',era:'Ostia od IV w. p.n.e., Portus: Klaudiusz 42–64 n.e., Trajan ok. 112 n.e.',text:'Ostia u ujścia Tybru była portem Rzymu. Klaudiusz zbudował obok nowy port – Portus, a Trajan dodał sześciokątny basen o boku ok. 358 m. Zboże z Egiptu i Afryki, oliwa z Hiszpanii i wino trafiały do magazynów (horrea) i barkami w górę Tybru.',
+  facts:['Latarnię Portusu postawiono na zatopionym statku, którym wcześniej przywieziono z Egiptu obelisk stojący dziś przed Bazyliką św. Piotra.','Na placu Korporacji w Ostii mozaiki przed biurami kupców pokazują statki, ryby i nazwy miast, z którymi handlowali.','Do załadunku używano dźwigów z kołem deptakowym – ludzie chodzili w środku koła jak chomik.'],
+  today:'Ruiny Ostii to jedno z najlepiej zachowanych miast rzymskich, a sześciokątny basen Trajana jest dziś jeziorem tuż obok lotniska Fiumicino.',legacy:'Falochrony z betonu wylewanego pod wodą (z popiołem wulkanicznym) to rzymski wynalazek – opisał je Witruwiusz.'};
+INFO.emporium={name:'Emporium – port rzeczny Rzymu',era:'od II w. p.n.e.',surv:0.05,text:'U stóp Awentynu wyładowywano towary przypływające barkami z Ostii: zboże, oliwę i wino. Obok stał ogromny magazyn Porticus Aemilia.',
+  facts:['Za magazynami wyrosło wzgórze Monte Testaccio – usypane z potłuczonych amfor po oliwie, według szacunków ok. 50 milionów sztuk.'],today:'Monte Testaccio stoi do dziś w dzielnicy Testaccio.'};
+INFO.colosseum.facts=[...INFO.colosseum.facts,'W arkadach drugiego i trzeciego piętra stały posągi – widać je na monetach z czasów Tytusa.','Miejsca przydzielano według stanu: senatorowie siedzieli na marmurowym podium, wyżej ekwici i obywatele, a kobiety na samej górze. Cesarz oglądał igrzyska z loży – pulvinar.','Gladiatorzy walczyli w parach różnych typów, np. murmillo z mieczem i dużą tarczą przeciw retiariusowi z siecią i trójzębem. Nad walką czuwał sędzia – summa rudis.'];
 INFO.drawbridge={name:'Most zwodzony',era:'średniowiecze, XII–XV w.',text:'Most zwodzony to wynalazek średniowiecznych zamków – w grze to mały anachronizm. Rzymianie bronili bram inaczej: przed murami kopali fosę (fossa), przez którą prowadził stały most, a bramę zamykała opuszczana pionowo krata.',
   facts:['Stuknij bramę albo most w trybie ✋ rozglądania, aby go podnieść lub opuścić. Gdy most jest w górze, nikt nie wejdzie do miasta.','O zmroku (suwak pory dnia w menu) mosty podnoszą się same.','Opuszczaną kratę w bramie Rzymianie nazywali cataracta – wspomina o niej już Liwiusz.'],
   today:'Mosty zwodzone przetrwały w wielu średniowiecznych zamkach Europy – niektóre wciąż się podnoszą.'};
@@ -2326,7 +2534,7 @@ function renderIcons(){
    ========================================================= */
 let todayMode=false;
 const ruinMat=new THREE.MeshStandardMaterial({color:'#cfc3ad',roughness:0.95,flatShading:true,side:THREE.DoubleSide});
-const TYPE_SURV={watchtower:0.2,house:0,domus:0.03,insula:0.04,taberna:0,garden:0,fountain:0.3,statue:0.4,column:0.9,cypress:1,pine:1,arch:0.8,temple:0.15,forum:0.2,basilica:0.08,curia:0.9,market:0.5,baths:0.1,caracalla:0.45,diocletian:0.4,pantheon:1,colosseum:0.7,circus:0.02,theatre:0.5,barracks:0.1,palace:0.25,mausoleum:0.45,pyramid:1,trajanbaths:0.1};
+const TYPE_SURV={castra:0.15,castellum:0.2,port:0.1,watchtower:0.2,house:0,domus:0.03,insula:0.04,taberna:0,garden:0,fountain:0.3,statue:0.4,column:0.9,cypress:1,pine:1,arch:0.8,temple:0.15,forum:0.2,basilica:0.08,curia:0.9,market:0.5,baths:0.1,caracalla:0.45,diocletian:0.4,pantheon:1,colosseum:0.7,circus:0.02,theatre:0.5,barracks:0.1,palace:0.25,mausoleum:0.45,pyramid:1,trajanbaths:0.1};
 function survOf(b){ const d=b.lm&&INFO[b.lm]; if(d&&d.surv!=null) return d.surv; return TYPE_SURV[b.type]??0; }
 function applyTodayTo(b,instant){ const s=survOf(b); b.target=todayMode?s:1; b.mesh.material=(todayMode&&s<0.95)?ruinMat:bMat; if(instant){ b.ts=b.target; b.mesh.scale.y=Math.max(0.001,b.ts); b.mesh.visible=b.ts>0.012; } }
 function lineToday(m){ const k=m.userData.key||''; const s=k.startsWith('aq')?0.45:0.3; m.userData.target=todayMode?s:1; if(m.userData.ts==null) m.userData.ts=1; m.material=todayMode?ruinMat:bMat; }
