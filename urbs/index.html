@@ -1132,7 +1132,7 @@ renderer.setSize(...viewSize(),false);
 renderer.setClearColor(0x000000,0);
 renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 const scene=new THREE.Scene();
-const camera=new THREE.PerspectiveCamera(38,viewSize()[0]/viewSize()[1],0.1,600);
+const camera=new THREE.PerspectiveCamera(38,viewSize()[0]/viewSize()[1],0.1,900);
 const controls=new OrbitControls(camera,canvas);
 controls.enableDamping=true; controls.dampingFactor=0.09; controls.screenSpacePanning=false;
 controls.maxPolarAngle=1.36; controls.minPolarAngle=0.18; controls.minDistance=4; controls.rotateSpeed=0.7;
@@ -1156,7 +1156,7 @@ const ghostMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.8,f
 /* =========================================================
    Stan świata
    ========================================================= */
-const MAXN=64, MAXC=MAXN*MAXN;
+const MAXN=128, MAXC=64*64;
 let N=48, terrain, road, line, bld;
 function alloc(n){ N=n; terrain=new Uint8Array(N*N); road=new Uint8Array(N*N); line=new Uint8Array(N*N); bld=new Int32Array(N*N); }
 alloc(48);
@@ -1178,16 +1178,16 @@ const slabMats=[new THREE.MeshStandardMaterial({color:'#b48a5e',roughness:1}),ne
   new THREE.MeshStandardMaterial({color:'#9ccb68',roughness:0.95}),new THREE.MeshStandardMaterial({color:'#8a6a48'}),
   new THREE.MeshStandardMaterial({color:'#b48a5e',roughness:1}),new THREE.MeshStandardMaterial({color:'#b48a5e',roughness:1})];
 function buildBoard(){
-  if(slab){ scene.remove(slab); slab.geometry.dispose(); scene.remove(plinth); plinth.geometry.dispose(); scene.remove(gridLines); gridLines.geometry.dispose(); }
-  slab=new THREE.Mesh(new THREE.BoxGeometry(N+0.8,0.8,N+0.8),slabMats); slab.position.y=-0.4; slab.receiveShadow=true; scene.add(slab);
-  plinth=new THREE.Mesh(new THREE.BoxGeometry(N+2.4,0.35,N+2.4),new THREE.MeshStandardMaterial({color:'#e3d0ae',roughness:1})); plinth.position.y=-0.95; plinth.receiveShadow=true; scene.add(plinth);
+  if(slab){ scene.remove(slab); slab.geometry.dispose(); scene.remove(gridLines); gridLines.geometry.dispose(); }
+  makeTerrainMeshes();
+  slab=new THREE.Mesh(new THREE.BoxGeometry(N,0.8,N),slabMats); slab.position.y=-0.4; slab.receiveShadow=true; scene.add(slab);
   const pts=[]; const h=N/2;
   for(let k=0;k<=N;k++){ const p=k-h; pts.push(p,0,-h, p,0,h, -h,0,p, h,0,p); }
   const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
   gridLines=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:'#5a4a3a',transparent:true,opacity:0.13,depthWrite:false}));
   gridLines.position.y=0.06; gridLines.visible=gridOn; scene.add(gridLines);
-  const sc=sun.shadow.camera; const e=N*0.78; sc.left=-e; sc.right=e; sc.top=e; sc.bottom=-e; sc.near=1; sc.far=N*4; sc.updateProjectionMatrix();
-  controls.maxDistance=N*1.7;
+  controls.maxDistance=Math.min(N*1.7,190);
+  rimSig='';
 }
 
 /* ---- kafelki terenu (instancje) ---- */
@@ -1195,33 +1195,30 @@ function tileMesh(color,cap,opt={}){
   const m=new THREE.InstancedMesh(G.box,new THREE.MeshStandardMaterial({color,roughness:opt.rough??0.95,metalness:opt.metal??0}),cap);
   m.count=0; m.frustumCulled=false; m.receiveShadow=true; m.castShadow=!!opt.cast; scene.add(m); return m;
 }
-const T={
-  plot:tileMesh('#ead6a6',MAXC), road1:tileMesh('#cfc2aa',MAXC), road2:tileMesh('#9c9488',MAXC),
-  water:tileMesh(WATERC,MAXC,{rough:0.25,metal:0.05}), forest:tileMesh('#86b85a',MAXC), field:tileMesh('#e6bf4f',MAXC),
-  bridge:tileMesh('#ddd0b6',MAXC,{cast:true}), curb:tileMesh('#efe7d8',MAXC*4,{cast:true}), bank:tileMesh('#e5d4a5',MAXC*4), rows:tileMesh('#d2ab45',MAXC*4),
-};
+const TSPEC={plot:['#ead6a6',1],road1:['#cfc2aa',1],road2:['#9c9488',1],water:[WATERC,1,{rough:0.25,metal:0.05}],forest:['#86b85a',1],field:['#e6bf4f',1],
+  bridge:['#ddd0b6',1,{cast:true}],curb:['#efe7d8',4,{cast:true}],bank:['#e5d4a5',4],rows:['#d2ab45',4]};
+const T={};
 function treePool(geom,color,cap){ const m=new THREE.InstancedMesh(geom,new THREE.MeshStandardMaterial({color,roughness:0.85,flatShading:true}),cap); m.count=0; m.frustumCulled=false; m.castShadow=true; m.receiveShadow=true; scene.add(m); return m; }
-const TR={
-  trunk:treePool(new THREE.CylinderGeometry(0.035,0.045,1,5).translate(0,0.5,0),WOOD,MAXC*3),
-  cyp:treePool(new THREE.ConeGeometry(0.12,1,7).translate(0,0.5,0),CYP,MAXC*3),
-  pine:treePool(new THREE.SphereGeometry(0.3,8,5).scale(1,0.45,1),'#6a9a4a',MAXC*3),
-  olive:treePool(new THREE.SphereGeometry(0.19,7,5),'#9bb07a',MAXC*3),
-  bush:treePool(new THREE.SphereGeometry(0.12,6,4),'#86b85e',MAXC),
-};
+const TRSPEC={trunk:[new THREE.CylinderGeometry(0.035,0.045,1,5).translate(0,0.5,0),WOOD,3],cyp:[new THREE.ConeGeometry(0.12,1,7).translate(0,0.5,0),CYP,3],
+  pine:[new THREE.SphereGeometry(0.3,8,5).scale(1,0.45,1),'#6a9a4a',3],olive:[new THREE.SphereGeometry(0.19,7,5),'#9bb07a',3],bush:[new THREE.SphereGeometry(0.12,6,4),'#86b85e',1]};
+const TR={}; let tCap=0;
+function makeTerrainMeshes(){ const cap=N*N; if(cap===tCap) return; tCap=cap;
+  for(const k in TSPEC){ if(T[k]){ scene.remove(T[k]); T[k].material.dispose(); T[k].dispose(); } const [c,m,o]=TSPEC[k]; T[k]=tileMesh(c,cap*m,o||{}); }
+  for(const k in TRSPEC){ if(TR[k]){ scene.remove(TR[k]); TR[k].material.dispose(); TR[k].dispose(); } const [gq,c,m]=TRSPEC[k]; TR[k]=treePool(gq,c,Math.round(cap*m)); } }
 const _M=new THREE.Matrix4(), _Q=new THREE.Quaternion(), _P=new THREE.Vector3(), _S=new THREE.Vector3();
 function setInst(mesh,idx,x,y,z,sx,sy,sz,ry=0){ _P.set(x,y,z); _S.set(sx,sy,sz); if(ry) _Q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP,ry); else _Q.identity(); _M.compose(_P,_Q,_S); mesh.setMatrixAt(idx,_M); }
 const aoTex=(()=>{ const c=document.createElement('canvas'); c.width=c.height=64; const g=c.getContext('2d'); const im=g.createImageData(64,64);
   for(let y=0;y<64;y++) for(let x=0;x<64;x++){ const dx=Math.max(0,Math.abs(x-31.5)/32-0.55)/0.45, dy=Math.max(0,Math.abs(y-31.5)/32-0.55)/0.45; const d=Math.min(1,Math.hypot(dx,dy)); const a=Math.pow(1-d,1.6); const k=(y*64+x)*4; im.data[k]=im.data[k+1]=im.data[k+2]=20; im.data[k+3]=Math.round(a*255); }
   g.putImageData(im,0,0); const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; return t; })();
-const AO=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({map:aoTex,transparent:true,opacity:0.5,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1}),MAXC*2);
+const AO=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({map:aoTex,transparent:true,opacity:0.5,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1}),7000);
 AO.count=0; AO.frustumCulled=false; AO.renderOrder=1; scene.add(AO);
 let aoDirty=true;
 function rebuildAO(){
   aoDirty=false; let n=0;
-  for(const b of buildings.values()){ if(n>=MAXC*2) break; if(!b.mesh.visible) continue; const def=DEFS[b.type]; if(def.decor&&b.type!=='arch') continue;
+  for(const b of buildings.values()){ if(n>=7000) break; if(!b.mesh.visible) continue; const def=DEFS[b.type]; if(def.decor&&b.type!=='arch') continue;
     const [fw,fd]=fpSize(def,b.rot); const sc=todayMode?Math.max(0.3,b.target??1):1;
     setInst(AO,n++,b.mesh.position.x,0.03,b.mesh.position.z,fw+0.55*sc,1,fd+0.55*sc); }
-  for(const [id,m] of lineMeshes){ if(n>=MAXC*2) break; const k=m.userData.key||''; const big=k.startsWith('tower'); setInst(AO,n++,m.position.x,0.03,m.position.z,big?1.25:1.1,1,big?1.25:1.1); }
+  for(const [id,m] of lineMeshes){ if(n>=7000) break; const k=m.userData.key||''; const big=k.startsWith('tower'); setInst(AO,n++,m.position.x,0.03,m.position.z,big?1.25:1.1,1,big?1.25:1.1); }
   AO.count=n; AO.instanceMatrix.needsUpdate=true;
 }
 
@@ -1279,7 +1276,76 @@ function toggleDrawAt(c){
   return false;
 }
 
+/* =========================================================
+   Świat wokół planszy: wzgórza, góry na horyzoncie, lasy,
+   a rzeki i drogi z krawędzi mapy biegną dalej w krajobraz
+   ========================================================= */
+let rim=null, rimSig='';
+const rimMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,flatShading:true});
+const rimWaterMat=new THREE.MeshStandardMaterial({color:WATERC,roughness:0.25,metalness:0.05});
+const rimRoadMat={1:new THREE.MeshStandardMaterial({color:'#cfc2aa',roughness:0.95}),2:new THREE.MeshStandardMaterial({color:'#9c9488',roughness:0.95})};
+function edgeKind(i,j){ const id=I(i,j); return terrain[id]===2?'w':(road[id]?'r'+road[id]:(line[id]===2?'a':'.')); }
+function edgeSig(){ let s=''; for(let k=0;k<N;k++) s+=edgeKind(k,0)+edgeKind(k,N-1)+edgeKind(0,k)+edgeKind(N-1,k); return N+':'+s; }
+function rimSpans(){
+  const sp=[];
+  const scan=(side,get)=>{ let k=0; while(k<N){ const kd=get(k); if(kd==='.'||kd==='a'){ k++; continue; } let e=k; while(e+1<N&&get(e+1)===kd) e++; sp.push({side,a:k,b:e,kind:kd}); k=e+1; } };
+  scan('n',k=>edgeKind(k,0)); scan('s',k=>edgeKind(k,N-1)); scan('w',k=>edgeKind(0,k)); scan('e',k=>edgeKind(N-1,k));
+  return sp;
+}
+function corridorDist(x,z,sp){ const h=N/2; let best=99, kind=null;
+  for(const s of sp){ let lat, out;
+    if(s.side==='n'){ out=-z-h; lat=Math.max(0,wx(s.a)-0.5-x,x-wx(s.b)-0.5); } else if(s.side==='s'){ out=z-h; lat=Math.max(0,wx(s.a)-0.5-x,x-wx(s.b)-0.5); }
+    else if(s.side==='w'){ out=-x-h; lat=Math.max(0,wx(s.a)-0.5-z,z-wx(s.b)-0.5); } else { out=x-h; lat=Math.max(0,wx(s.a)-0.5-z,z-wx(s.b)-0.5); }
+    if(out<-0.2) continue; if(lat<best){ best=lat; kind=s.kind; } }
+  return [best,kind];
+}
+function rimHeight(x,z,sp){
+  const h=N/2, d=Math.max(Math.abs(x),Math.abs(z))-h; if(d<0.5) return -0.012;
+  const hills=(vnoise(x/9,z/9,77)*0.9+vnoise(x/22,z/22,78)*2.0)*smooth(0.5,7,d)*(0.35+Math.min(1.4,d/N*1.3));
+  const mount=smooth(N*0.55,N*1.5,d)*(3+7*vnoise(x/17,z/17,79));
+  let y=hills+mount-0.012;
+  const [cd,kind]=corridorDist(x,z,sp); if(kind){ const f=smooth(0.4,2.2,cd); y=(kind==='w'?-0.03:-0.012)*(1-f)+y*f; }
+  return y;
+}
+function buildRim(){
+  rimSig=edgeSig();
+  if(rim){ scene.remove(rim); rim.traverse(o=>{ if(o.geometry&&o.geometry!==G.box) o.geometry.dispose(); }); }
+  rim=new THREE.Group(); const sp=rimSpans(), h=N/2, S=Math.max(220,N*5), seg=Math.min(170,Math.round(S/1.6));
+  const g=new THREE.PlaneGeometry(S,S,seg,seg); g.rotateX(-Math.PI/2);
+  const pos=g.attributes.position, col=new Float32Array(pos.count*3), c=new THREE.Color(), haze=new THREE.Color('#e6e0d2'), grass=new THREE.Color('#9ccb68'), dark=new THREE.Color('#6f9f4e'), field=new THREE.Color('#d9bf63'), rock=new THREE.Color('#a8987a'), wet=new THREE.Color('#d8c99e');
+  for(let v=0;v<pos.count;v++){ const x=pos.getX(v), z=pos.getZ(v), y=rimHeight(x,z,sp); pos.setY(v,y);
+    const d=Math.max(Math.abs(x),Math.abs(z))-h, n1=vnoise(x/6,z/6,81), n2=vnoise(x/11,z/11,82);
+    c.copy(grass).lerp(dark,clamp((n1-0.45)*2.2,0,1)*0.9);
+    if(d<16&&n2>0.62) c.lerp(field,0.85);
+    c.lerp(rock,smooth(2.5,6,y)*0.8);
+    const [cd,kind]=corridorDist(x,z,sp); if(kind==='w'&&cd<1.6) c.lerp(wet,0.7*(1-cd/1.6));
+    c.lerp(haze,smooth(N*0.7,N*2.3,d)*0.7);
+    col[v*3]=c.r; col[v*3+1]=c.g; col[v*3+2]=c.b; }
+  g.setAttribute('color',new THREE.BufferAttribute(col,3)); g.computeVertexNormals();
+  const ground=new THREE.Mesh(g,rimMat); ground.receiveShadow=true; rim.add(ground);
+  // rzeki i drogi biegnące dalej
+  const L=S/2-h;
+  for(const s of sp){ const w=s.b-s.a+1, mid=(wx(s.a)+wx(s.b))/2, isW=s.kind==='w';
+    const mat=isW?rimWaterMat:rimRoadMat[s.kind==='r2'?2:1], hh=isW?0.012:0.03, y0=isW?0.0:0.0;
+    const len=isW?L:Math.min(L,N*0.9), m=new THREE.Mesh(G.box,mat); m.receiveShadow=true;
+    if(s.side==='n'){ m.position.set(mid,y0+hh/2,-h-len/2); m.scale.set(w,hh,len); } else if(s.side==='s'){ m.position.set(mid,y0+hh/2,h+len/2); m.scale.set(w,hh,len); }
+    else if(s.side==='w'){ m.position.set(-h-len/2,y0+hh/2,mid); m.scale.set(len,hh,w); } else { m.position.set(h+len/2,y0+hh/2,mid); m.scale.set(len,hh,w); }
+    rim.add(m); }
+  // lasy, pinie i cyprysy za miastem
+  const cones=[], pines=[];
+  for(let k=0;k<5200&&cones.length+pines.length<2400;k++){ const x=(rnd()-0.5)*S*0.9, z=(rnd()-0.5)*S*0.9, d=Math.max(Math.abs(x),Math.abs(z))-h;
+    if(d<1.2||d>N*1.3) continue; const n=vnoise(x/6,z/6,81); if(n<0.5&&rnd()>0.08) continue; const [cd]=corridorDist(x,z,sp); if(cd<1.6) continue;
+    const y=rimHeight(x,z,sp); if(y>5.5) continue; const sc=0.8+rnd()*0.9; (rnd()<0.55?cones:pines).push([x,y,z,sc]); }
+  const cm=new THREE.InstancedMesh(new THREE.ConeGeometry(0.16,1,6).translate(0,0.5,0),new THREE.MeshStandardMaterial({color:CYP,roughness:0.9,flatShading:true}),Math.max(1,cones.length));
+  cones.forEach(([x,y,z,s],k)=>setInst(cm,k,x,y,z,s,s*(1.1+(k%3)*0.2),s)); cm.count=cones.length; cm.castShadow=true;
+  const pm=new THREE.InstancedMesh(new THREE.SphereGeometry(0.34,7,4).scale(1,0.5,1).translate(0,0.75,0),new THREE.MeshStandardMaterial({color:'#6a9a4a',roughness:0.9,flatShading:true}),Math.max(1,pines.length));
+  pines.forEach(([x,y,z,s],k)=>setInst(pm,k,x,y,z,s,s,s)); pm.count=pines.length; pm.castShadow=true;
+  rim.add(cm); rim.add(pm);
+  scene.add(rim);
+}
+
 function rebuildTerrain(){
+  if(edgeSig()!==rimSig) buildRim();
   aoDirty=true; dirtyWater=true;
   const n={}; for(const k in T) n[k]=0; for(const k in TR) n[k]=0;
   const tile=(k,x,z,y0,h)=>setInst(T[k],n[k]++,x,y0+h/2,z,1,h,1);
@@ -2302,7 +2368,9 @@ function applyTime(){
   const nf=typeof ENV!=='undefined'?Math.max(ENV.nightF,af*0.55):0, rf=typeof ENV!=='undefined'?ENV.rainF:0, ff=typeof ENV!=='undefined'?ENV.fogF:0, gray=Math.max(rf,ff*0.6,af);
   const dir=new THREE.Vector3(-Math.cos(t*Math.PI)*1.1,0.18+el*1.25,0.55).normalize();
   if(nf>0){ const md=new THREE.Vector3(0.45,1.1,-0.6).normalize(); dir.lerp(md,nf).normalize(); }
-  sun.position.copy(dir).multiplyScalar(N*1.6); sun.target.position.set(0,0,0);
+  { const tg=controls.target, dd=camera.position.distanceTo(tg), E=clamp(dd*1.15,16,Math.max(40,N*0.8)); const sc=sun.shadow.camera;
+    if(Math.abs(sc.right-E)>0.5){ sc.left=-E; sc.right=E; sc.top=E; sc.bottom=-E; sc.near=1; sc.far=E*6; sc.updateProjectionMatrix(); }
+    sun.position.copy(dir).multiplyScalar(E*2.5).add(tg); sun.target.position.copy(tg); sun.target.updateMatrixWorld(); }
   fillLight.position.set(-dir.x*N,N*0.5,-dir.z*N); fillLight.intensity=(0.3+0.25*el)*(1-nf*0.85);
   sun.color.set('#fff1dc').lerp(_c1.set('#ff9a55'),warm).lerp(_c2.set('#dfe4ea'),gray*0.8).lerp(_c1.set('#8fa6ff'),nf);
   sun.intensity=(1.5+2.1*el)*(1-gray*0.6)*(1-nf)+0.55*nf;
@@ -2646,6 +2714,29 @@ function migrateSaves(){
 const fmtDate=t=>{ try{ return new Date(t).toLocaleString('pl-PL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } };
 const plBud=n=>n===1?'budynek':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?'budynki':'budynków';
 
+/* ---- powiększenie mapy z zachowaniem miasta ---- */
+function expandMap(newN){
+  if(newN<=N) return; if(todayMode) setToday(false);
+  const snap=serialize(), o=JSON.parse(snap), n0=o.N, off=Math.floor((newN-n0)/2);
+  const t0=unrle(o.t,n0*n0), r0=unrle(o.r,n0*n0), l0=unrle(o.l,n0*n0);
+  const t1=new Uint8Array(newN*newN), r1=new Uint8Array(newN*newN), l1=new Uint8Array(newN*newN);
+  for(let j=0;j<n0;j++) for(let i=0;i<n0;i++){ const a=j*n0+i, b=(j+off)*newN+i+off; t1[b]=t0[a]; r1[b]=r0[a]; l1[b]=l0[a]; }
+  const old=(i,j)=>i>=off&&j>=off&&i<off+n0&&j<off+n0;
+  // przedłuż rzeki, drogi i akwedukty z dawnej krawędzi do nowej
+  const ext=(i0,j0,di,dj)=>{ const a=(j0)*newN+i0; const t=t1[a], r=r1[a], l=l1[a]; if(t!==2&&!r&&l!==2) return;
+    let i=i0+di, j=j0+dj; while(i>=0&&j>=0&&i<newN&&j<newN&&!old(i,j)){ const b=j*newN+i; if(t===2) t1[b]=2; if(r) r1[b]=r; if(l===2) l1[b]=2; i+=di; j+=dj; } };
+  for(let k=0;k<n0;k++){ ext(off+k,off,0,-1); ext(off+k,off+n0-1,0,1); ext(off,off+k,-1,0); ext(off+n0-1,off+k,1,0); }
+  // nowy krajobraz na dobudowanym pasie
+  const sd=Math.floor(rnd()*1000);
+  for(let j=0;j<newN;j++) for(let i=0;i<newN;i++){ if(old(i,j)) continue; const b=j*newN+i; if(t1[b]===2||r1[b]||l1[b]) continue;
+    const n=vnoise(i/6.5,j/6.5,sd); if(n>0.64) t1[b]=3; else if(vnoise(i/5,j/5,sd+3)>0.72) t1[b]=4; }
+  o.N=newN; o.t=rle(t1); o.r=rle(r1); o.l=rle(l1);
+  o.b=o.b.map(a=>{ const c=[...a]; c[1]+=off; c[2]+=off; return c; });
+  if(o.rb) o.rb=o.rb.map(a=>{ const c=[...a]; c[1]+=off; c[2]+=off; return c; });
+  deserialize(JSON.stringify(o)); pushUndo(snap); saveCurrent(false);
+  toast(`Mapa powiększona do ${newN}×${newN} 🗺️`); sfx('done');
+}
+
 /* ---- menu (panel w stylu ustawień) ---- */
 let menuPage='main', confirmDel=null, openMore=null;
 function openMenu(page){ menuPage=typeof page==='string'?page:'main'; confirmDel=null; openMore=null; renderMenu(); modal.classList.remove('hidden'); card.scrollTop=0; }
@@ -2674,7 +2765,7 @@ function renderMenu(){
     </div>
     <div class="st">Pusta mapa</div>
     <div class="list"><div class="ri static"><span class="ic">🌿</span><span class="tx">Rozmiar</span>
-      <select id="nSize"><option value="32">mała 32×32</option><option value="48" selected>średnia 48×48</option><option value="64">duża 64×64</option></select></div>
+      <select id="nSize"><option value="32">mała 32×32</option><option value="48" selected>średnia 48×48</option><option value="64">duża 64×64</option><option value="96">bardzo duża 96×96</option><option value="128">ogromna 128×128</option></select></div>
       ${swrow('nLand','🏞️','Rzeka, gaje i pola',true)}
       ${row('nEmpty','✨','Zacznij od pustej mapy','','<span class="chev">›</span>')}
     </div></div>`;
@@ -2686,7 +2777,8 @@ function renderMenu(){
     <div class="st">Twoje miasto</div>
     <div class="cur"><input class="nm" id="mName" value="${(curSlot?curSlot.name:'Miasto').replace(/"/g,'&quot;')}" maxlength="40" aria-label="Nazwa miasta">
       <div class="meta">${statsEl.textContent}</div>
-      <div class="btns"><button class="btn" id="mSave">💾 Zapisz</button><button class="btn main" id="mNewGame">＋ Nowa gra</button></div></div>
+      <div class="btns"><button class="btn" id="mSave">💾 Zapisz</button><button class="btn main" id="mNewGame">＋ Nowa gra</button></div>
+      ${N<128?`<div class="btns"><select id="mGrow" style="flex:1">${[48,64,96,128].filter(x=>x>N).map(x=>`<option value="${x}">${x}×${x}</option>`).join('')}</select><button class="btn" id="mGrowBtn">🗺️ Powiększ mapę</button></div>`:''}</div>
     ${slots.length?`<div class="st">Zapisane miasta</div><div class="list">${slots.map(s=>`<div class="ri slot" data-id="${s.id}"><span class="ic">🏛️</span><span class="tx">${s.name.replace(/</g,'&lt;')}<span class="sub2">${s.n} ${plBud(s.n)} · ${s.size}×${s.size} · ${fmtDate(s.date)}</span></span><button class="del${confirmDel===s.id?' sure':''}" data-del="${s.id}">${confirmDel===s.id?'Usuń?':'🗑'}</button></div>`).join('')}</div>`:''}
     <div class="st">Widok</div>
     <div class="list">
@@ -2726,6 +2818,7 @@ function renderMenu(){
   on('mName','onchange',e=>{ const v=e.target.value.trim()||'Miasto'; if(curSlot){ curSlot.name=v; saveCurrent(false); } });
   on('mSave','onclick',()=>{ const v=$('mName').value.trim(); if(curSlot&&v) curSlot.name=v; saveCurrent(true); renderMenu(); });
   on('mNewGame','onclick',()=>{ menuPage='new'; renderMenu(); card.scrollTop=0; });
+  on('mGrowBtn','onclick',()=>{ const n=+$('mGrow').value; closeModal(); expandMap(n); });
   card.querySelectorAll('.slot').forEach(el=>el.onclick=e=>{ const del=e.target.closest('[data-del]');
     if(del){ e.stopPropagation(); const id=del.dataset.del; if(confirmDel===id){ deleteSlot(id); confirmDel=null; toast('Usunięto'); } else confirmDel=id; renderMenu(); return; }
     if(loadSlot(el.dataset.id)){ closeModal(); toast('Wczytano „'+curSlot.name+'”'); } });
@@ -3451,9 +3544,9 @@ function envStep(dt,time){
   starsEl.style.opacity=(ENV.nightF*(1-ENV.fogF*0.8)*(1-ENV.rainF)).toFixed(3);
   // mgła
   const dist=camera.position.distanceTo(controls.target);
-  if(ENV.fogF>0.01){ if(!scene.fog) scene.fog=new THREE.Fog('#dfe6ea',10,100); scene.fog.color.copy(_skyD2);
-    scene.fog.near=dist*(1.25-ENV.fogF*0.75); scene.fog.far=dist*(3.4-ENV.fogF*1.7); }
-  else if(scene.fog) scene.fog=null;
+  if(!scene.fog) scene.fog=new THREE.Fog('#dfe6ea',10,100); scene.fog.color.copy(_skyD2);
+  const hzN=Math.max(dist*1.4,N*0.75), hzF=Math.max(dist*3.2,N*2.6);
+  scene.fog.near=hzN+(dist*(1.25)-hzN)*ENV.fogF*0.9; scene.fog.far=hzF+(dist*(3.4-1.7)-hzF)*ENV.fogF*0.9;
   // deszcz – krople wokół kamery
   rainLines.material.opacity=ENV.rainF*0.55; rainLines.visible=ENV.rainF>0.02;
   if(rainLines.visible){ const cx=controls.target.x, cz=controls.target.z, R=Math.min(30,dist*0.9), H=Math.max(8,dist*0.6);
