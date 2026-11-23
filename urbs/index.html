@@ -290,6 +290,9 @@ function archPanel(w,h,t,arches){
   s.lineTo(w/2,0); s.lineTo(w/2,h); s.lineTo(-w/2,h); s.lineTo(-w/2,0.0001);
   return new THREE.ExtrudeGeometry(s,{depth:t,bevelEnabled:false,curveSegments:10});
 }
+const batterMemo={};
+function batterGeo(kx,kz){ const k=kx+':'+kz; if(batterMemo[k]) return batterMemo[k]; const g=new THREE.BoxGeometry(1,1,1); const p=g.attributes.position;
+  for(let v=0;v<p.count;v++) if(p.getY(v)>0){ p.setX(v,p.getX(v)*kx); p.setZ(v,p.getZ(v)*kz); } return batterMemo[k]=g; }
 const _hsl={};
 const _m=new THREE.Matrix4(), _q=new THREE.Quaternion(), _e=new THREE.Euler(), _p=new THREE.Vector3(), _s=new THREE.Vector3(), _col=new THREE.Color();
 class B{
@@ -313,6 +316,7 @@ class B{
   hemi(r,x,y,z,c,sy=1){ return this.add(G.hemi,c,x,y,z,0,0,0,r,r*sy,r); }
   roofX(w,h,d,x,y,z,c){ if(d>0.2&&w>0.2) this.add(G.box,shade(c,-0.2),x,y+0.025,z,0,0,0,w,0.05,d); return this.add(G.prism,c,x,y+(d>0.2&&w>0.2?0.05:0),z,0,0,0,w,h,d); }
   roofZ(w,h,d,x,y,z,c){ if(d>0.2&&w>0.2) this.add(G.box,shade(c,-0.2),x,y+0.025,z,0,0,0,w,0.05,d); return this.add(G.prism,c,x,y+(d>0.2&&w>0.2?0.05:0),z,0,Math.PI/2,0,d,h,w); }
+  batter(w,h,d,kx,kz,x,y,z,c){ return this.add(batterGeo(kx,kz),c,x,y+h/2,z,0,0,0,w,h,d); }
   pyr(w,h,x,y,z,c){ return this.add(G.pyr,c,x,y+h/2,z,0,0,0,w,h,w); }
   column(x,z,y0,h,r,c){ this.cyl(r*1.4,0.05,x,y0,z,c,8); this.cyl(r,h-0.1,x,y0+0.05,z,c,8,r*0.88); this.box(r*2.8,0.05,r*2.8,x,y0+h-0.05,z,c); return this; }
   cypress(x,z,h=0.75,y=0){ this.cyl(0.03,0.08,x,y,z,WOOD,5); this.cone(0.11,h,x,y+0.06,z,CYP,7); return this; }
@@ -878,6 +882,61 @@ D.park=(b,r)=>{
   for(let k=0;k<3;k++) b.box(0.12,0.012,0.04,-0.1+(k-1)*0.25,0.07,0.1+(k%2)*0.2,'#f4f4f4');
 };
 
+// Barbakan / dziedziniec bramny: dwie potężne baszty, przejazd z opuszczaną kratą (krata to osobna, ruchoma część)
+D.barbican=(b,r)=>{
+  const H=1.95;
+  for(const sx of [-1,1]){ const x=sx*1.0;
+    b.box(1.0,0.14,1.5,x,0,-0.22,WSTONE2); b.cyl(0.5,0.14,x,0,0.5,WSTONE2,18);
+    b.batter(0.94,2.1,1.44,0.92,0.95,x,0.14,-0.22,WALLSTONE); b.cyl(0.46,2.1,x,0.14,0.5,WALLSTONE,18,0.43);
+    for(const y of [0.62,1.12,1.62]){ b.box(0.95,0.045,1.46,x,y,-0.22,BRICK2); b.cyl(0.462,0.045,x,y,0.5,BRICK2,18); }
+    b.cyl(0.47,0.07,x,2.24,0.5,WCAP,18); b.box(0.92,0.07,1.42,x,2.24,-0.22,WCAP);
+    for(let k=0;k<7;k++){ const a=-0.15+k/6*(Math.PI+0.3); b.box(0.11,0.17,0.1,x+Math.cos(a)*0.4,2.31,0.5+Math.sin(a)*0.4,WALLSTONE,-a); }
+    // izba na szczycie z oknami i dachem
+    b.box(0.78,0.45,0.9,x,2.31,-0.42,WALLSTONE);
+    for(const z of [-0.65,-0.2]) { b.box(0.02,0.18,0.1,x+sx*0.391,2.42,z,DARK); }
+    b.box(0.12,0.18,0.02,x,2.42,0.031,DARK); b.add(G.cyl(8),DARK,x,2.6,0.031,Math.PI/2,0,0,0.06,0.02,0.06);
+    b.roofZ(0.9,0.3,1.0,x,2.76,-0.42,ROOF);
+    // strzelnice w półokrągłym froncie
+    for(const [a,y] of [[Math.PI/2,0.9],[Math.PI/2,1.45],[Math.PI/2+sx*0.9,1.2]]) b.box(0.04,0.22,0.03,x+Math.cos(a)*0.44,y,0.5+Math.sin(a)*0.44,DARK,-a+Math.PI/2);
+    // proporzec legionu
+    b.box(0.2,0.42,0.012,x,1.45,0.965,RED); b.box(0.26,0.03,0.03,x,1.89,0.965,GOLD); b.box(0.06,0.06,0.014,x,1.66,0.97,GOLD);
+    b.cyl(0.05,0.08,x,2.31,0.52,IRON,6); b.sph(0.065,x,2.43,0.52,FLAME,1.4);
+  }
+  b.add(archPanel(1.1,H,1.9,[{c:0,hw:0.33,spring:0.86}]),WALLSTONE,0,0,-0.95);
+  for(const z of [0.95,-0.98]) b.add(arcRing(0.33,0.42,0.03),BRICK2,0,0.86,z);
+  b.box(1.1,0.06,1.96,0,H-0.06,0,WCAP); b.box(1.02,0.03,1.0,0,H,-0.48,WWALK);
+  for(const k of [-0.375,-0.125,0.125,0.375]) b.box(0.13,0.17,0.09,k,H,-0.93,WALLSTONE);
+  // galeria nad przejazdem (jak w Porta Appia) z rzędem okien
+  b.box(1.04,0.5,0.9,0,H,0.5,WALLSTONE); b.box(1.08,0.04,0.94,0,H+0.5,0.5,WCAP);
+  for(const x of [-0.3,0,0.3]){ b.box(0.13,0.2,0.02,x,H+0.12,0.951,DARK); b.add(G.cyl(8),DARK,x,H+0.32,0.951,Math.PI/2,0,0,0.065,0.02,0.065); }
+  b.roofX(1.12,0.24,0.98,0,H+0.54,0.5,ROOF);
+  b.box(0.62,0.17,0.03,0,1.36,0.96,'#efe6d2'); b.box(0.5,0.025,0.032,0,1.42,0.965,'#b8a888'); b.box(0.42,0.025,0.032,0,1.36,0.965,'#b8a888');
+  // prowadnice kraty i otwarte skrzydła bramy
+  for(const sx of [-1,1]){ b.box(0.05,1.2,0.07,sx*0.335,0,0.72,DARK); b.box(0.05,0.95,0.32,sx*0.3,0,-0.55,WOOD,sx*0.12); b.box(0.055,0.04,0.32,sx*0.3,0.3,-0.55,IRON,sx*0.12); b.box(0.055,0.04,0.32,sx*0.3,0.7,-0.55,IRON,sx*0.12); }
+  for(const sx of [-1,1]) torch(b,sx*0.62,1.2,1.0,1);
+};
+let pcGeo=null;
+function portcullisGeo(){ if(pcGeo) return pcGeo; const b=new B();
+  for(let k=0;k<9;k++){ const x=-0.3+k*0.075; b.box(0.024,1.2,0.024,x,0,0,'#4a4038'); b.add(G.cone(4),IRON,x,-0.035,0,Math.PI,0,0,0.02,0.07,0.02); }
+  for(const y of [0.22,0.52,0.82,1.1]) b.box(0.64,0.026,0.03,0,y,0,'#4a4038');
+  return pcGeo=b.geom(); }
+const PC_OPEN=1.12, PC_SHUT=0.04;
+function attachPortcullis(bd){ const m=new THREE.Mesh(portcullisGeo(),bMat); m.castShadow=true; m.position.set(0,PC_OPEN,0.72); bd.mesh.add(m); bd.pc=m; bd.pcForce=undefined; }
+function barbicanAt(i,j){ if(!inb(i,j)||!bld[I(i,j)]) return null; const b=buildings.get(bld[I(i,j)]); return b&&b.type==='barbican'?b:null; }
+function isGateShut(i,j){ const b=barbicanAt(i,j); return !!b&&!!b.pc&&b.pc.position.y<0.7; }
+function updateBarbicans(dt){
+  const t=+timeInput.value, night=t<0.06||t>0.94||ENV.nightF>0.6;
+  for(const b of buildings.values()){ if(b.type!=='barbican'||!b.pc) continue;
+    const open=b.pcForce!==undefined?b.pcForce:!night; const tg=open?PC_OPEN:PC_SHUT, y=b.pc.position.y;
+    b.pc.visible=!todayMode;
+    if(Math.abs(tg-y)<1e-4) continue;
+    const sp=open?0.45:1.8; // podnoszenie powoli na kołowrocie, opadanie z hukiem
+    const ny=y+Math.sign(tg-y)*Math.min(Math.abs(tg-y),dt*sp); b.pc.position.y=ny;
+    if(ny===PC_SHUT) sfx('thud'); else if(open&&Math.random()<dt*3) sfx('tick'); }
+}
+function toggleBarbican(c){ const b=barbicanAt(c.i,c.j); if(!b||!b.pc) return false;
+  const nowOpen=b.pc.position.y>(PC_OPEN+PC_SHUT)/2; b.pcForce=!nowOpen;
+  toast(b.pcForce?'Krata podnosi się – brama otwarta':'Krata opada! Brama zamknięta'); sfx('tick'); return true; }
 D.watchtower=(b,r)=>{
   b.box(0.74,0.14,0.74,0,0,0,STONE);
   b.box(0.6,1.5,0.6,0,0.12,0,WALLSTONE);
@@ -1036,6 +1095,7 @@ const DEFS={
   theatre:{name:'Teatr',cat:'rozr',w:7,d:6,v:1},
   barracks:{name:'Koszary',cat:'woj',w:5,d:5,v:1,pop:480},
   watchtower:{name:'Wieża strażnicza',cat:'woj',w:1,d:1,v:1,pop:4},
+  barbican:{name:'Barbakan z kratą',cat:'woj',w:3,d:2,v:1,onRoad:true,pop:6,desc:'Stawiaj na drodze przed bramą · stuknij, aby podnieść lub opuścić kratę'},
   colossus:{name:'Kolos',cat:'ozd',w:2,d:2,v:1,decor:true},
   quadriga:{name:'Pomnik kwadrygi',cat:'ozd',w:1,d:2,v:1,decor:true},
   obelisk:{name:'Obelisk',cat:'ozd',w:1,d:1,v:1,decor:true},
@@ -1069,24 +1129,86 @@ function getGeom(type,seed,fl=null,opt={}){
 
 /* ---- mury i akwedukty (elementy liniowe) ---- */
 const lineGeoCache=new Map();
-function wallX(b){
-  b.box(1.0,1.0,0.42,0,0,0,WALLSTONE); b.box(1.0,0.05,0.46,0,0.95,0,'#e6d6b4');
-  for(const k of [-0.33,0,0.33]){ b.box(0.17,0.15,0.08,k,1.0,0.19,WALLSTONE); b.box(0.17,0.15,0.08,k,1.0,-0.19,WALLSTONE); }
+const WH=1.25, WSTONE2='#c4b391', WCAP='#e6d6b4', WWALK='#cbb994', IRON='#3d3a36', FLAME='#ff9a3c';
+const wDepth=y=>0.76*(1-0.2*Math.max(0,Math.min(1,(y-0.14)/(WH-0.14))));
+// odcinek muru wzdłuż osi x: lekko skośne (pochyłe) lico, cokół, przepaski z cegły, chodnik i blanki od strony wroga
+function wallSeg(b,len,cx,side){
+  const sIn=side==='p'?1:(side==='m'?-1:0), sOut=-sIn;
+  b.box(len,0.14,0.86,cx,0,0,WSTONE2);
+  b.batter(len,WH-0.14,0.76,1,0.8,cx,0.14,0,WALLSTONE);
+  for(const y of [0.5,0.88]) b.box(len,0.045,wDepth(y)+0.03,cx,y,0,BRICK2);
+  b.box(len,0.06,0.68,cx,WH-0.06,0,WCAP); b.box(len,0.03,0.52,cx,WH,0,WWALK);
+  const blanki=s=>{ b.box(len,0.11,0.08,cx,WH,s*0.3,WALLSTONE); const n=Math.max(1,Math.round(len/0.25));
+    for(let k=0;k<n;k++){ const x=cx-len/2+(k+0.5)*len/n; b.box(0.13,0.17,0.09,x,WH+0.11,s*0.3,WALLSTONE); b.box(0.15,0.025,0.11,x,WH+0.28,s*0.3,WCAP); } };
+  if(sIn===0){ blanki(1); blanki(-1); }
+  else { blanki(sOut); b.box(len,0.09,0.07,cx,WH,sIn*0.3,WALLSTONE);
+    for(let k=0;k<Math.max(1,Math.round(len/0.5));k++){ const x=cx-len/2+(k+0.5)*len/Math.max(1,Math.round(len/0.5)); b.box(0.035,0.14,0.02,x,0.98,sOut*(wDepth(1.05)/2+0.004),DARK); } }
+}
+function torch(b,x,y,z,s){ // uchwyt, żagiew i płomień; s – kierunek odsunięcia od lica
+  b.box(0.035,0.035,0.11,x,y,z-s*0.03,IRON); b.cyl(0.018,0.17,x,y,z+s*0.03,WOOD,5,0.012); b.sph(0.05,x,y+0.2,z+s*0.03,FLAME,1.5); b.sph(0.03,x,y+0.25,z+s*0.03,'#ffd36b',1.4);
+}
+function wallX(b,side,feat){
+  wallSeg(b,1.0,0,side);
+  const sIn=side==='m'?-1:1;
+  if(feat==='S'){ // schody od strony miasta – na chodnik dla straży
+    const n=9, rise=WH/n, run=0.1;
+    for(let k=0;k<n;k++){ const L=0.9-k*run; b.box(L,rise+0.002,0.2,0.45-L/2,k*rise,sIn*0.39,'#cdbb95'); }
+    b.box(0.9,0.05,0.04,0,0.02,sIn*0.48,WSTONE2);
+  }
+  if(feat==='H'){ // drewniane zadaszenie – schronienie dla wartowników
+    for(const x of [-0.42,0.42]) for(const z of [-0.22,0.22]) b.box(0.045,0.42,0.045,x,WH+0.03,z,WOOD);
+    for(const z of [-0.22,0.22]) b.box(0.95,0.045,0.05,0,WH+0.41,z,'#6e4a30');
+    b.roofX(1.0,0.17,0.64,0,WH+0.45,0,ROOF);
+    b.box(0.1,0.24,0.035,0.3,WH+0.03,sIn*0.25,RED); b.box(0.08,0.06,0.04,0.3,WH+0.15,sIn*0.25,GOLD); // tarcza oparta o balustradę
+    b.cyl(0.012,0.5,-0.3,WH+0.03,sIn*0.24,WOOD,4);
+  }
+  if(feat==='T'){ torch(b,0,0.92,sIn*(wDepth(0.95)/2+0.04),sIn); torch(b,0,0.92,-sIn*(wDepth(0.95)/2+0.04),-sIn); }
 }
 function towerG(b){
-  b.box(0.68,1.45,0.68,0,0,0,WALLSTONE); b.box(0.74,0.07,0.74,0,1.38,0,'#e6d6b4');
-  b.pyr(0.8,0.38,0,1.45,0,ROOF);
-  for(const s of [-1,1]){ b.box(0.06,0.16,0.03,0,0.95,s*0.34,DARK); b.box(0.03,0.16,0.06,s*0.34,0.95,0,DARK); }
+  b.box(1.04,0.14,1.04,0,0,0,WSTONE2);
+  b.batter(0.96,1.6,0.96,0.88,0.88,0,0.14,0,WALLSTONE);
+  for(const y of [0.5,0.95,1.4]){ const k=1-0.12*(y-0.14)/1.6; b.box(0.96*k+0.03,0.045,0.96*k+0.03,0,y,0,BRICK2); }
+  b.box(0.92,0.07,0.92,0,1.74,0,WCAP);
+  b.box(0.8,0.42,0.8,0,1.81,0,WALLSTONE);
+  for(const [ry] of [[0],[Math.PI/2],[Math.PI],[-Math.PI/2]]) b.at(0,0,0,ry,()=>{
+    for(const x of [-0.18,0.18]){ b.box(0.1,0.17,0.02,x,1.92,0.401,DARK); b.add(G.cyl(8),DARK,x,2.09,0.401,Math.PI/2,0,0,0.05,0.02,0.05); b.box(0.15,0.03,0.025,x,2.15,0.402,BRICK2); }
+    b.box(0.035,0.2,0.02,0,0.85,0.45,DARK); b.box(0.035,0.2,0.02,0,1.3,0.44,DARK); });
+  b.box(0.92,0.04,0.92,0,2.23,0,shade(ROOF,-0.2)); b.pyr(1.02,0.44,0,2.27,0,ROOF);
+  for(const s of [-1,1]) torch(b,s*0.5,1.02,s*0.5,s);
 }
-function wallStub(b){
-  b.box(0.5,1.0,0.42,0.25,0,0,WALLSTONE); b.box(0.5,0.05,0.46,0.25,0.95,0,'#e6d6b4');
-  for(const k of [0.42]){ b.box(0.17,0.15,0.08,k,1.0,0.19,WALLSTONE); b.box(0.17,0.15,0.08,k,1.0,-0.19,WALLSTONE); }
+function wallStub(b){ wallSeg(b,0.5,0.25,null); }
+function arcRing(r0,r1,t){ const s=new THREE.Shape(); s.moveTo(r1,0); s.absarc(0,0,r1,0,Math.PI,false); s.lineTo(-r0,0); s.absarc(0,0,r0,Math.PI,0,true); s.lineTo(r1,0);
+  return new THREE.ExtrudeGeometry(s,{depth:t,bevelEnabled:false,curveSegments:10}); }
+function gateX(b,side){
+  const sIn=side==='m'?-1:1, sOut=-sIn, GH=1.62;
+  for(const x of [-0.37,0.37]) b.box(0.26,0.14,0.92,x,0,0,WSTONE2);
+  b.add(archPanel(1.0,GH,0.84,[{c:0,hw:0.3,spring:0.8}]),WALLSTONE,0,0,-0.42);
+  for(const s of [-1,1]) b.add(arcRing(0.3,0.38,0.03),BRICK2,0,0.8,s>0?0.42:-0.45);
+  b.box(1.0,0.045,0.9,0,1.25,0,BRICK2);
+  b.box(1.04,0.06,0.92,0,GH-0.06,0,WCAP); b.box(1.0,0.03,0.56,0,GH,0,WWALK);
+  for(const k of [-0.375,-0.125,0.125,0.375]){ b.box(0.13,0.17,0.09,k,GH+0.03,sOut*0.33,WALLSTONE); b.box(0.15,0.025,0.11,k,GH+0.2,sOut*0.33,WCAP); }
+  b.box(1.0,0.12,0.07,0,GH,sIn*0.33,WALLSTONE);
+  // opuszczana krata (cataracta) – teraz podniesiona, widać jej zęby w łuku
+  for(let x=-0.24;x<=0.241;x+=0.08) b.box(0.022,0.3,0.022,x,0.86,sOut*0.3,IRON);
+  for(const y of [0.92,1.04]) b.box(0.56,0.022,0.022,0,y,sOut*0.3,IRON);
+  b.box(0.42,0.13,0.025,0,1.33,sOut*0.43,'#efe6d2');
+  // półokrągłe baszty po stronie wroga, z koszami ognia na szczycie
+  for(const sx of [-1,1]){ const x=sx*0.52, z=sOut*0.3;
+    b.cyl(0.24,0.14,x,0,z,WSTONE2,14); b.cyl(0.22,1.86,x,0.14,z,WALLSTONE,14); b.cyl(0.225,0.045,x,0.62,z,BRICK2,14); b.cyl(0.225,0.045,x,1.2,z,BRICK2,14);
+    b.cyl(0.245,0.06,x,2.0,z,WCAP,14);
+    for(let k=0;k<6;k++){ const a=k/6*Math.PI*2; b.box(0.08,0.14,0.08,x+Math.cos(a)*0.19,2.06,z+Math.sin(a)*0.19,WALLSTONE,-a); }
+    b.box(0.035,0.18,0.02,x+sx*0.0,1.05,z+sOut*0.221,DARK);
+    b.cyl(0.05,0.08,x,2.06,z,IRON,6); b.sph(0.06,x,2.17,z,FLAME,1.4); }
+  for(const sx of [-1,1]) torch(b,sx*0.36,0.95,sIn*0.46,sIn);
 }
-function gateX(b){
-  b.add(archPanel(1.0,1.3,0.56,[{c:0,hw:0.3,spring:0.62}]),WALLSTONE,0,0,-0.28);
-  b.box(1.04,0.06,0.6,0,1.25,0,'#e6d6b4');
-  for(const k of [-0.36,-0.12,0.12,0.36]){ b.box(0.14,0.16,0.08,k,1.31,0.26,WALLSTONE); b.box(0.14,0.16,0.08,k,1.31,-0.26,WALLSTONE); }
-  b.box(0.3,0.08,0.02,0,1.08,0.29,'#e4d4b0');
+function moatG(b,m){ // kamienne nabrzeże fosy od strony lądu
+  const sides=[[1,1,0],[2,-1,0],[4,0,-1],[8,0,1]];
+  for(const [bit,dx,dz] of sides){ if(m&bit) continue;
+    if(dx){ b.box(0.09,0.2,1.0,dx*0.455,-0.1,0,WSTONE2); b.box(0.12,0.035,1.0,dx*0.455,0.1,0,WCAP);
+      for(const z of [-0.3,0.05,0.35]) b.add(G.cone(4),WOOD,dx*0.36,0.06,z,0,0,dx*0.6,0.025,0.16,0.025); }
+    else { b.box(1.0,0.2,0.09,0,-0.1,dz*0.455,WSTONE2); b.box(1.0,0.035,0.12,0,0.1,dz*0.455,WCAP);
+      for(const x of [-0.3,0.05,0.35]) b.add(G.cone(4),WOOD,x,0.06,dz*0.36,-dz*0.6,0,0,0.025,0.16,0.025); } }
+  if(m===15) b.box(0.02,0.002,0.02,0,0,0,WATERC);
 }
 function aqX(b,wet=true){
   b.add(archPanel(1.0,1.3,0.3,[{c:0,hw:0.34,spring:0.78}]),TRAV,0,0,-0.15);
@@ -1100,10 +1222,12 @@ function lineGeom(key){
     const g=b.geom(); lineGeoCache.set(key,g); return g; }
   if(lineGeoCache.has(key)) return lineGeoCache.get(key);
   const b=new B(); const rotZ=fn=>b.at(0,0,0,Math.PI/2,()=>fn(b));
-  if(key==='wall-x') wallX(b); else if(key==='wall-z') rotZ(wallX);
-  else if(key.startsWith('tower')){ towerG(b); const m=+(key.split('-')[1]||0);
+  const wp=key.split('-'); // np. wall-x-pT, gate-z-m
+  if(wp[0]==='wall'){ const side=(wp[2]||'')[0]||null, feat=(wp[2]||'').slice(1); if(wp[1]==='x') wallX(b,side,feat); else rotZ(()=>wallX(b,side,feat)); }
+  else if(key.startsWith('tower')){ towerG(b); const m=+(wp[1]||0);
     for(const [bit,ry] of [[1,0],[2,Math.PI],[4,Math.PI/2],[8,-Math.PI/2]]) if(m&bit) b.at(0,0,0,ry,()=>wallStub(b)); }
-  else if(key==='gate-x') gateX(b); else if(key==='gate-z') rotZ(gateX);
+  else if(wp[0]==='gate'){ const side=wp[2]||null; if(wp[1]==='x') gateX(b,side); else rotZ(()=>gateX(b,side)); }
+  else if(wp[0]==='moat') moatG(b,+wp[1]);
   else if(key==='aq-x') aqX(b); else if(key==='aq-z') rotZ(aqX);
   else if(key.startsWith('aqp-')){ const m=+key.slice(4);
     b.box(0.5,1.92,0.42,0,0,0,TRAV); b.box(0.54,0.16,0.46,0,1.92,0,'#efe3c8');
@@ -1225,7 +1349,7 @@ function rebuildAO(){
   for(const b of buildings.values()){ if(n>=7000) break; if(!b.mesh.visible) continue; const def=DEFS[b.type]; if(def.decor&&b.type!=='arch') continue;
     const [fw,fd]=fpSize(def,b.rot); const sc=todayMode?Math.max(0.3,b.target??1):1;
     setInst(AO,n++,b.mesh.position.x,0.03,b.mesh.position.z,fw+0.55*sc,1,fd+0.55*sc); }
-  for(const [id,m] of lineMeshes){ if(n>=7000) break; const k=m.userData.key||''; const big=k.startsWith('tower'); setInst(AO,n++,m.position.x,0.03,m.position.z,big?1.25:1.1,1,big?1.25:1.1); }
+  for(const [id,m] of lineMeshes){ if(n>=7000) break; const k=m.userData.key||''; if(k.startsWith('moat')) continue; const big=k.startsWith('tower'); setInst(AO,n++,m.position.x,0.03,m.position.z,big?1.25:1.1,1,big?1.25:1.1); }
   AO.count=n; AO.instanceMatrix.needsUpdate=true;
 }
 
@@ -1238,9 +1362,9 @@ const chainGeo=new THREE.CylinderGeometry(0.012,0.012,1,5);
 let deckGeo=null;
 function drawInfo(i,j){
   if(!inb(i,j)) return null; const id=I(i,j);
-  if(!road[id]||terrain[id]!==2||line[id]||bld[id]) return null;
+  if(!road[id]||terrain[id]!==2||(line[id]&&line[id]!==3)||bld[id]) return null;
   for(const [di,dj] of DIRS){ const gi=i-di, gj=j-dj; if(!wallGate(gi,gj)) continue;
-    const k=lineKey(gi,gj)||''; if((k==='gate-x'&&di===0)||(k==='gate-z'&&dj===0)) return {gi,gj,dx:di,dz:dj}; }
+    const k=lineKey(gi,gj)||''; if((k.startsWith('gate-x')&&di===0)||(k.startsWith('gate-z')&&dj===0)) return {gi,gj,dx:di,dz:dj}; }
   return null;
 }
 function syncDrawbridges(){
@@ -1391,8 +1515,17 @@ function lineAt(i,j){ return inb(i,j)?line[I(i,j)]:0; }
 function wallCorner(i,j){ if(lineAt(i,j)!==1) return false; return (lineAt(i+1,j)===1||lineAt(i-1,j)===1)&&(lineAt(i,j+1)===1||lineAt(i,j-1)===1); }
 function wallEnd(i,j){ if(lineAt(i,j)!==1||road[I(i,j)]) return false; return (lineAt(i+1,j)===1)+(lineAt(i-1,j)===1)+(lineAt(i,j+1)===1)+(lineAt(i,j-1)===1)<=1; }
 function wallGate(i,j){ return lineAt(i,j)===1&&road[I(i,j)]>0; }
+function cityAt(i,j){ if(!inb(i,j)) return 0; const id=I(i,j); if(terrain[id]===2) return -1; return (bld[id]||road[id]||terrain[id]===1)?1:0; }
+// po której stronie muru leży miasto ('p' – w stronę rosnącej współrzędnej poprzecznej, 'm' – malejącej)
+function wallSide(i,j,ax){
+  let sc=0; for(let d=1;d<=3;d++) for(let l=-1;l<=1;l++){ sc+=ax==='x'?cityAt(i+l,j+d)-cityAt(i+l,j-d):cityAt(i+d,j+l)-cityAt(i-d,j+l); }
+  if(sc) return sc>0?'p':'m';
+  const c=(ax==='x'?j:i); return c<N/2?'p':'m';
+}
+function isWet(i,j){ return !inb(i,j)||terrain[I(i,j)]===2||line[I(i,j)]===3; }
 function lineKey(i,j){
   const k=lineAt(i,j); if(!k) return null;
+  if(k===3) return 'moat-'+((isWet(i+1,j)?1:0)+(isWet(i-1,j)?2:0)+(isWet(i,j-1)?4:0)+(isWet(i,j+1)?8:0));
   const nE=lineAt(i+1,j)===k, nW=lineAt(i-1,j)===k, nN=lineAt(i,j-1)===k, nS=lineAt(i,j+1)===k;
   const hx=nE||nW, hz=nN||nS;
   const mask=(nE?1:0)+(nW?2:0)+(nN?4:0)+(nS?8:0);
@@ -1401,21 +1534,28 @@ function lineKey(i,j){
     const r=road[I(i,j)];
     let ax=hz?'z':'x';
     if(!hx&&!hz&&r){ const rx=(inb(i+1,j)&&road[I(i+1,j)])||(inb(i-1,j)&&road[I(i-1,j)]); ax=rx?'z':'x'; }
-    if(r) return 'gate-'+ax;
+    const sd=wallSide(i,j,ax);
+    if(r) return 'gate-'+ax+'-'+sd;
+    const W=(f='')=>'wall-'+ax+'-'+sd+f;
     const cnt=(nE?1:0)+(nW?1:0)+(nN?1:0)+(nS?1:0);
     if(cnt<=1){ // koniec muru: wieża, chyba że tuż obok stoi narożnik lub inny koniec
-      for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(wallCorner(ni,nj)) return 'wall-'+ax; if(wallEnd(ni,nj)&&(ni<i||nj<j)) return 'wall-'+ax; }
+      for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(wallCorner(ni,nj)) return W(); if(wallEnd(ni,nj)&&(ni<i||nj<j)) return W(); }
       return 'tower-'+mask; }
-    if((ax==='x'?i:j)%6===0){ // wieże pośrednie tylko z dala od narożników, końców i bram
-      for(const d of [-2,-1,1,2]){ const ni=ax==='x'?i+d:i, nj=ax==='x'?j:j+d; if(wallCorner(ni,nj)||wallEnd(ni,nj)||wallGate(ni,nj)) return 'wall-'+ax; }
+    const p=ax==='x'?i:j, q=((p%12)+12)%12;
+    if(p%6===0){ // wieże pośrednie tylko z dala od narożników, końców i bram
+      for(const d of [-2,-1,1,2]){ const ni=ax==='x'?i+d:i, nj=ax==='x'?j:j+d; if(wallCorner(ni,nj)||wallEnd(ni,nj)||wallGate(ni,nj)) return W(); }
       return 'tower-'+mask; }
-    return 'wall-'+ax;
+    // rytm muru: schody, pochodnie i drewniane zadaszenia dla straży
+    return W(q===1?'S':(q%6===3?'H':(q%6===2||q%6===4?'T':'')));
   }
   const dry=aqWet.length===N*N&&!aqWet[I(i,j)]?'-d':'';
   if(hx&&hz) return 'aqp-'+((nE?1:0)+(nW?2:0)+(nN?4:0)+(nS?8:0))+dry;
   return 'aq-'+(hz?'z':'x')+dry;
 }
 function markLine(i,j){ for(let d=-2;d<=2;d++){ if(inb(i+d,j)) dirtyLines.add(I(i+d,j)); if(inb(i,j+d)) dirtyLines.add(I(i,j+d)); } for(const [di,dj] of [[1,1],[1,-1],[-1,1],[-1,-1]]) if(inb(i+di,j+dj)) dirtyLines.add(I(i+di,j+dj)); }
+let sideDirty=false, sideT=0;
+function wallSideStep(t){ if(dirtySave) sideDirty=true; if(!sideDirty||t-sideT<1.5) return; sideT=t; sideDirty=false;
+  for(let id=0;id<N*N;id++) if(line[id]===1) dirtyLines.add(id); }
 function processLines(){
   for(const id of dirtyLines){
     const i=id%N, j=Math.floor(id/N); const key=lineKey(i,j); const ex=lineMeshes.get(id);
@@ -1461,6 +1601,7 @@ function addBuilding(type,x,z,rot,seed,anim=true,lm=null,fl=null){
   buildGroup.add(m);
   buildings.set(id,{id,type,x,z,rot,seed,mesh:m,lm:lm||null,ts:1,fl:fl||null});
   if(todayMode){ applyTodayTo(buildings.get(id),true); }
+  if(type==='barbican') attachPortcullis(buildings.get(id));
   if(type==='house') markHouses(x,z);
   if(anim){ buildings.get(id).justPlaced=true; buildings.get(id).u=1; }
   if(constr) startConstruction(buildings.get(id));
@@ -1486,8 +1627,11 @@ function bestRot(type,x,z){ const def=DEFS[type]; const order=[0,1,2,3].sort(()=
   for(const r of order){ const [fw,fd]=fpSize(def,r); if(canPlace(type,x,z,r)&&frontHasRoad(x,z,fw,fd,r)) return r; }
   for(const r of order) if(canPlace(type,x,z,r)) return r; return -1; }
 function setRoad(i,j,v){ const id=I(i,j); if(road[id]===v) return false; road[id]=v; waterNetDirty=true; dirtyTerrain=true; dirtyRoads=true; dirtySave=true; if(line[id]) markLine(i,j); markHouses(i,j); return true; }
-function setLine(i,j,v){ const id=I(i,j); if(line[id]===v) return false; line[id]=v; waterNetDirty=true; dirtyWalls=true; markHouses(i,j); markLine(i,j); dirtyTerrain=true; dirtySave=true; return true; }
-function setTerrain(i,j,v){ const id=I(i,j); if(terrain[id]===v) return false; if(v===2&&bld[id]) return false; terrain[id]=v; dirtyWater=true; dirtyTerrain=true; dirtySave=true; return true; }
+function setLine(i,j,v){ const id=I(i,j); if(line[id]===v) return false; const was=line[id]; line[id]=v;
+  if(v===3){ terrain[id]=2; dirtyWater=true; } else if(was===3&&v===0&&terrain[id]===2) terrain[id]=0;
+  for(const [di,dj] of DIRS) if(lineAt(i+di,j+dj)===3) dirtyLines.add(I(i+di,j+dj)); waterNetDirty=true; dirtyWalls=true; markHouses(i,j); markLine(i,j); dirtyTerrain=true; dirtySave=true; return true; }
+function setTerrain(i,j,v){ const id=I(i,j); if(terrain[id]===v) return false; if(v===2&&bld[id]) return false; if(line[id]===3&&v!==2) return false; terrain[id]=v;
+  for(const [di,dj] of DIRS) if(lineAt(i+di,j+dj)===3) dirtyLines.add(I(i+di,j+dj)); dirtyWater=true; dirtyTerrain=true; dirtySave=true; return true; }
 /* =========================================================
    Kamienice łączące się w bloki (jak w Townscaperze)
    ========================================================= */
@@ -1841,7 +1985,7 @@ function groundY(i,j){ if(!inb(i,j)) return 0.035; const id=I(i,j); return road[
 function adjBuilding(i,j){ for(const [di,dj] of DIRS){ const ni=i+di,nj=j+dj; if(inb(ni,nj)&&bld[I(ni,nj)]) return true; } return false; }
 function nextCell(a){
   const opts=[]; const sx=a.bx-a.ax, sz=a.bz-a.az;
-  for(const [di,dj] of DIRS){ const ni=a.bx+di, nj=a.bz+dj; if(!inb(ni,nj)) continue; const r=road[I(ni,nj)]; if(!r) continue; if(isDrawUp(ni,nj)) continue; if(a.kind==='cart'&&r!==2) continue; if(ni===a.ax&&nj===a.az) continue; opts.push({i:ni,j:nj,st:di===sx&&dj===sz}); }
+  for(const [di,dj] of DIRS){ const ni=a.bx+di, nj=a.bz+dj; if(!inb(ni,nj)) continue; const r=road[I(ni,nj)]; if(!r) continue; if(isDrawUp(ni,nj)||isGateShut(ni,nj)) continue; if(a.kind==='cart'&&r!==2) continue; if(ni===a.ax&&nj===a.az) continue; opts.push({i:ni,j:nj,st:di===sx&&dj===sz}); }
   if(!opts.length){ if(isRoad(a.ax,a.az)&&(a.kind!=='cart'||road[I(a.ax,a.az)]===2)) return {i:a.ax,j:a.az}; return {i:a.bx,j:a.bz}; }
   const st=opts.find(o=>o.st); const ps=a.kind==='ped'?0.55:0.82;
   if(st && rnd()<ps) return st; return pickArr(opts);
@@ -1887,7 +2031,7 @@ function updateShips(dt,time){
 }
 const wallGuards=[]; let wallCells=[];
 function isWallWalk(i,j){ return inb(i,j)&&line[I(i,j)]===1; }
-function wallY(i,j){ return wallGate(i,j)?1.31:1.0; }
+function wallY(i,j){ return wallGate(i,j)?1.65:1.28; }
 function updateWallGuards(dt){
   if(dirtyWalls){ dirtyWalls=false; wallCells=[]; for(let id=0;id<N*N;id++) if(line[id]===1) wallCells.push({i:id%N,j:Math.floor(id/N)}); }
   const target=peopleOn&&!todayMode?Math.min(14,Math.floor(wallCells.length/9)):0;
@@ -2115,7 +2259,7 @@ let nextSeed=Math.floor(rnd()*1e6);
 function pathValid(i,j){
   const id=I(i,j);
   if(tool.kind==='road'){ const b=bld[id]; return !b || !!DEFS[buildings.get(b)?.type]?.onRoad; }
-  if(tool.kind==='line') return !bld[id];
+  if(tool.kind==='line'){ if(bld[id]) return false; const l=line[id]; if(tool.val===3) return !l||l===3; if(tool.val===1) return l!==3; return true; }
   return true;
 }
 function updatePreview(c){
@@ -2281,9 +2425,9 @@ function touchUp(e){
 }
 function tapInfo(c){
   if(!c.inside){ hideInfo(); return; }
-  if(toggleDrawAt(c)) return; const id=bld[I(c.i,c.j)]; let key=null;
+  if(toggleDrawAt(c)) return; toggleBarbican(c); const id=bld[I(c.i,c.j)]; let key=null;
   if(id){ const b=buildings.get(id); key=b.lm&&INFO[b.lm]?b.lm:b.type; pulses.push({m:b.mesh,t:0}); }
-  else if(line[I(c.i,c.j)]) key=line[I(c.i,c.j)]===1?'l-wall':'l-aq';
+  else if(line[I(c.i,c.j)]) key=['','l-wall','l-aq','l-moat'][line[I(c.i,c.j)]];
   else if(road[I(c.i,c.j)]) key=road[I(c.i,c.j)]===2?'r-wide':'r-narrow';
   if(key&&INFO[key]){ showInfo(key); sfx('tick'); } else hideInfo();
 }
@@ -2416,6 +2560,8 @@ const TOOLS=[
   {id:'b-barracks',cat:'woj',kind:'build',type:'barracks'},
   {id:'b-watchtower',cat:'woj',kind:'build',type:'watchtower'},
   {id:'l-wall',cat:'woj',kind:'line',val:1,name:'Mur miejski',hint:'Przeciągnij, aby postawić mur. Mur na drodze zamienia się w bramę, a droga z bramy przez fosę – w most zwodzony'},
+  {id:'l-moat',cat:'woj',kind:'line',val:3,name:'Fosa',hint:'Przeciągnij wzdłuż muru, aby wykopać fosę z wodą. Droga przez fosę staje się mostem – tuż za bramą mostem zwodzonym'},
+  {id:'b-barbican',cat:'woj',kind:'build',type:'barbican'},
   ...['arch','fountain','statue','column','mausoleum','pyramid','colossus','quadriga','obelisk','ara','cypress','pine'].map(t=>({id:'b-'+t,cat:'ozd',kind:'build',type:t})),
 ];
 for(const t of TOOLS) if(t.type&&!t.name) t.name=DEFS[t.type].name;
@@ -2568,6 +2714,15 @@ Object.assign(INFO,{
   terrace:{name:'Ogród tarasowy',era:'od I w. p.n.e.',text:'Na zboczach wzgórz urządzano ogrody na kilku poziomach, podpartych murami oporowymi, ze schodami, pergolami i fontannami.',facts:['Ogrody Lukullusa na wzgórzu Pincio schodziły tarasami w dół zbocza – w tym miejscu do dziś rosną ogrody.']},
   park:{name:'Park (horti)',era:'od I w. p.n.e.',text:'Najbogatsi Rzymianie zakładali na obrzeżach miasta wielkie ogrody – horti – z alejami, stawami, pawilonami i kolekcjami rzeźb. Z czasem wiele z nich przeszło na własność cesarzy.',facts:['W Ogrodach Salustiusza znaleziono wiele słynnych rzeźb, m.in. grupę Gala zabijającego żonę i siebie.']},
 });
+INFO['l-moat']={name:'Fosa (fossa)',era:'od czasów republiki – w każdym obozie i przy murach miast',text:'Rów przed murem był pierwszą linią obrony: spowalniał szturm, utrudniał podsunięcie wież oblężniczych i taranów, a ziemia z wykopu szła na wał za murem. Legioniści kopali fosę wokół każdego obozu, nawet na jedną noc marszu.',
+  facts:['Najczęstsza była fossa fastigata – rów w kształcie litery V, z którego trudno się wydostać. Fossa punica miała stromą ścianę od strony obrońców i łagodną od strony wroga.','Przy Murze Serwiańskim w Rzymie przed wałem (agger) biegła fosa szeroka na kilkadziesiąt metrów.','Na dnie lub przed rowem bywały pułapki: zaostrzone pale i zamaskowane doły zwane „liliami” – opisuje je Cezar przy oblężeniu Alezji.','W grze fosa jest wypełniona wodą – w praktyce rzymskie rowy były często suche.'],
+  today:'Rowy obozów rzymskich widać do dziś w krajobrazie Brytanii, np. przy Murze Hadriana, gdzie za murem biegnie wielki rów zwany vallum.',
+  legacy:'Fosy wokół średniowiecznych zamków i nowożytnych twierdz – także polskich – to dalsza historia tego samego pomysłu.'};
+INFO.barbican={name:'Barbakan z kratą',era:'bramy z basztami i kratą: od III w. p.n.e.; słowo „barbakan” – średniowiecze',text:'Rzymianie nie używali słowa barbakan, ale budowali coś podobnego: bramy flankowane dwiema basztami, czasem z wewnętrznym dziedzińcem, w którym wróg, który sforsował pierwsze wrota, trafiał w pułapkę pod ostrzałem z góry. Przejazd zamykała krata (cataracta) opuszczana pionowo w kamiennych prowadnicach.',
+  facts:['Liwiusz opisuje kratę spuszczoną w bramie Salapii, która odcięła wdzierających się żołnierzy Hannibala.','Za cesarza Honoriusza (ok. 401–403 n.e.) bramy Muru Aureliana przebudowano: dostały wyższe baszty, dziedzińce bramne i galerie dla obrońców.','Krata spadała pod własnym ciężarem w ułamku sekundy – podnoszenie jej kołowrotem zajmowało dużo dłużej.','W grze: stuknij barbakan, by podnieść lub opuścić kratę. Nocą krata sama opada, a przechodnie czekają do rana.'],
+  today:'W Porta San Sebastiano (dawnej Porta Appia) w Rzymie widać jeszcze prowadnice kraty, a w środku działa Muzeum Murów, z którego można wyjść na chodnik obronny Muru Aureliana.',
+  legacy:'Krakowski Barbakan z XV w. to średniowieczny potomek tej idei – osobne przedpole przed Bramą Floriańską.'};
+INFO['l-wall'].facts.push('Za Honoriusza Mur Aureliana podwyższono niemal dwukrotnie, a w jego grubości poprowadzono krytą galerię dla obrońców.','Ściany murów często lekko się zwężały ku górze – szersza podstawa była stabilniejsza i trudniej było ją podkopać.','W grze mur sam układa się w rytm: wieże co sześć pól, schody od strony miasta, zadaszenia dla straży i pochodnie, które płoną nocą.');
 INFO.drawbridge={name:'Most zwodzony',era:'średniowiecze, XII–XV w.',text:'Most zwodzony to wynalazek średniowiecznych zamków – w grze to mały anachronizm. Rzymianie bronili bram inaczej: przed murami kopali fosę (fossa), przez którą prowadził stały most, a bramę zamykała opuszczana pionowo krata.',
   facts:['Stuknij bramę albo most w trybie ✋ rozglądania, aby go podnieść lub opuścić. Gdy most jest w górze, nikt nie wejdzie do miasta.','O zmroku (suwak pory dnia w menu) mosty podnoszą się same.','Opuszczaną kratę w bramie Rzymianie nazywali cataracta – wspomina o niej już Liwiusz.'],
   today:'Mosty zwodzone przetrwały w wielu średniowiecznych zamkach Europy – niektóre wciąż się podnoszą.'};
@@ -2898,6 +3053,10 @@ function swatch(kind,val){
     if(val===2){ fill(WATERC); g.strokeStyle='#bfe8f2'; g.lineWidth=4; for(let y=22;y<90;y+=22){ g.beginPath(); for(let x=0;x<=96;x+=4) g.lineTo(x,y+Math.sin(x/9)*4); g.stroke(); } }
     if(val===3){ fill('#95c16a'); for(const [x,y,col] of [[30,62,CYP],[64,56,'#6a9a4a'],[48,34,'#9bb07a']]){ g.fillStyle=col; g.beginPath(); g.moveTo(x-12,y+10); g.lineTo(x,y-26); g.lineTo(x+12,y+10); g.fill(); } }
     if(val===4){ fill('#e8c867'); g.fillStyle='#d2ab45'; for(let y=10;y<96;y+=18) g.fillRect(6,y,84,7); }
+  } else if(kind==='moat'){
+    fill('#a9d17b'); g.fillStyle='#c4b391'; g.fillRect(0,24,96,48); g.fillStyle=WATERC; g.fillRect(0,32,96,32); g.fillStyle='#e6d6b4'; g.fillRect(0,22,96,6); g.fillRect(0,68,96,6);
+    g.strokeStyle='#bfe8f2'; g.lineWidth=3; g.beginPath(); for(let x=0;x<=96;x+=4) g.lineTo(x,48+Math.sin(x/8)*3); g.stroke();
+    g.fillStyle='#8f6040'; for(let x=8;x<96;x+=16){ g.beginPath(); g.moveTo(x,20); g.lineTo(x+4,8); g.lineTo(x+7,20); g.fill(); }
   } else {
     fill('#a9d17b'); const w=val===2?44:30; g.fillStyle=val===2?'#aaa398':'#d4c9b6'; g.fillRect(48-w/2,0,w,96); g.fillRect(0,48-w/2,96,w);
     g.fillStyle='#efe7d8'; for(const o of [-w/2-3,w/2]){ g.fillRect(48+o,0,3,48-w/2); g.fillRect(48+o,48+w/2,3,48-w/2); g.fillRect(0,48+o,48-w/2,3); g.fillRect(48+w/2,48+o,48-w/2,3); }
@@ -2920,7 +3079,8 @@ function renderIcons(){
     try{
       if(t.kind==='terrain'||t.kind==='road') t.icon=swatch(t.kind,t.val);
       else if(t.kind==='brush') t.icon=shot([M(getGeom('house',3),-0.5,-0.5),M(getGeom('house',7),0.5,-0.5),M(getGeom('house',11),-0.5,0.5),M(getGeom('house',14),0.5,0.5)]);
-      else if(t.id==='l-wall') t.icon=shot([M(lineGeom('tower-1'),-1),M(lineGeom('wall-x'),0),M(lineGeom('gate-x'),1),M(lineGeom('wall-x'),2),M(lineGeom('tower-2'),3)]);
+      else if(t.id==='l-wall') t.icon=shot([M(lineGeom('tower-1'),-1),M(lineGeom('wall-x-pH'),0),M(lineGeom('gate-x-p'),1),M(lineGeom('wall-x-pT'),2),M(lineGeom('tower-2'),3)]);
+      else if(t.id==='l-moat') t.icon=swatch('moat',3);
       else if(t.id==='l-aq') t.icon=shot([M(lineGeom('aq-x'),-1),M(lineGeom('aq-x'),0),M(lineGeom('aq-x'),1)]);
       else if(t.type) t.icon=shot([M(getGeom(t.type,0))]);
     }catch(e){ console.warn('ikona',t.id,e); }
@@ -3253,7 +3413,7 @@ function triumphStep(dt,time){
   if(t.s-t.tail>t.len){ triumph=null; follow=null; markEvent('triumph'); toast('Io triumphe! Pochód dotarł na miejsce 🌿'); showInfo('triumph'); }
 }
 INFO.news={name:'Nowości w Urbs',era:'aktualizacja',text:'Miasto żyje teraz dużo bardziej. Oto co nowego:',
-  facts:['🔨 Budowa z rusztowaniami, robotnikami i dźwigiem – a z gotowego budynku wychodzą mieszkańcy.','💧 Woda: poprowadź akwedukt od krawędzi mapy do ulic, a fontanny i termy ożyją.','✨ Domy przy fontannach, ogrodach i forum pięknieją: kwiaty, pranie nad uliczką, ławki i stragany.','🏆 Zadania od cesarza (stuknij 🌿 przy logo) – wieńce odblokowują Kolosa, kwadrygę, obelisk, Ara Pacis i latarnię.','🔨 Nowa gra → Odbuduj Rzym, a także Pompeje z Wezuwiuszem, Vindobona i Londinium.','🎺 Wydarzenia w menu: triumf, wyścig rydwanów, igrzyska.','🌙 Noc, pogoda i upływ czasu (menu → Widok), 📷 tryb fotograficzny w lewym dolnym rogu, muzyka liry i odgłosy miasta.']};
+  facts:['🛡️ Nowe mury: grubsze, lekko pochyłe, z wieżami co sześć pól, schodami, zadaszeniami dla straży i pochodniami, które płoną nocą.','🌊 Fosa (Wojsko i mury): przeciągnij wzdłuż muru – droga przez fosę staje się mostem, a tuż za bramą mostem zwodzonym.','🏰 Barbakan z kratą: postaw go na drodze przed bramą i stuknij, by podnieść lub opuścić kratę. Nocą opada sam.','🔨 Budowa z rusztowaniami, robotnikami i dźwigiem – a z gotowego budynku wychodzą mieszkańcy.','💧 Woda: poprowadź akwedukt od krawędzi mapy do ulic, a fontanny i termy ożyją.','✨ Domy przy fontannach, ogrodach i forum pięknieją: kwiaty, pranie nad uliczką, ławki i stragany.','🏆 Zadania od cesarza (stuknij 🌿 przy logo) – wieńce odblokowują Kolosa, kwadrygę, obelisk, Ara Pacis i latarnię.','🔨 Nowa gra → Odbuduj Rzym, a także Pompeje z Wezuwiuszem, Vindobona i Londinium.','🎺 Wydarzenia w menu: triumf, wyścig rydwanów, igrzyska.','🌙 Noc, pogoda i upływ czasu (menu → Widok), 📷 tryb fotograficzny w lewym dolnym rogu, muzyka liry i odgłosy miasta.']};
 INFO.triumph={name:'Triumf',era:'tradycja od czasów królów',text:'Najwyższy zaszczyt dla zwycięskiego wodza. Pochód szedł przez miasto aż na Kapitol: liktorzy, trębacze, łupy i jeńcy, a za nimi wódz w purpurowej todze na złotej kwadrydze, z twarzą pomalowaną na czerwono jak posąg Jowisza. Na końcu maszerowali żołnierze, śpiewając żartobliwe piosenki o swoim dowódcy.',
   facts:['Tłum wołał „Io triumphe!”.','Trajan odbył triumfy po zwycięstwach nad Dakami – łupy sfinansowały jego forum.','Według przekazów niewolnik w rydwanie przypominał wodzowi, że jest tylko człowiekiem.']};
 // wyścig rydwanów
@@ -3505,12 +3665,15 @@ const glowMat=new THREE.PointsMaterial({map:glowTex,size:0.9,sizeAttenuation:tru
 const glowPts=new THREE.Points(glowGeo,glowMat); glowPts.frustumCulled=false; glowPts.renderOrder=8; scene.add(glowPts);
 function rebuildGlow(){
   const arr=glowGeo.attributes.position.array; let n=0; const add=(x,y,z)=>{ if(n>=1200) return; arr[n*3]=x; arr[n*3+1]=y; arr[n*3+2]=z; n++; };
-  for(const [id,m] of lineMeshes){ const k=m.userData.key||''; const x=m.position.x, z=m.position.z;
-    if(k.startsWith('gate')){ const ax=k.endsWith('x'); add(x+(ax?0.36:0.34),0.95,z+(ax?0.34:0.36)); add(x-(ax?0.36:0.34),0.95,z-(ax?0.34:0.36)); }
-    else if(k.startsWith('tower')) add(x+0.36,1.15,z+0.36); }
+  for(const [id,m] of lineMeshes){ const k=m.userData.key||''; const x=m.position.x, z=m.position.z; const wp=k.split('-');
+    const W=(lx,y,lz)=>wp[1]==='z'?add(x+lz,y,z-lx):add(x+lx,y,z+lz);
+    if(wp[0]==='gate'){ const sIn=wp[2]==='m'?-1:1; for(const sx of [-1,1]){ W(sx*0.36,1.17,sIn*0.52); W(sx*0.52,2.2,-sIn*0.3); } }
+    else if(wp[0]==='wall'&&(wp[2]||'').endsWith('T')){ W(0,1.14,0.42); W(0,1.14,-0.42); }
+    else if(wp[0]==='tower'){ add(x+0.5,1.24,z+0.54); add(x-0.5,1.24,z-0.54); } }
   for(const b of buildings.values()){ const p=b.mesh.position, th=b.rot*Math.PI/2, c=Math.cos(th), s=Math.sin(th); const L=(lx,y,lz)=>add(p.x+lx*c+lz*s,y,p.z-lx*s+lz*c);
     switch(b.type){
       case 'watchtower': L(0.32,1.85,-0.32); break;
+      case 'barbican': for(const sx of [-1,1]){ L(sx*0.62,1.42,1.07); L(sx*1.0,2.47,0.52); } break;
       case 'castellum': L(-1.3,0.25,-1.3); L(-0.66,1.0,1.85); L(0.66,1.0,1.85); break;
       case 'castra': for(const [x,z] of [[-0.66,3.9],[0.66,3.9],[-0.66,-3.9],[0.66,-3.9],[0,1.2],[0,3.0]]) L(x,0.95,z); break;
       case 'barracks': L(0,0.3,1.6); L(-0.68,1.0,2.6); L(0.68,1.0,2.6); break;
@@ -3638,7 +3801,7 @@ function loop(now){
     g.m.scale.set(sxz,Math.max(0.01,sy),sxz); if(t>=1){ g.m.scale.set(1,1,1); growing.splice(k,1); } }
   for(let k=pulses.length-1;k>=0;k--){ const p=pulses[k]; if(p.base==null) p.base=p.m.scale.y; p.t+=dt/0.35; const s=1+0.07*Math.sin(Math.min(1,p.t)*Math.PI); p.m.scale.set(s,p.base*s,s); if(p.t>=1){ p.m.scale.set(1,p.base,1); pulses.splice(k,1); } }
   updateAgents(dt,now/1000);
-  todayStep(dt); updateLabels(); updateDrawbridges(dt); envStep(dt,now/1000); updateWaterFx(now/1000);
+  todayStep(dt); updateLabels(); updateDrawbridges(dt); updateBarbicans(dt); wallSideStep(now/1000); envStep(dt,now/1000); updateWaterFx(now/1000);
   T.water.material.emissive.setRGB(0.02+Math.sin(now/900)*0.015,0.05+Math.sin(now/900)*0.02,0.07);
   statT+=dt; if(statT>0.6){ statT=0; updateStats(); }
   saveT+=dt; if(saveT>2.5){ saveT=0; autosave(); }
@@ -3668,7 +3831,7 @@ function start(){
   document.getElementById('loading').remove();
   requestAnimationFrame(loop);
   if(!loaded) setTimeout(()=>showInfo('rome'),700);
-  else { let seen=false; try{ seen=localStorage.getItem('urbs-news-3')==='1'; localStorage.setItem('urbs-news-3','1'); }catch(e){} if(!seen) setTimeout(()=>showInfo('news'),900); }
+  else { let seen=false; try{ seen=localStorage.getItem('urbs-news-4')==='1'; localStorage.setItem('urbs-news-4','1'); }catch(e){} if(!seen) setTimeout(()=>showInfo('news'),900); }
 }
 start();
 if('serviceWorker' in navigator&&location.protocol==='https:') window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
