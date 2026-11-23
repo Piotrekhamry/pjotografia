@@ -900,6 +900,61 @@ function rebuildAO(){
   for(const [id,m] of lineMeshes){ if(n>=MAXC*2) break; const k=m.userData.key||''; const big=k.startsWith('tower'); setInst(AO,n++,m.position.x,0.03,m.position.z,big?1.25:1.1,1,big?1.25:1.1); }
   AO.count=n; AO.instanceMatrix.needsUpdate=true;
 }
+
+/* =========================================================
+   Most zwodzony – pierwsze pole mostu za bramą nad wodą
+   ========================================================= */
+const drawbridges=new Map();
+const chainMat=new THREE.MeshStandardMaterial({color:'#3d3a36',roughness:0.6,metalness:0.4});
+const chainGeo=new THREE.CylinderGeometry(0.012,0.012,1,5);
+let deckGeo=null;
+function drawInfo(i,j){
+  if(!inb(i,j)) return null; const id=I(i,j);
+  if(!road[id]||terrain[id]!==2||line[id]||bld[id]) return null;
+  for(const [di,dj] of DIRS){ const gi=i-di, gj=j-dj; if(!wallGate(gi,gj)) continue;
+    const k=lineKey(gi,gj)||''; if((k==='gate-x'&&di===0)||(k==='gate-z'&&dj===0)) return {gi,gj,dx:di,dz:dj}; }
+  return null;
+}
+function syncDrawbridges(){
+  const keep=new Set();
+  for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const inf=drawInfo(i,j); if(!inf) continue; const id=I(i,j); keep.add(id);
+    const ex=drawbridges.get(id); if(ex&&ex.gi===inf.gi&&ex.gj===inf.gj) continue; if(ex) removeDraw(id);
+    if(!deckGeo){ const b=new B(); b.box(0.86,0.07,1.0,0,-0.07,0.5,'#9a6a42');
+      for(let k=0;k<6;k++) b.box(0.86,0.072,0.02,0,-0.07,0.08+k*0.17,'#7a5234');
+      for(const x of [-0.36,0.36]) b.box(0.05,0.075,1.0,x,-0.072,0.5,'#4a4540');
+      for(const x of [-0.4,0.4]) b.box(0.05,0.05,0.05,x,0,0.96,'#4a4540');
+      deckGeo=b.geom(); }
+    const grp=new THREE.Group(); grp.position.set((wx(i)+wx(inf.gi))/2,0.14,(wx(j)+wx(inf.gj))/2); grp.rotation.y=Math.atan2(inf.dx,inf.dz);
+    const deck=new THREE.Mesh(deckGeo,bMat); deck.castShadow=deck.receiveShadow=true; grp.add(deck); scene.add(grp);
+    const chains=[0,1].map(()=>{ const m=new THREE.Mesh(chainGeo,chainMat); m.castShadow=true; scene.add(m); return m; });
+    drawbridges.set(id,{i,j,gi:inf.gi,gj:inf.gj,grp,deck,chains,ang:0,raised:false}); }
+  for(const id of [...drawbridges.keys()]) if(!keep.has(id)) removeDraw(id);
+}
+function removeDraw(id){ const d=drawbridges.get(id); if(!d) return; scene.remove(d.grp); d.chains.forEach(c=>scene.remove(c)); drawbridges.delete(id); }
+function isDrawUp(i,j){ const d=inb(i,j)&&drawbridges.get(I(i,j)); return !!d&&d.ang>0.05; }
+const _ca=new THREE.Vector3(), _cb=new THREE.Vector3(), _cd=new THREE.Vector3(), _up=new THREE.Vector3(0,1,0);
+function updateDrawbridges(dt){
+  const t=+timeInput.value, night=t<0.06||t>0.94;
+  for(const d of drawbridges.values()){
+    const target=(d.raised||night)?1.3:0; const before=d.ang;
+    d.ang+=Math.sign(target-d.ang)*Math.min(Math.abs(target-d.ang),dt*0.9);
+    if((before===0&&d.ang>0)||(before>0&&d.ang===0)) sfx('thud');
+    d.deck.rotation.x=-d.ang; const vis=!todayMode; d.grp.visible=vis;
+    d.grp.updateMatrixWorld(true);
+    d.chains.forEach((c,k)=>{ c.visible=vis; const sx=k?0.4:-0.4;
+      _ca.set(sx,0,0.96).applyMatrix4(d.deck.matrixWorld); _cb.set(sx,1.0,-0.3).applyMatrix4(d.grp.matrixWorld);
+      _cd.subVectors(_cb,_ca); const len=_cd.length(); c.position.addVectors(_ca,_cb).multiplyScalar(0.5); c.scale.set(1,len,1); c.quaternion.setFromUnitVectors(_up,_cd.normalize()); });
+  }
+}
+function toggleDrawAt(c){
+  for(const d of drawbridges.values()) if((d.i===c.i&&d.j===c.j)||(d.gi===c.i&&d.gj===c.j)){
+    d.raised=!d.raised;
+    toast(d.raised?'Most zwodzony podnosi się…':'Most zwodzony opada…'); sfx('tick');
+    if(!seenInfo.has('drawbridge')){ seenInfo.add('drawbridge'); try{ localStorage.setItem('urbs-seen',JSON.stringify([...seenInfo])); }catch(_){} showInfo('drawbridge'); }
+    return true; }
+  return false;
+}
+
 function rebuildTerrain(){
   aoDirty=true;
   const n={}; for(const k in T) n[k]=0; for(const k in TR) n[k]=0;
@@ -912,7 +967,8 @@ function rebuildTerrain(){
     else if(t===4){ tile('field',x,z,0,0.022); if(!occ) for(let k=0;k<4;k++) setInst(T.rows,n.rows++,x,0.03,z-0.36+k*0.24,0.86,0.025,0.07); }
     if(t===2) for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(!inb(ni,nj)||terrain[I(ni,nj)]===2) continue;
       if(di) setInst(T.bank,n.bank++,x+di*0.46,0.015,z,0.08,0.03,1); else setInst(T.bank,n.bank++,x,0.015,z+dj*0.46,1,0.03,0.08); }
-    if(r){
+    if(r&&drawInfo(i,j)){ /* most zwodzony rysowany osobno */ }
+    else if(r){
       const br=t===2; const y0=br?-0.06:0, h=br?0.2:(r===2?0.04:0.035);
       tile(br?'bridge':(r===1?'road1':'road2'),x,z,y0,h);
       const ch=br?0.31:0.075, cy=br?-0.06:0;
@@ -930,6 +986,7 @@ function rebuildTerrain(){
   }
   for(const k in T){ T[k].count=n[k]; T[k].instanceMatrix.needsUpdate=true; }
   for(const k in TR){ TR[k].count=n[k]; TR[k].instanceMatrix.needsUpdate=true; }
+  syncDrawbridges();
 }
 
 /* ---- linie ---- */
@@ -1156,6 +1213,7 @@ function rle(a){ const out=[]; let prev=a[0],c=0; for(let k=0;k<a.length;k++){ i
 function unrle(s,n){ const a=new Uint8Array(n); let p=0; for(const part of s.split(',')){ const [v,c]=part.split('*').map(Number); a.fill(v,p,p+c); p+=c; } return a; }
 function serialize(){ const bl=[]; for(const b of buildings.values()) bl.push(b.fl?[b.type,b.x,b.z,b.rot,b.seed,b.lm||0,b.fl]:b.lm?[b.type,b.x,b.z,b.rot,b.seed,b.lm]:[b.type,b.x,b.z,b.rot,b.seed]); return JSON.stringify({v:2,N,t:rle(terrain),r:rle(road),l:rle(line),b:bl}); }
 function clearWorld(){
+  if(typeof drawbridges!=='undefined') for(const id of [...drawbridges.keys()]) removeDraw(id);
   if(typeof wallGuards!=='undefined') wallGuards.length=0; dirtyWalls=true;
   for(const b of buildings.values()) buildGroup.remove(b.mesh); buildings.clear();
   for(const m of lineMeshes.values()) lineGroup.remove(m); lineMeshes.clear();
@@ -1356,7 +1414,7 @@ function groundY(i,j){ if(!inb(i,j)) return 0.035; const id=I(i,j); return road[
 function adjBuilding(i,j){ for(const [di,dj] of DIRS){ const ni=i+di,nj=j+dj; if(inb(ni,nj)&&bld[I(ni,nj)]) return true; } return false; }
 function nextCell(a){
   const opts=[]; const sx=a.bx-a.ax, sz=a.bz-a.az;
-  for(const [di,dj] of DIRS){ const ni=a.bx+di, nj=a.bz+dj; if(!inb(ni,nj)) continue; const r=road[I(ni,nj)]; if(!r) continue; if(a.kind==='cart'&&r!==2) continue; if(ni===a.ax&&nj===a.az) continue; opts.push({i:ni,j:nj,st:di===sx&&dj===sz}); }
+  for(const [di,dj] of DIRS){ const ni=a.bx+di, nj=a.bz+dj; if(!inb(ni,nj)) continue; const r=road[I(ni,nj)]; if(!r) continue; if(isDrawUp(ni,nj)) continue; if(a.kind==='cart'&&r!==2) continue; if(ni===a.ax&&nj===a.az) continue; opts.push({i:ni,j:nj,st:di===sx&&dj===sz}); }
   if(!opts.length){ if(isRoad(a.ax,a.az)&&(a.kind!=='cart'||road[I(a.ax,a.az)]===2)) return {i:a.ax,j:a.az}; return {i:a.bx,j:a.bz}; }
   const st=opts.find(o=>o.st); const ps=a.kind==='ped'?0.55:0.82;
   if(st && rnd()<ps) return st; return pickArr(opts);
@@ -1650,12 +1708,7 @@ function endPointer(e){
   pointers.delete(e.pointerId);
   if(e.pointerType==='touch'){ touchUp(e); return; }
   if(camDown&&e.pointerId===camDown.id){ const cd=camDown; camDown=null;
-    if(Math.hypot(e.clientX-cd.x,e.clientY-cd.y)<8&&performance.now()-cd.t<600&&pointers.size===0){ const c=cellAt(e);
-      if(c&&c.inside){ const id=bld[I(c.i,c.j)]; let key=null;
-        if(id){ const b=buildings.get(id); key=b.lm&&INFO[b.lm]?b.lm:b.type; pulses.push({m:b.mesh,t:0}); }
-        else if(line[I(c.i,c.j)]) key=line[I(c.i,c.j)]===1?'l-wall':'l-aq';
-        else if(road[I(c.i,c.j)]) key=road[I(c.i,c.j)]===2?'r-wide':'r-narrow';
-        if(key&&INFO[key]){ showInfo(key); sfx('tick'); } else hideInfo(); } } }
+    if(Math.hypot(e.clientX-cd.x,e.clientY-cd.y)<8&&performance.now()-cd.t<600&&pointers.size===0){ const c=cellAt(e); if(c) tapInfo(c); } }
   if(!stroke||e.pointerId!==stroke.pid) return;
   const s=stroke; stroke=null;
   if(tool.kind==='road'||tool.kind==='line') commitPath(s.start,s.cur);
@@ -1734,7 +1787,8 @@ function touchUp(e){
     updatePreview(c); setTimeout(()=>{ if(!pending&&!stroke){ prevTiles.count=0; } },350); }
 }
 function tapInfo(c){
-  if(!c.inside){ hideInfo(); return; } const id=bld[I(c.i,c.j)]; let key=null;
+  if(!c.inside){ hideInfo(); return; }
+  if(toggleDrawAt(c)) return; const id=bld[I(c.i,c.j)]; let key=null;
   if(id){ const b=buildings.get(id); key=b.lm&&INFO[b.lm]?b.lm:b.type; pulses.push({m:b.mesh,t:0}); }
   else if(line[I(c.i,c.j)]) key=line[I(c.i,c.j)]===1?'l-wall':'l-aq';
   else if(road[I(c.i,c.j)]) key=road[I(c.i,c.j)]===2?'r-wide':'r-narrow';
@@ -1840,7 +1894,7 @@ const TOOLS=[
   ...['colosseum','circus','theatre'].map(t=>({id:'b-'+t,cat:'rozr',kind:'build',type:t})),
   {id:'b-barracks',cat:'woj',kind:'build',type:'barracks'},
   {id:'b-watchtower',cat:'woj',kind:'build',type:'watchtower'},
-  {id:'l-wall',cat:'woj',kind:'line',val:1,name:'Mur miejski',hint:'Przeciągnij, aby postawić mur. Mur na drodze zamienia się w bramę'},
+  {id:'l-wall',cat:'woj',kind:'line',val:1,name:'Mur miejski',hint:'Przeciągnij, aby postawić mur. Mur na drodze zamienia się w bramę, a droga z bramy przez fosę – w most zwodzony'},
   ...['arch','fountain','statue','column','mausoleum','pyramid','cypress','pine'].map(t=>({id:'b-'+t,cat:'ozd',kind:'build',type:t})),
 ];
 for(const t of TOOLS) if(t.type&&!t.name) t.name=DEFS[t.type].name;
@@ -1970,6 +2024,9 @@ const INFO={
   'l-wall':{era:'Mur Serwiański IV w. p.n.e., Mur Aureliana 271–275 n.e.',text:'Pierwszy wielki mur Rzymu wzniesiono po złupieniu miasta przez Galów (ok. 390 p.n.e.). Przez stulecia pokoju miasto rozrosło się daleko poza niego.',
     facts:['Mur Aureliana miał ok. 19 km długości i 383 wieże – w dużej części stoi do dziś.','Bramy stały tam, gdzie mur przecinały drogi – w grze mur na drodze sam zamienia się w bramę.']},
 };
+INFO.drawbridge={name:'Most zwodzony',era:'średniowiecze, XII–XV w.',text:'Most zwodzony to wynalazek średniowiecznych zamków – w grze to mały anachronizm. Rzymianie bronili bram inaczej: przed murami kopali fosę (fossa), przez którą prowadził stały most, a bramę zamykała opuszczana pionowo krata.',
+  facts:['Stuknij bramę albo most w trybie ✋ rozglądania, aby go podnieść lub opuścić. Gdy most jest w górze, nikt nie wejdzie do miasta.','O zmroku (suwak pory dnia w menu) mosty podnoszą się same.','Opuszczaną kratę w bramie Rzymianie nazywali cataracta – wspomina o niej już Liwiusz.'],
+  today:'Mosty zwodzone przetrwały w wielu średniowiecznych zamkach Europy – niektóre wciąż się podnoszą.'};
 INFO.watchtower={name:'Wieża strażnicza',era:'na granicach imperium – od I w. n.e.',text:'Wzdłuż granic (limes) stały setki wież strażniczych. Załoga obserwowała okolicę i w razie zagrożenia dawała znak ogniem, dymem albo pochodnią – sygnał biegł od wieży do wieży aż do najbliższego fortu.',
   facts:['Na Kolumnie Trajana widać drewniane wieże z pochodniami i stosami drewna nad Dunajem.','Na Wale Hadriana (od 122 n.e.) co rzymską milę stał fort, a między nimi po dwie wieżyczki.','Wzdłuż limesu w Germanii i Recji stało ok. 900 wież strażniczych.'],
   today:'Na dawnym limesie zachowały się fundamenty wielu wież; kilka zrekonstruowano, a odcinek limesu jest na liście UNESCO.'};
@@ -2326,7 +2383,7 @@ function loop(now){
     g.m.scale.set(sxz,Math.max(0.01,sy),sxz); if(t>=1){ g.m.scale.set(1,1,1); growing.splice(k,1); } }
   for(let k=pulses.length-1;k>=0;k--){ const p=pulses[k]; if(p.base==null) p.base=p.m.scale.y; p.t+=dt/0.35; const s=1+0.07*Math.sin(Math.min(1,p.t)*Math.PI); p.m.scale.set(s,p.base*s,s); if(p.t>=1){ p.m.scale.set(1,p.base,1); pulses.splice(k,1); } }
   updateAgents(dt,now/1000);
-  todayStep(dt); updateLabels();
+  todayStep(dt); updateLabels(); updateDrawbridges(dt);
   T.water.material.emissive.setRGB(0.02+Math.sin(now/900)*0.015,0.05+Math.sin(now/900)*0.02,0.07);
   statT+=dt; if(statT>0.6){ statT=0; updateStats(); }
   saveT+=dt; if(saveT>2.5){ saveT=0; autosave(); }
