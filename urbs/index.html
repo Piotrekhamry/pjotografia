@@ -21,7 +21,7 @@
 html{background:#f6ead5;height:100%}
 body{min-height:100%;min-height:100dvh}
 html,body{margin:0;height:100%;overflow:hidden;font-family:Nunito,system-ui,sans-serif;color:var(--ink);background:linear-gradient(180deg,var(--sky1) 0%,var(--sky2) 75%);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-#c{position:fixed;left:0;top:0;width:100%;height:calc(100% + var(--vfix,0px));display:block;touch-action:none;outline:none;filter:saturate(1.14) contrast(1.1)}
+#c{position:fixed;left:0;top:0;width:100%;height:calc(100% + var(--vfix,0px));display:block;touch-action:none;outline:none}
 #stars{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .6s}
 #vig{position:fixed;left:0;top:0;right:0;height:calc(100% + var(--vfix,0px));pointer-events:none;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 55%,rgba(70,40,15,.22) 100%);z-index:1}
 button{font-family:inherit;color:inherit}
@@ -232,6 +232,13 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { HorizontalTiltShiftShader } from 'three/addons/shaders/HorizontalTiltShiftShader.js';
 import { VerticalTiltShiftShader } from 'three/addons/shaders/VerticalTiltShiftShader.js';
+
+/* Korekta kolorów (nasycenie 1.14, kontrast 1.1) liczona w shaderach zamiast filtra CSS na <canvas>.
+   Filtr CSS na stale odświeżanym płótnie WebGL powodował w Safari na iOS paski i „zostające” łaty przy przesuwaniu mapy. */
+const URBS_GRADE_GLSL = `vec3 urbsGrade(vec3 c){ float l=dot(c,vec3(0.2126,0.7152,0.0722)); c=mix(vec3(l),c,1.14); c=(c-0.5)*1.1+0.5; return clamp(c,0.0,1.0); }`;
+THREE.ShaderChunk.dithering_fragment = `{ vec4 _ugT = linearToOutputTexel(vec4(0.5)); if(_ugT.r>0.6){ vec3 _c=gl_FragColor.rgb; float l=dot(_c,vec3(0.2126,0.7152,0.0722)); _c=mix(vec3(l),_c,1.14); _c=(_c-0.5)*1.1+0.5; gl_FragColor.rgb=clamp(_c,0.0,1.0); } }\n` + THREE.ShaderChunk.dithering_fragment;
+const GradeShader = { uniforms:{ tDiffuse:{value:null} }, vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader:`uniform sampler2D tDiffuse; varying vec2 vUv; ${URBS_GRADE_GLSL} void main(){ vec4 t=texture2D(tDiffuse,vUv); gl_FragColor=vec4(urbsGrade(t.rgb),t.a); }` };
 
 /* =========================================================
    Pomocnicze
@@ -2927,7 +2934,7 @@ function renderIcons(){
    ========================================================= */
 let photo=false, composer=null, hTS=null, vTS=null, tiltOn=true;
 function ensureComposer(){ if(composer) return; composer=new EffectComposer(renderer); composer.addPass(new RenderPass(scene,camera));
-  hTS=new ShaderPass(HorizontalTiltShiftShader); vTS=new ShaderPass(VerticalTiltShiftShader); composer.addPass(hTS); composer.addPass(vTS); composer.addPass(new OutputPass()); sizeComposer(); }
+  hTS=new ShaderPass(HorizontalTiltShiftShader); vTS=new ShaderPass(VerticalTiltShiftShader); composer.addPass(hTS); composer.addPass(vTS); composer.addPass(new OutputPass()); composer.addPass(new ShaderPass(GradeShader)); sizeComposer(); }
 function sizeComposer(){ if(!composer) return; const [w,h]=viewSize(), pr=renderer.getPixelRatio(); composer.setPixelRatio(pr); composer.setSize(w,h);
   hTS.uniforms.h.value=3.2/(w*pr); vTS.uniforms.v.value=3.2/(h*pr); hTS.uniforms.r.value=0.52; vTS.uniforms.r.value=0.52; }
 function enterPhoto(){ photo=true; selectTool('camera'); hideInfo(); closeModal(); cancelPending(); document.body.classList.add('photo'); try{ ensureComposer(); sizeComposer(); }catch(e){ console.warn(e); tiltOn=false; } renderPhotoBar(); }
@@ -2944,7 +2951,7 @@ function capturePhoto(){
   renderFrame(); const src=renderer.domElement, w=src.width, h=src.height; const c=document.createElement('canvas'); c.width=w; c.height=h; const g=c.getContext('2d');
   const cs=getComputedStyle(document.documentElement); const grd=g.createLinearGradient(0,0,0,h); grd.addColorStop(0,cs.getPropertyValue('--sky1').trim()||'#cfe6ee'); grd.addColorStop(0.75,cs.getPropertyValue('--sky2').trim()||'#f6ead5'); g.fillStyle=grd; g.fillRect(0,0,w,h);
   if(ENV.nightF>0.05){ g.fillStyle=`rgba(255,252,235,${ENV.nightF})`; for(let k=0;k<260;k++) g.fillRect(Math.random()*w,Math.random()*h*0.7,1.4,1.4); }
-  try{ g.filter='saturate(1.14) contrast(1.1)'; }catch(e){} g.drawImage(src,0,0); g.filter='none';
+  g.drawImage(src,0,0);
   const vg=g.createRadialGradient(w/2,h*0.45,Math.min(w,h)*0.35,w/2,h*0.45,Math.max(w,h)*0.75); vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(60,35,15,0.3)'); g.fillStyle=vg; g.fillRect(0,0,w,h);
   g.font=`700 ${Math.round(h*0.024)}px Cinzel, serif`; g.fillStyle='rgba(255,255,255,0.8)'; g.textAlign='right'; g.fillText('URBS',w-h*0.03,h-h*0.03);
   const fl=document.getElementById('flash'); fl.classList.add('go'); setTimeout(()=>fl.classList.remove('go'),180); sfx('shutter');
