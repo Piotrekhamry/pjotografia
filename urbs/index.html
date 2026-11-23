@@ -795,6 +795,82 @@ D.pharos=(b,r)=>{
   b.sph(0.18,0,3.48,0,'#ffb347',1.1); b.add(new THREE.ConeGeometry(0.32,0.25,12),BRONZE,0,3.74,0); b.cyl(0.03,0.3,0,3.86,0,BRONZE,6); b.sph(0.06,0,4.2,0,BRONZE);
 };
 
+/* ---- ogrody: od ogródka po park ---- */
+const LAWN='#8fc06a', PATH='#e6d7b5', LEAF='#6f9d4a';
+function olive(b,x,z,y=0,s=1){ b.cyl(0.03*s,0.3*s,x,y,z,WOOD,5,0.02*s); b.sph(0.17*s,x,y+0.36*s,z,'#9bb07a',0.75); b.sph(0.11*s,x+0.08*s,y+0.42*s,z+0.05*s,'#a9bd86',0.8); }
+function lemon(b,x,z,y=0,s=1,r=Math.random){ b.cyl(0.025*s,0.25*s,x,y,z,WOOD,5); b.sph(0.15*s,x,y+0.32*s,z,'#4f8f3e',0.9); for(let k=0;k<5;k++){ const a=k*1.3; b.sph(0.025*s,x+Math.cos(a)*0.13*s,y+0.3*s+(k%2)*0.06*s,z+Math.sin(a)*0.13*s,'#f2d03b'); } }
+function bed(b,x,z,w,d,y,r){ b.box(w,0.08,d,x,y,z,'#d9c39a'); b.box(w-0.06,0.04,d-0.06,x,y+0.05,z,'#6b8f45'); const n=Math.max(2,Math.round(w*d*30));
+  for(let k=0;k<n;k++) b.sph(0.035+r()*0.02,x+(r()-0.5)*(w-0.1),y+0.11,z+(r()-0.5)*(d-0.1),FLOWERS[Math.floor(r()*FLOWERS.length)]); }
+function topi(b,x,z,kind,y=0){ b.cyl(0.05,0.06,x,y,z,'#b86a3c',6);
+  if(kind===0){ b.sph(0.12,x,y+0.17,z,HEDGE); } else if(kind===1){ b.cone(0.11,0.38,x,y+0.04,z,HEDGE,8); } else { b.sph(0.1,x,y+0.14,z,HEDGE); b.sph(0.07,x,y+0.3,z,HEDGE); b.sph(0.045,x,y+0.41,z,HEDGE); } }
+function tholos(b,x,z,y=0,s=1){ b.cyl(0.42*s,0.08,x,y,z,MARBLE,12); for(let k=0;k<6;k++){ const a=k/6*Math.PI*2; b.column(x+Math.cos(a)*0.34*s,z+Math.sin(a)*0.34*s,y+0.08,0.55*s,0.03*s,MARBLE); }
+  b.cyl(0.4*s,0.05,x,y+0.08+0.55*s,z,MARBLE,12); b.cone(0.44*s,0.28*s,x,y+0.13+0.55*s,z,'#7fa3a0',12); b.sph(0.05*s,x,y+0.15+0.83*s,z,GOLD); }
+D.gardenS=(b,r)=>{
+  b.box(0.94,0.04,0.94,0,0,0,LAWN); b.box(0.2,0.045,0.94,0,0,0,PATH);
+  b.box(0.94,0.12,0.06,0,0,-0.44,HEDGE); b.box(0.06,0.12,0.82,-0.44,0,0.03,HEDGE); b.box(0.06,0.12,0.82,0.44,0,0.03,HEDGE);
+  bed(b,-0.24,0.18,0.26,0.4,0.04,r); bed(b,0.24,0.18,0.26,0.4,0.04,r);
+  if(r()<0.5) olive(b,-0.24,-0.2,0.04,0.9); else lemon(b,-0.24,-0.2,0.04,1,r);
+  b.box(0.24,0.04,0.09,0.25,0.12,-0.25,'#f0e6d2'); for(const x of [0.16,0.34]) b.box(0.03,0.12,0.08,x,0.02,-0.25,'#dccdb0');
+  b.cyl(0.05,0.08,0.2,0.04,0.42,'#b86a3c',6); b.sph(0.07,0.2,0.16,0.42,FLOWERS[Math.floor(r()*FLOWERS.length)]);
+};
+D.topiary=(b,r)=>{
+  b.box(1.94,0.04,1.94,0,0,0,LAWN);
+  for(const [w,d,x,z] of [[1.9,0.08,0,-0.92],[1.9,0.08,0,0.92],[0.08,1.9,-0.92,0],[0.08,1.9,0.92,0]]) b.box(w,0.16,d,x,0,z,HEDGE);
+  for(const [w,d,x,z] of [[0.08,1.2,-0.45,0.1],[0.08,1.2,0.45,-0.1],[0.9,0.08,0,-0.45],[0.9,0.08,0,0.45]]) b.box(w,0.14,d,x,0,z,'#5f9146');
+  b.box(0.16,0.045,1.84,0,0,0,PATH);
+  b.cyl(0.18,0.05,0,0.04,0,STONE,10); b.sph(0.16,0,0.25,0,HEDGE); b.sph(0.11,0,0.46,0,HEDGE); b.cone(0.07,0.2,0,0.55,0,HEDGE,8);
+  for(const [x,z,k] of [[-0.7,-0.7,1],[0.7,-0.7,1],[-0.7,0.7,2],[0.7,0.7,2],[-0.7,0,0],[0.7,0,0]]) topi(b,x,z,k,0.04);
+  // krzew w kształcie ptaka
+  b.box(0.22,0.14,0.12,-0.2,0.08,-0.72,HEDGE); b.sph(0.06,-0.08,0.27,-0.72,HEDGE); b.add(G.box,HEDGE,-0.34,0.24,-0.72,0,0,0.6,0.08,0.14,0.08);
+  b.box(0.3,0.04,0.1,0.2,0.12,0.72,'#f0e6d2'); for(const x of [0.1,0.3]) b.box(0.03,0.12,0.08,x,0.02,0.72,'#dccdb0');
+};
+D.vineyard=(b,r)=>{
+  b.box(1.94,0.03,1.94,0,0,0,'#b49a6a');
+  for(let k=0;k<5;k++){ const z=-0.78+k*0.39; b.box(1.85,0.035,0.16,0,0.02,z,'#8a7350');
+    for(const x of [-0.85,-0.28,0.28,0.85]) b.box(0.03,0.42,0.03,x,0,z,WOOD);
+    b.box(1.75,0.008,0.008,0,0.38,z,'#6b5a48'); b.box(1.75,0.008,0.008,0,0.24,z,'#6b5a48');
+    for(let m=0;m<9;m++){ const x=-0.8+m*0.2; b.box(0.16,0.16,0.1,x,0.2,z,m%2?LEAF:'#7aa652'); if(r()<0.6) b.sph(0.035,x+0.04,0.18,z+0.06,'#5b2a5e'); } }
+  b.cyl(0.07,0.12,0.88,0,0.95,'#b86a3c',6); b.cyl(0.06,0.11,0.74,0,0.95,'#a95f35',6);
+};
+D.peristyle=(b,r)=>{
+  b.box(2.92,0.06,2.92,0,0,0,'#e9dfcc'); b.box(1.9,0.065,1.9,0,0,0,LAWN);
+  b.box(1.9,0.07,0.16,0,0,0,PATH); b.box(0.16,0.07,1.9,0,0,0,PATH);
+  for(let k=0;k<7;k++){ const a=-1.2+k*0.4; for(const [x,z] of [[a,-1.2],[a,1.2],[-1.2,a],[1.2,a]]) b.column(x,z,0.06,0.78,0.045,pick(['#f1e8d8','#e8a07a','#f3ecdf'],()=>((k*3)%7)/7)); }
+  for(const [w,d,x,z] of [[2.92,0.5,0,-1.21],[2.92,0.5,0,1.21],[0.5,1.92,-1.21,0],[0.5,1.92,1.21,0]]){ b.box(w,0.05,d,x,0.84,z,shade(ROOF,-0.15)); b.add(G.box,ROOF,x,0.92,z,0,0,0,w,0.06,d); }
+  for(const sx of [-1,1]) for(const sz of [-1,1]) bed(b,sx*0.52,sz*0.52,0.62,0.62,0.06,r);
+  basin(b,0,0,0.06,0.26,0.2,0.12,MARBLE,16); b.cyl(0.04,0.22,0,0.1,0,MARBLE,8); jet(b,0,0,0.32,0.08);
+  for(const [x,z] of [[-0.88,-0.88],[0.88,0.88]]) b.cypress(x,z,0.6,0.06);
+  for(const [x,z] of [[0.88,-0.88],[-0.88,0.88]]){ b.box(0.14,0.16,0.14,x,0.06,z,MARBLE); b.cyl(0.04,0.18,x,0.22,z,'#f3efe7',6,0.03); b.sph(0.035,x,0.44,z,'#f3efe7'); }
+  for(let k=0;k<4;k++) topi(b,(k<2?-1:1)*0.25,(k%2?-1:1)*0.88,0,0.06);
+};
+D.terrace=(b,r)=>{
+  const L=[[1.0,0.32,0.22],[0.32,-0.34,0.52],[-0.34,-1.0,0.82]];
+  L.forEach(([z1,z0,h],k)=>{ const zc=(z0+z1)/2, dd=z1-z0;
+    b.box(2.9,h,dd,0,0,zc,STONE2); b.box(2.92,0.05,0.08,0,h-0.02,z1-0.04,STONE); b.box(2.8,0.03,dd-0.1,0,h,zc-0.03,LAWN);
+    for(let m=0;m<5;m++){ const x=-1.15+m*0.48; if(m===4) continue; if(r()<0.5) b.sph(0.08,x,h+0.08,z1-0.12,GREEN); else { for(let q=0;q<3;q++) b.sph(0.035,x+(q-1)*0.07,h+0.07,z1-0.12,FLOWERS[(m+q+k)%FLOWERS.length]); }
+      b.box(0.14,0.12+0.05*k,0.02,x+0.05,h-0.12-0.05*k,z1+0.005,'#5f9146'); }
+    if(k<2) for(let m=0;m<3;m++) b.cypress(-1.2+m*0.9,zc-0.12,0.35+k*0.1,h); });
+  for(let s=0;s<8;s++){ const y=s*0.1; b.box(0.3,0.1,0.12,1.25,y,0.95-s*0.25,STONE); }
+  const top=0.82; for(const [x,z] of [[-1.2,-0.4],[-0.1,-0.4],[-1.2,-0.95],[-0.1,-0.95]]) b.box(0.04,0.45,0.04,x,top,z,WOOD);
+  b.box(1.2,0.03,0.65,-0.65,top+0.45,-0.68,WOOD); b.box(1.25,0.05,0.7,-0.65,top+0.48,-0.68,'#6f9d4a'); for(let k=0;k<6;k++) b.sph(0.04,-1.1+k*0.18,top+0.47,-0.35,'#5b2a5e');
+  b.box(0.3,0.04,0.1,-0.65,top+0.12,-0.68,'#f0e6d2'); basin(b,0.5,-0.7,top,0.2,0.15,0.1,MARBLE,12); b.box(0.12,0.3,0.06,0.5,top,-0.97,MARBLE); jet(b,0.5,-0.7,top+0.1,0.05);
+  lemon(b,0.95,-0.45,top,0.9,r);
+};
+D.park=(b,r)=>{
+  b.box(3.94,0.04,3.94,0,0,0,'#93c46a');
+  b.add(lathe([[1.2,0.045],[1.42,0.045]],40),PATH,0,0,0);
+  b.box(0.22,0.046,1.0,0,0,1.48,PATH); b.box(0.22,0.046,1.0,0,0,-1.48,PATH); b.box(1.0,0.046,0.22,1.48,0,0,PATH); b.box(1.0,0.046,0.22,-1.48,0,0,PATH);
+  b.add(new THREE.CylinderGeometry(0.66,0.66,0.02,28),WATERC,-0.1,0.05,0.1,0,0,0,1,1,0.8); b.add(lathe([[0.66,0.04],[0.74,0.04],[0.74,0.09],[0.66,0.09],[0.66,0.04]],28),STONE,-0.1,0,0.1,0,0,0,1,1,0.8);
+  b.cyl(0.2,0.08,-0.1,0.04,0.1,'#8fc06a',12); tholos(b,-0.1,0.1,0.1,0.42);
+  tholos(b,1.45,-1.45,0.04,0.85);
+  for(const [x,z] of [[-1.5,-1.1],[-1.1,-1.55],[1.55,1.0],[1.05,1.55],[-1.6,1.55]]){ b.cyl(0.04,0.75,x,0.04,z,WOOD,6,0.03); b.add(G.box,WOOD,x+0.09,0.68,z,0,0,-0.7,0.03,0.22,0.03); b.sph(0.4,x,0.86,z,'#6a9a4a',0.38); b.sph(0.24,x+0.12,0.95,z+0.05,'#78a854',0.45); }
+  for(let k=0;k<7;k++){ const a=k/7*Math.PI*2+0.2; b.cypress(Math.cos(a)*1.78,Math.sin(a)*1.78,0.7+r()*0.2,0.04); }
+  for(const [x,z] of [[0.75,0.75],[-0.75,-0.75],[0.75,-0.75]]){ b.box(0.14,0.18,0.14,x,0.04,z,MARBLE); b.cyl(0.045,0.2,x,0.22,z,'#f3efe7',6,0.035); b.sph(0.04,x,0.46,z,'#f3efe7'); }
+  bed(b,-0.95,0.85,0.5,0.3,0.04,r); bed(b,0.9,-0.2,0.3,0.5,0.04,r); bed(b,-0.2,-1.0,0.5,0.25,0.04,r);
+  for(const [x,z,ry] of [[1.0,0.3,Math.PI/2],[-1.0,-0.3,-Math.PI/2],[0.35,1.05,0]]) b.at(x,0,z,ry,()=>{ b.box(0.36,0.035,0.1,0,0.12,0,'#f0e6d2'); for(const xx of [-0.14,0.14]) b.box(0.03,0.12,0.08,xx,0.02,0,'#dccdb0'); });
+  for(let k=0;k<3;k++) b.box(0.12,0.012,0.04,-0.1+(k-1)*0.25,0.07,0.1+(k%2)*0.2,'#f4f4f4');
+};
+
 D.watchtower=(b,r)=>{
   b.box(0.74,0.14,0.74,0,0,0,STONE);
   b.box(0.6,1.5,0.6,0,0.12,0,WALLSTONE);
@@ -932,7 +1008,13 @@ const DEFS={
   domus:{name:'Domus',cat:'domy',w:2,d:2,v:6,pop:12},
   insula:{name:'Insula',cat:'domy',w:2,d:2,v:6,pop:45},
   taberna:{name:'Taberna',cat:'domy',w:1,d:1,v:6,pop:3},
-  garden:{name:'Ogród',cat:'domy',w:2,d:2,v:4,decor:true},
+  garden:{name:'Ogród',cat:'ogr',w:2,d:2,v:4,decor:true},
+  gardenS:{name:'Ogródek',cat:'ogr',w:1,d:1,v:6,decor:true},
+  topiary:{name:'Ogród topiarowy',cat:'ogr',w:2,d:2,v:2,decor:true},
+  vineyard:{name:'Winnica',cat:'ogr',w:2,d:2,v:3,decor:true},
+  peristyle:{name:'Ogród perystylowy',cat:'ogr',w:3,d:3,v:3,decor:true},
+  terrace:{name:'Ogród tarasowy',cat:'ogr',w:3,d:2,v:3,decor:true},
+  park:{name:'Park (horti)',cat:'ogr',w:4,d:4,v:2,decor:true},
   forum:{name:'Forum',cat:'publ',w:6,d:6,v:2},
   temple:{name:'Świątynia',cat:'publ',w:3,d:5,v:3},
   pantheon:{name:'Panteon',cat:'publ',w:4,d:5,v:1},
@@ -2237,7 +2319,7 @@ timeInput.addEventListener('input',applyTime);
 /* =========================================================
    Interfejs
    ========================================================= */
-const CATS=[{id:'teren',l:'🌿 Teren'},{id:'drogi',l:'🛣️ Drogi i port'},{id:'domy',l:'🏠 Domy'},{id:'publ',l:'🏛️ Forum i świątynie'},{id:'rozr',l:'🏟️ Rozrywka'},{id:'woj',l:'🛡️ Wojsko i mury'},{id:'ozd',l:'🌲 Ozdoby'}];
+const CATS=[{id:'teren',l:'🌿 Teren'},{id:'drogi',l:'🛣️ Drogi i port'},{id:'domy',l:'🏠 Domy'},{id:'ogr',l:'🌸 Ogrody'},{id:'publ',l:'🏛️ Forum i świątynie'},{id:'rozr',l:'🏟️ Rozrywka'},{id:'woj',l:'🛡️ Wojsko i mury'},{id:'ozd',l:'🌲 Ozdoby'}];
 const TOOLS=[
   {id:'t-grass',cat:'teren',kind:'terrain',val:0,name:'Łąka',hint:'Maluj teren przeciągając'},
   {id:'t-plot',cat:'teren',kind:'terrain',val:1,name:'Działka',hint:'Wyznacz działki pod zabudowę'},
@@ -2250,7 +2332,8 @@ const TOOLS=[
   {id:'b-pharos',cat:'drogi',kind:'build',type:'pharos'},
   {id:'l-aq',cat:'drogi',kind:'line',val:2,name:'Akwedukt',hint:'Przeciągnij, aby poprowadzić akwedukt (może iść nad drogą i wodą)'},
   {id:'b-house',cat:'domy',kind:'brush',type:'house',name:'Kamienice',hint:'Puste pole – nowy dom, dom lub insula – kolejne piętro · przeciągnij, by budować całe kwartały · ⛏️ Burz zdejmuje piętra'},
-  ...['domus','insula','taberna','garden'].map(t=>({id:'b-'+t,cat:'domy',kind:'build',type:t})),
+  ...['domus','insula','taberna'].map(t=>({id:'b-'+t,cat:'domy',kind:'build',type:t})),
+  ...['gardenS','garden','topiary','vineyard','peristyle','terrace','park'].map(t=>({id:'b-'+t,cat:'ogr',kind:'build',type:t})),
   ...['forum','temple','pantheon','basilica','curia','market','palace','baths','trajanbaths','caracalla','diocletian'].map(t=>({id:'b-'+t,cat:'publ',kind:'build',type:t})),
   ...['colosseum','circus','theatre'].map(t=>({id:'b-'+t,cat:'rozr',kind:'build',type:t})),
   {id:'b-castra',cat:'woj',kind:'build',type:'castra'},
@@ -2402,6 +2485,14 @@ INFO.port={name:'Port rzymski',era:'Ostia od IV w. p.n.e., Portus: Klaudiusz 42�
 INFO.emporium={name:'Emporium – port rzeczny Rzymu',era:'od II w. p.n.e.',surv:0.05,text:'U stóp Awentynu wyładowywano towary przypływające barkami z Ostii: zboże, oliwę i wino. Obok stał ogromny magazyn Porticus Aemilia.',
   facts:['Za magazynami wyrosło wzgórze Monte Testaccio – usypane z potłuczonych amfor po oliwie, według szacunków ok. 50 milionów sztuk.'],today:'Monte Testaccio stoi do dziś w dzielnicy Testaccio.'};
 INFO.colosseum.facts=[...INFO.colosseum.facts,'W arkadach drugiego i trzeciego piętra stały posągi – widać je na monetach z czasów Tytusa.','Miejsca przydzielano według stanu: senatorowie siedzieli na marmurowym podium, wyżej ekwici i obywatele, a kobiety na samej górze. Cesarz oglądał igrzyska z loży – pulvinar.','Gladiatorzy walczyli w parach różnych typów, np. murmillo z mieczem i dużą tarczą przeciw retiariusowi z siecią i trójzębem. Nad walką czuwał sędzia – summa rudis.'];
+Object.assign(INFO,{
+  gardenS:{name:'Ogródek',era:'',text:'Nawet w ciasnym mieście Rzymianie hodowali rośliny – w donicach, skrzynkach i maleńkich ogródkach na tyłach domów.',facts:['Pliniusz Starszy pisał, że zwykli mieszkańcy Rzymu urządzali sobie ogródki nawet w oknach.']},
+  topiary:{name:'Ogród topiarowy',era:'od I w. p.n.e.',text:'Rzymscy ogrodnicy – topiarii – przycinali krzewy w kule, stożki, a nawet kształty zwierząt.',facts:['Pliniusz Młodszy opisywał w liście ogród swojej willi z bukszpanem przyciętym w kształty zwierząt i litery układające jego imię.']},
+  vineyard:{name:'Winnica',era:'',text:'Wino piło się w Rzymie codziennie, zwykle rozcieńczone wodą. Winorośl rosła nawet wewnątrz murów miast.',facts:['W Pompejach obok amfiteatru odkryto winnicę i obsadzono ją ponownie – znów robi się tam wino.']},
+  peristyle:{name:'Ogród perystylowy',era:'od II w. p.n.e.',text:'Serce zamożnego domu: ogród otoczony kolumnadą (perystylem), z fontanną, rzeźbami i równo przyciętymi żywopłotami.',facts:['Ściany kolumnad często malowano w ogrody – z ptakami i drzewami – żeby ogród wydawał się większy.']},
+  terrace:{name:'Ogród tarasowy',era:'od I w. p.n.e.',text:'Na zboczach wzgórz urządzano ogrody na kilku poziomach, podpartych murami oporowymi, ze schodami, pergolami i fontannami.',facts:['Ogrody Lukullusa na wzgórzu Pincio schodziły tarasami w dół zbocza – w tym miejscu do dziś rosną ogrody.']},
+  park:{name:'Park (horti)',era:'od I w. p.n.e.',text:'Najbogatsi Rzymianie zakładali na obrzeżach miasta wielkie ogrody – horti – z alejami, stawami, pawilonami i kolekcjami rzeźb. Z czasem wiele z nich przeszło na własność cesarzy.',facts:['W Ogrodach Salustiusza znaleziono wiele słynnych rzeźb, m.in. grupę Gala zabijającego żonę i siebie.']},
+});
 INFO.drawbridge={name:'Most zwodzony',era:'średniowiecze, XII–XV w.',text:'Most zwodzony to wynalazek średniowiecznych zamków – w grze to mały anachronizm. Rzymianie bronili bram inaczej: przed murami kopali fosę (fossa), przez którą prowadził stały most, a bramę zamykała opuszczana pionowo krata.',
   facts:['Stuknij bramę albo most w trybie ✋ rozglądania, aby go podnieść lub opuścić. Gdy most jest w górze, nikt nie wejdzie do miasta.','O zmroku (suwak pory dnia w menu) mosty podnoszą się same.','Opuszczaną kratę w bramie Rzymianie nazywali cataracta – wspomina o niej już Liwiusz.'],
   today:'Mosty zwodzone przetrwały w wielu średniowiecznych zamkach Europy – niektóre wciąż się podnoszą.'};
@@ -3147,7 +3238,7 @@ function markEvent(k){ evDone[k]=true; checkQuests(); }
    Piękno okolicy: fontanny, ogrody, forum i świątynie upiększają sąsiedztwo
    ========================================================= */
 let beauty=new Float32Array(0), beautyDirty=true, decoDirty=true, marketNear=new Uint8Array(0);
-const AMEN={fountain:[3,2.2],garden:[3,2],forum:[5,2],temple:[3,1.2],statue:[2,1],column:[2,1],arch:[2,1],cypress:[2,0.6],pine:[2,0.6],market:[3,1.3],baths:[4,1.5],caracalla:[5,1.5],diocletian:[5,1.5],trajanbaths:[5,1.5],theatre:[4,1],pantheon:[4,1.5],curia:[3,1],basilica:[3,1],mausoleum:[3,1],pyramid:[2,0.8],colossus:[5,1.6],obelisk:[3,1.3],ara:[4,1.6],quadriga:[3,1.3],palace:[4,1.5],domus:[2,0.5]};
+const AMEN={fountain:[3,2.2],garden:[3,2],gardenS:[2,1.3],topiary:[3,2],vineyard:[2,0.8],peristyle:[4,2.4],terrace:[3,2.2],park:[6,2.7],forum:[5,2],temple:[3,1.2],statue:[2,1],column:[2,1],arch:[2,1],cypress:[2,0.6],pine:[2,0.6],market:[3,1.3],baths:[4,1.5],caracalla:[5,1.5],diocletian:[5,1.5],trajanbaths:[5,1.5],theatre:[4,1],pantheon:[4,1.5],curia:[3,1],basilica:[3,1],mausoleum:[3,1],pyramid:[2,0.8],colossus:[5,1.6],obelisk:[3,1.3],ara:[4,1.6],quadriga:[3,1.3],palace:[4,1.5],domus:[2,0.5]};
 function computeBeauty(){
   beautyDirty=false; const NN=N*N; if(beauty.length!==NN){ beauty=new Float32Array(NN); marketNear=new Uint8Array(NN); } beauty.fill(0); marketNear.fill(0);
   for(const b of buildings.values()){ const a=AMEN[b.type]; if(!a) continue; let [rad,val]=a; if(b.type==='fountain'&&b.wet===false) val=0.6;
@@ -3377,7 +3468,7 @@ function smooth(a,b,x){ const t=clamp((x-a)/(b-a),0,1); return t*t*(3-2*t); }
    ========================================================= */
 let todayMode=false;
 const ruinMat=new THREE.MeshStandardMaterial({color:'#cfc3ad',roughness:0.95,flatShading:true,side:THREE.DoubleSide});
-const TYPE_SURV={colossus:0,quadriga:0,obelisk:1,ara:0.9,pharos:0,castra:0.15,castellum:0.2,port:0.1,watchtower:0.2,house:0,domus:0.03,insula:0.04,taberna:0,garden:0,fountain:0.3,statue:0.4,column:0.9,cypress:1,pine:1,arch:0.8,temple:0.15,forum:0.2,basilica:0.08,curia:0.9,market:0.5,baths:0.1,caracalla:0.45,diocletian:0.4,pantheon:1,colosseum:0.7,circus:0.02,theatre:0.5,barracks:0.1,palace:0.25,mausoleum:0.45,pyramid:1,trajanbaths:0.1};
+const TYPE_SURV={gardenS:0,topiary:0,vineyard:0,peristyle:0.1,terrace:0.05,park:0.05,colossus:0,quadriga:0,obelisk:1,ara:0.9,pharos:0,castra:0.15,castellum:0.2,port:0.1,watchtower:0.2,house:0,domus:0.03,insula:0.04,taberna:0,garden:0,fountain:0.3,statue:0.4,column:0.9,cypress:1,pine:1,arch:0.8,temple:0.15,forum:0.2,basilica:0.08,curia:0.9,market:0.5,baths:0.1,caracalla:0.45,diocletian:0.4,pantheon:1,colosseum:0.7,circus:0.02,theatre:0.5,barracks:0.1,palace:0.25,mausoleum:0.45,pyramid:1,trajanbaths:0.1};
 function survOf(b){ const d=b.lm&&INFO[b.lm]; if(d&&d.surv!=null) return d.surv; return TYPE_SURV[b.type]??0; }
 function applyTodayTo(b,instant){ const s=survOf(b); b.target=todayMode?s:1; b.mesh.material=(todayMode&&s<0.95)?ruinMat:bMat; if(instant){ b.ts=b.target; b.mesh.scale.y=Math.max(0.001,b.ts); b.mesh.visible=b.ts>0.012; } }
 function lineToday(m){ const k=m.userData.key||''; const s=k.startsWith('aq')?0.45:0.3; m.userData.target=todayMode?s:1; if(m.userData.ts==null) m.userData.ts=1; m.material=todayMode?ruinMat:bMat; }
