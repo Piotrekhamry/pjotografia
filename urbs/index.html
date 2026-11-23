@@ -1351,7 +1351,16 @@ function aqX(b,wet=true){
   b.add(archPanel(1.0,0.62,0.26,[{c:-0.25,hw:0.15,spring:0.3},{c:0.25,hw:0.15,spring:0.3}]),TRAV,0,1.32,-0.13);
   b.box(1.0,0.16,0.34,0,1.92,0,'#efe3c8'); b.box(1.0,0.02,0.16,0,2.08,0,wet?WATERC:'#8f7d64');
 }
+function aqUp(key){ const m=key.match(/^(aqp?-[^+]+)\+(\d+)(-d)?$/); return m?{base:m[1],e:+m[2],dry:!!m[3]}:null; }
+// dolna kondygnacja arkad (jak w Pont du Gard) pod akweduktem prowadzonym przez dolinę
+function aqTier(b,e,pier){ const H=e*LH;
+  if(pier){ b.box(0.5,H,0.42,0,0,0,TRAV); return; }
+  b.add(archPanel(1.0,H,0.4,[{c:0,hw:0.34,spring:Math.max(0.1,H-0.4)}]),TRAV,0,0,-0.2); b.box(1.0,0.06,0.44,0,H-0.06,0,'#efe3c8'); }
 function lineGeom(key){
+  const au=aqUp(key);
+  if(au&&!lineGeoCache.has(key)){ const b=new B(); const H=au.e*LH, pier=au.base.startsWith('aqp'), z=au.base==='aq-z';
+    if(z) b.at(0,0,0,Math.PI/2,()=>aqTier(b,au.e,pier)); else aqTier(b,au.e,pier);
+    const g0=lineGeom(au.base+(au.dry?'-d':'')).clone(); g0.translate(0,H,0); const g1=b.geom(); const g=mergeGeometries([g1,g0]); g.computeBoundingBox(); g.computeBoundingSphere(); lineGeoCache.set(key,g); return g; }
   if(key.endsWith('-d')&&!lineGeoCache.has(key)){ const base=key.slice(0,-2); const b=new B();
     if(base==='aq-x') aqX(b,false); else if(base==='aq-z') b.at(0,0,0,Math.PI/2,()=>aqX(b,false)); else { const g0=lineGeom(base).clone(); recolorDry(g0); lineGeoCache.set(key,g0); return g0; }
     const g=b.geom(); lineGeoCache.set(key,g); return g; }
@@ -1710,14 +1719,27 @@ function lineKey(i,j){
     return W(q===1?'S':(q%6===3?'H':(q%6===2||q%6===4?'T':'')));
   }
   const dry=aqWet.length===N*N&&!aqWet[I(i,j)]?'-d':'';
-  if(hx&&hz) return 'aqp-'+((nE?1:0)+(nW?2:0)+(nN?4:0)+(nS?8:0))+dry;
-  return 'aq-'+(hz?'z':'x')+dry;
+  const lid=I(i,j), ex=aqLvl.length===N*N?Math.max(0,aqLvl[lid]-hgt[lid]):0, up=ex?'+'+ex:'';
+  if(hx&&hz) return 'aqp-'+((nE?1:0)+(nW?2:0)+(nN?4:0)+(nS?8:0))+up+dry;
+  return 'aq-'+(hz?'z':'x')+up+dry;
 }
 function markLine(i,j){ for(let d=-2;d<=2;d++){ if(inb(i+d,j)) dirtyLines.add(I(i+d,j)); if(inb(i,j+d)) dirtyLines.add(I(i,j+d)); } for(const [di,dj] of [[1,1],[1,-1],[-1,1],[-1,-1]]) if(inb(i+di,j+dj)) dirtyLines.add(I(i+di,j+dj)); }
 let sideDirty=false, sideT=0;
 function wallSideStep(t){ if(dirtySave) sideDirty=true; if(!sideDirty||t-sideT<1.5) return; sideT=t; sideDirty=false;
   for(let id=0;id<N*N;id++) if(line[id]===1) dirtyLines.add(id); }
+// poziom kanału akweduktu: cały połączony odcinek trzyma jedną wysokość (najwyższy grunt pod nim),
+// a w dolinach rosną wyższe arkady – woda nie płynie ani pod górę, ani z górki
+let aqLvl=new Uint8Array(0), aqLvlDirty=true;
+function computeAqLevels(){
+  aqLvlDirty=false; const old=aqLvl.length===N*N?aqLvl:null; const lv=new Uint8Array(N*N), seen=new Uint8Array(N*N);
+  for(let s0=0;s0<N*N;s0++){ if(line[s0]!==2||seen[s0]) continue; const comp=[s0]; seen[s0]=1; let mx=0;
+    for(let h=0;h<comp.length;h++){ const id=comp[h]; mx=Math.max(mx,hgt[id]); const i=id%N, j=(id/N)|0;
+      for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(!inb(ni,nj)) continue; const nid=nj*N+ni; if(line[nid]===2&&!seen[nid]){ seen[nid]=1; comp.push(nid); } } }
+    for(const id of comp) lv[id]=mx; }
+  aqLvl=lv; for(let id=0;id<N*N;id++) if(line[id]===2&&(!old||old[id]!==lv[id])) dirtyLines.add(id);
+}
 function processLines(){
+  if(aqLvlDirty) computeAqLevels();
   for(const id of dirtyLines){
     const i=id%N, j=Math.floor(id/N); const key=lineKey(i,j); const ex=lineMeshes.get(id);
     if(!key){ if(ex){ lineGroup.remove(ex); lineMeshes.delete(id); } continue; }
@@ -1790,9 +1812,9 @@ function bestRot(type,x,z){ const def=DEFS[type]; const order=[0,1,2,3].sort(()=
   for(const r of order) if(canPlace(type,x,z,r)) return r; return -1; }
 function setRoad(i,j,v){ const id=I(i,j); if(road[id]===v) return false; road[id]=v; waterNetDirty=true; dirtyTerrain=true; dirtyRoads=true; dirtySave=true; if(line[id]) markLine(i,j); markHouses(i,j); return true; }
 function canRaise(i,j){ if(!inb(i,j)) return false; const id=I(i,j); return !bld[id]&&!line[id]&&terrain[id]!==2; }
-function setHeight(i,j,v){ if(!canRaise(i,j)) return false; const id=I(i,j); v=clamp(v,0,HMAX); if(hgt[id]===v) return false; hgt[id]=v; calcHillMax();
+function setHeight(i,j,v){ if(!canRaise(i,j)) return false; const id=I(i,j); v=clamp(v,0,HMAX); if(hgt[id]===v) return false; hgt[id]=v; calcHillMax(); aqLvlDirty=true;
   dirtyTerrain=true; dirtyRoads=true; dirtySave=true; aoDirty=true; beautyDirty=true; return true; }
-function setLine(i,j,v){ const id=I(i,j); if(line[id]===v) return false; const was=line[id]; line[id]=v;
+function setLine(i,j,v){ const id=I(i,j); if(line[id]===v) return false; const was=line[id]; line[id]=v; if(v===2||was===2) aqLvlDirty=true;
   if(v===3){ terrain[id]=2; dirtyWater=true; } else if(was===3&&v===0&&terrain[id]===2) terrain[id]=0;
   for(const [di,dj] of DIRS) if(lineAt(i+di,j+dj)===3) dirtyLines.add(I(i+di,j+dj)); waterNetDirty=true; dirtyWalls=true; markHouses(i,j); markLine(i,j); dirtyTerrain=true; dirtySave=true; return true; }
 function setTerrain(i,j,v){ const id=I(i,j); if(terrain[id]===v) return false; if(v===2&&(bld[id]||hgt[id])) return false; if(line[id]===3&&v!==2) return false; terrain[id]=v;
@@ -1940,7 +1962,7 @@ function clearCell(i,j){ const id=I(i,j); if(bld[id]) removeBuilding(bld[id]); s
 function rle(a){ const out=[]; let prev=a[0],c=0; for(let k=0;k<a.length;k++){ if(a[k]===prev) c++; else { out.push(prev+'*'+c); prev=a[k]; c=1; } } out.push(prev+'*'+c); return out.join(','); }
 function unrle(s,n){ const a=new Uint8Array(n); let p=0; for(const part of s.split(',')){ const [v,c]=part.split('*').map(Number); a.fill(v,p,p+c); p+=c; } return a; }
 function serialize(){ const bl=[]; for(const b of buildings.values()) bl.push(b.u||b.fl?[b.type,b.x,b.z,b.rot,b.seed,b.lm||0,b.fl||0,b.u?1:0]:b.lm?[b.type,b.x,b.z,b.rot,b.seed,b.lm]:[b.type,b.x,b.z,b.rot,b.seed]); const o={v:2,N,t:rle(terrain),r:rle(road),l:rle(line),b:bl}; if(hillMax) o.h=rle(hgt); if(romeYear!==null) o.ry=romeYear; if(rebuild) o.rb=rebuild.targets.map(t=>[t.type,t.x,t.z,t.rot,t.lm,t.done?1:0]); if(scenery) o.sc=scenery; return JSON.stringify(o); }
-function clearWorld(){ romeYear=null;
+function clearWorld(){ romeYear=null; aqLvlDirty=true;
   if(typeof setScenery!=='undefined') setScenery(null);
   if(typeof clearRebuildMarkers!=='undefined'){ clearRebuildMarkers(); rebuild=null; triumph=null; race=null; games=null; follow=null; cortege=null; }
   if(typeof builds!=='undefined') while(builds.length) endConstruction(builds[0],true);
@@ -3965,12 +3987,12 @@ const dropMesh=new THREE.InstancedMesh(new THREE.SphereGeometry(0.018,5,4),new T
 dropMesh.count=0; dropMesh.frustumCulled=false; scene.add(dropMesh);
 function updateWaterFx(time){
   let n=0;
-  if(!todayMode) for(const [id,m] of lineMeshes){ if(n>=896) break; const k=m.userData.key||''; if(!(k==='aq-x'||k==='aq-z')) continue;
-    const i=id%N, j=(id/N)|0, d=aqDist[id]??-1; if(d<0) continue; const ax=k==='aq-x';
+  if(!todayMode) for(const [id,m] of lineMeshes){ if(n>=896) break; const k=m.userData.key||''; if(!/^aq-[xz](\+\d+)?$/.test(k)) continue; const up=(+(k.split('+')[1]||0))*LH;
+    const i=id%N, j=(id/N)|0, d=aqDist[id]??-1; if(d<0) continue; const ax=k.startsWith('aq-x');
     let sg=1; const a=ax?[i+1,j]:[i,j+1], bq=ax?[i-1,j]:[i,j-1];
     if(inb(a[0],a[1])&&aqDist[I(a[0],a[1])]===d-1) sg=-1; else if(inb(bq[0],bq[1])&&aqDist[I(bq[0],bq[1])]===d+1) sg=-1;
     for(let q=0;q<2;q++){ const u=((time*0.55+q*0.5+((i*7+j*13)%10)/10)%1)-0.5;
-      setInst(flowMesh,n++,m.position.x+(ax?u*sg:0),2.105+m.position.y,m.position.z+(ax?0:u*sg),ax?0.16:0.05,0.012,ax?0.05:0.16); } }
+      setInst(flowMesh,n++,m.position.x+(ax?u*sg:0),2.105+m.position.y+up,m.position.z+(ax?0:u*sg),ax?0.16:0.05,0.012,ax?0.05:0.16); } }
   flowMesh.count=n; flowMesh.instanceMatrix.needsUpdate=true;
   let d=0;
   if(!todayMode) for(const b of buildings.values()){ if(d>=690) break; if(b.type!=='fountain'||b.wet===false||!b.mesh.visible||b.mesh.scale.y<0.98) continue;
@@ -4183,7 +4205,7 @@ function loop(now){
   if(decoDirty) rebuildDeco();
   updateBuilds(dt,now/1000); camFlyStep(dt); sceneryStep(dt,now/1000); petalsStep(now/1000); eventsTick();
   questT+=dt; if(questT>1.5){ questT=0; checkQuests(); }
-  if(dirtyLines.size) processLines();
+  if(dirtyLines.size||aqLvlDirty) processLines();
   if(dirtyHouses.size) processHouses();
   if(aoDirty){ rebuildAO(); rebuildGlow(); }
   if(dirtyTerrain){ rebuildTerrain(); dirtyTerrain=false; }
