@@ -1,5 +1,5 @@
 // Morze chmur – service worker: szybkie uruchamianie i ostatnia prognoza bez zasięgu
-const SHELL = 'mc-shell-v5';
+const SHELL = 'mc-shell-v6';
 const DATA = 'mc-data';
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];

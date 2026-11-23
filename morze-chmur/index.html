@@ -175,6 +175,9 @@ button.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--l
 .offl{color:var(--mid)}
 .stats .wide{grid-column:1/-1}
 .fogb{color:#cfe3ff}
+.flake{animation:fall 4s linear infinite}
+@keyframes fall{0%{transform:translate(0,0)}50%{transform:translate(4px,45px)}100%{transform:translate(-2px,92px)}}
+.stats small a{color:var(--sea)}
 .dsec{font-size:15px;margin:16px 0 6px;font-weight:600}
 .ext{display:block;margin-top:12px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);text-decoration:none;font-size:14px}
 .day{padding:12px 14px}
@@ -286,7 +289,7 @@ const MODELS=[
   {id:'meteofrance_seamless',name:'Météo-France'}
 ];
 const LEVELS=[1000,975,950,925,900,850,800,700,600,500,400,300,250];
-const HOURLY=['cloud_cover_low','cloud_cover_mid','cloud_cover_high','wind_speed_10m','wind_gusts_10m','precipitation','relative_humidity_2m',
+const HOURLY=['cloud_cover_low','cloud_cover_mid','cloud_cover_high','wind_speed_10m','wind_gusts_10m','precipitation','relative_humidity_2m','snowfall','freezing_level_height',
   ...LEVELS.flatMap(l=>[`temperature_${l}hPa`,`relative_humidity_${l}hPa`,`cloud_cover_${l}hPa`,`geopotential_height_${l}hPa`,`wind_speed_${l}hPa`])];
 const TREND=[-60,-30,0,30,60,90,120]; // minuty względem wschodu (dla zachodu odwrócone)
 const PRESETS=[
@@ -474,6 +477,19 @@ function atHeight(lv,key,z){
   for(let i=1;i<a.length;i++)if(z<=a[i].h){const p=a[i-1],q=a[i];return p[key]+(q[key]-p[key])*(z-p.h)/(q.h-p.h)}
   return a[a.length-1][key];
 }
+// śnieg: świeży opad z 48 h (cm, ~1 mm wody = 1 cm śniegu), opad w chwili wschodu, szansa na szadź
+function snowInfo(h,idx,summit,lv,tS,inCloud,v){
+  let s48=0,have=false;
+  for(let k=0;k<48;k++){const j=Math.floor(idx)-k;if(j<0)break;
+    const pr=h.precipitation?h.precipitation[j]:null,fl=h.freezing_level_height?h.freezing_level_height[j]:null,sf=h.snowfall?h.snowfall[j]:null;
+    if(pr!=null&&fl!=null){have=true;if(fl<summit+150)s48+=pr*(fl<summit-100?1:.6)}
+    else if(sf!=null){have=true;s48+=sf}}
+  const pr=v('precipitation'),fl=v('freezing_level_height');
+  const snowing=pr!=null&&pr>=0.2&&((fl!=null&&fl<summit+150)||(tS!=null&&tS<=1));
+  const rhS=atHeight(lv,'rh',summit);
+  const rime=tS==null?null:tS>-1?0:inCloud?85:rhS>=95?65:rhS>=90?40:10;
+  return{snow48:have?s48:null,snowing,rime,fl};
+}
 function evalModel(md,summit,whenMin){
   const h=md.hourly;if(!h||!h.time)return null;
   const idx=(whenMin-toMin(h.time[0]))/60;
@@ -544,9 +560,13 @@ function evalModel(md,summit,whenMin){
     }
   }
   return{sea,sun,combined:Math.round(Math.sqrt(sea*sun)),belowCloud,aboveClear,ccLow,ccMid,ccHigh,wind,top,inv,inCloud,levels:lv,
-    tS,wS,gust:v('wind_gusts_10m'),precip:v('precipitation'),fog};
+    tS,wS,gust:v('wind_gusts_10m'),precip:v('precipitation'),fog,...snowInfo(h,idx,summit,lv,tS,inCloud,v)};
 }
 
+function applySnow(a){
+  if(a.snowing>=.5)a.score=a.combined=Math.round(a.score*0.6);
+  else if(a.snow48>=3)a.score=a.combined=Math.min(100,a.score+5);
+}
 function applyFog(a,elev,rising){
   const V=state.valley;a.fog=null;a.depth=V?Math.round(elev-V.min):null;
   if(!rising||!V||a.depth<120||a.fogRaw==null)return;
@@ -564,7 +584,8 @@ function aggregate(per){
     spread:Math.max(...combos)-Math.min(...combos),belowCloud:m('belowCloud'),aboveClear:m('aboveClear'),
     ccHigh:m('ccHigh'),ccMid:m('ccMid'),wind:m('wind'),inv:v.filter(p=>p.r.inv).length,
     inCloud:v.filter(p=>p.r.inCloud).length,top:median(v.map(p=>p.r.top)),
-    tS:m('tS'),wS:m('wS'),gust:m('gust'),precip:m('precip'),fogRaw:m('fog')};
+    tS:m('tS'),wS:m('wS'),gust:m('gust'),precip:m('precip'),fogRaw:m('fog'),
+    snow48:m('snow48'),snowing:v.filter(p=>p.r.snowing).length/v.length,rime:m('rime'),fl:m('fl')};
 }
 
 /* ---------- słońce: wysokość i azymut (algorytm uproszczony, dokładność ~1 min) ---------- */
@@ -609,6 +630,9 @@ function explain(a){
   else if(a.aboveClear>=45)t.push('nad szczytem część chmur');
   else t.push('nad szczytem sporo chmur');
   if(a.inv>a.n/2)t.push('sygnał inwersji temperatury');
+  if(a.snowing>=.5)t.push('w chwili '+(state.mode==='sunrise'?'wschodu':'zachodu')+' może padać śnieg – słaba widoczność');
+  else if(a.snow48>=2)t.push(`świeży śnieg w ostatnich 48 h (~${Math.round(a.snow48)} cm) – białe szczyty`);
+  if(a.rime>=50)t.push('mróz i wilgoć – szansa na szadź');
   if(a.fog>=50)t.push(`warunki na mgłę w dolinie ok. ${Math.round(a.depth/10)*10} m niżej (pogodna noc, słaby wiatr, wilgotno)`);
   const w=a.wS!=null?a.wS:a.wind;
   if(w!=null&&w>35)t.push(`silny wiatr (~${Math.round(w)} km/h) może rozbić warstwę`);
@@ -641,7 +665,7 @@ function compute(){
       return{off:off2,n:rs.length,sea:rs.length?mean(rs.map(r=>r.sea)):null,sun:rs.length?mean(rs.map(r=>r.sun)):null,inCloud:rs.length?rs.filter(r=>r.inCloud).length/rs.length:0}});
     if(!rising)trend.sort((a,b)=>a.off-b.off);
     const agg=aggregate(per);
-    if(agg)applyFog(agg,elev,rising);
+    if(agg){applyFog(agg,elev,rising);applySnow(agg)}
     days.push({date:d,time:t,tm,per,agg,trend,sun:sunTimes(tm,off/60,lat,lon,rising)});
   });
   state.days=days;state.tz=ref.timezone_abbreviation||'';
@@ -656,7 +680,7 @@ const CHEV='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentCol
 
 /* ---------- animowane scenki do oceny ---------- */
 function sceneType(a){
-  if(!a)return'fog';const s=a.score;
+  if(!a)return'fog';if(a.snowing>=.5)return'snow';const s=a.score;
   if(s<35)return'fog';if(s<55)return'cloudsun';
   if(a.sea>=55&&a.sun>=55)return'epic';
   return a.sea>=a.sun?'sea':'colors';
@@ -672,9 +696,18 @@ function sky(id,stops,anim){
   return`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">${stops.map((c,k)=>`<stop offset="${k/(stops.length-1)}" stop-color="${c[0]}">${anim&&c[1]?`<animate attributeName="stop-color" values="${c[0]};${c[1]};${c[0]}" dur="${8+k*2}s" repeatCount="indefinite"/>`:''}</stop>`).join('')}</linearGradient>`;
 }
 const PEAKS='<polygon fill="#1d2140" points="40,80 78,38 92,50 112,26 138,56 152,46 200,74 200,80"/>';
+const CAPS='<g fill="#f4f7ff" opacity=".92"><polygon points="71,46 78,38 85,46 81,44 78,47 75,44"/><polygon points="102,38 112,26 122,38 117,35 112,39 107,35"/><polygon points="146,52 152,46 158,51 155,50 152,52 149,50"/></g>';
 const sunG=id=>`<radialGradient id="${id}"><stop offset="0" stop-color="#fff3d1"/><stop offset=".6" stop-color="#ffd08a"/><stop offset="1" stop-color="#ffb454" stop-opacity="0"/></radialGradient>`;
-function sceneSVG(type,i){
-  const g=`s${type}${i}`;let d='',b='';
+function sceneSVG(type,i,caps){
+  const g=`s${type}${i}`;let d='',b='';const PK=PEAKS+(caps?CAPS:'');
+  if(type==='snow'){
+    d=sky(g,[['#2f3a4f'],['#56627a'],['#8a95aa']]);
+    b=`<rect width="200" height="80" fill="url(#${g})"/>
+      <polygon fill="#4a5570" points="30,80 70,44 90,56 115,36 140,58 160,50 200,70 200,80"/><g fill="#e8eef8" opacity=".85"><polygon points="62,51 70,44 78,51 74,50 70,52 66,50"/><polygon points="107,43 115,36 123,43 119,42 115,44 111,42"/></g>
+      <g class="sdr3">${cl(40,16,1,'#9aa5b9',.8)}${cl(150,12,1.2,'#a7b1c4',.85)}${cl(240,16,1,'#9aa5b9',.8)}${cl(350,12,1.2,'#a7b1c4',.85)}</g>
+      <rect y="72" width="200" height="8" fill="#e8eef8" opacity=".9"/>
+      ${[...Array(26)].map((_,k)=>{const x=(k*37)%200,r=1+(k%3)*.5;return`<circle class="flake" cx="${x}" cy="-4" r="${r}" fill="#fff" style="animation-duration:${3+(k%5)*.7}s;animation-delay:${-(k*.43).toFixed(2)}s"/>`}).join('')}`;
+  }else
   if(type==='fog'){
     d=sky(g,[['#252c3a'],['#3a4252'],['#4a5263']]);
     b=`<rect width="200" height="80" fill="url(#${g})"/>
@@ -697,7 +730,7 @@ function sceneSVG(type,i){
     d=sky(g,[['#1a2a55'],['#4c4f86'],['#c9939a'],['#f1c19a']])+sunG(g+'s');
     b=`<rect width="200" height="80" fill="url(#${g})"/>
       <circle class="glow" cx="168" cy="40" r="26" fill="url(#${g}s)"/><circle cx="168" cy="40" r="7" fill="#fff0c8"/>
-      ${PEAKS}
+      ${PK}
       <g class="sdr">${seaRow(56,12,14,26,'#e3e8f6',.85,7)}</g>
       <g class="sdr2">${seaRow(66,11,18,30,'#f4f6fc',.95,13)}</g>
       <rect y="70" width="200" height="10" fill="#f4f6fc"/>`;
@@ -707,7 +740,7 @@ function sceneSVG(type,i){
       <g class="rays" style="transform-origin:150px 52px">${[...Array(12)].map((_,k)=>`<line x1="150" y1="52" x2="${(150+70*Math.cos(k*Math.PI/6)).toFixed(1)}" y2="${(52+70*Math.sin(k*Math.PI/6)).toFixed(1)}" stroke="#ffe2a8" stroke-width="3" opacity=".22"/>`).join('')}</g>
       <circle class="glow" cx="150" cy="52" r="34" fill="url(#${g}s)"/><circle class="sunup" cx="150" cy="52" r="10" fill="#fff4d6"/>
       <g class="sdr">${[0,200].map(o=>`<ellipse cx="${40+o}" cy="16" rx="36" ry="3" fill="#ff9ab0" opacity=".85"/><ellipse cx="${110+o}" cy="10" rx="40" ry="3" fill="#ffc08a" opacity=".85"/>`).join('')}</g>
-      ${PEAKS}
+      ${PK}
       <g class="sdr">${seaRow(57,12,14,26,'#ffd6c8',.85,5)}</g>
       <g class="sdr2">${seaRow(67,11,18,30,'#fff1ea',.95,9)}</g>
       <rect y="71" width="200" height="9" fill="#fff1ea"/>
@@ -732,8 +765,8 @@ function render(){
     return`<article class="day${i===bi?' top':''}" data-i="${i}" style="--i:${i};--c:${col(a.combined)}">
       <div class="dh" role="button" tabindex="0" aria-expanded="false">
         <div class="score"><svg viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="28"/><circle class="val" cx="32" cy="32" r="28" data-v="${a.combined}"/></svg><span class="num" data-v="${a.combined}">0</span></div>
-        <div class="dt"><b>${esc(date)}</b><div class="s">${label.toLowerCase()} ${time}${tz}${i===bi?' · <span class="star">★ najlepszy</span>':''}${a.fog>=50?' · <span class="fogb">🌫 mgła w dolinie</span>':''}</div><div class="vd"><span class="verdict">${v1}</span> <span class="what">${v2}</span></div></div>
-        ${sceneSVG(sceneType(a),i)}
+        <div class="dt"><b>${esc(date)}</b><div class="s">${label.toLowerCase()} ${time}${tz}${i===bi?' · <span class="star">★ najlepszy</span>':''}${a.fog>=50?' · <span class="fogb">🌫 mgła w dolinie</span>':''}${a.snowing>=.5?` · <span class="fogb">🌨 śnieg podczas ${sunrise?'wschodu':'zachodu'}</span>`:a.snow48>=2?` · <span class="fogb">❄️ świeży śnieg ~${Math.round(a.snow48)} cm</span>`:''}${a.rime>=50?' · <span class="fogb">✨ szadź</span>':''}</div><div class="vd"><span class="verdict">${v1}</span> <span class="what">${v2}</span></div></div>
+        ${sceneSVG(sceneType(a),i,a.snow48>=2)}
         <span class="opn"><span>Analiza</span>${CHEV}</span>
       </div>
       <div class="detail"><div class="clip"><div class="din" style="--i:0"></div></div></div>
@@ -755,6 +788,17 @@ function timesHTML(d){
     <span title="Kierunek słońca">${ARROW(s.az)}${Math.round(s.az)}° ${dirName(s.az)}</span>
   </div>${go}`;
 }
+function snowTile(a){
+  if(a.snow48==null&&a.fl==null&&a.tS==null)return'';
+  const elev=state.loc.elev,frost=a.tS!=null&&a.tS<=0;
+  if(!(a.snow48>=0.5||frost||a.snowing>0||(a.fl!=null&&a.fl<elev+300)))return'';
+  const l=state.loc,tatry=l.lat>48.9&&l.lat<49.45&&l.lon>19.4&&l.lon<20.6;
+  const lav=tatry?'<a href="https://lawiny.topr.pl/" target="_blank" rel="noopener">komunikat lawinowy TOPR ↗</a>':'<a href="https://www.avalanches.org/" target="_blank" rel="noopener">komunikaty lawinowe (EAWS) ↗</a>';
+  const rime=a.rime>=60?'duża':a.rime>=35?'możliwa':'mała';
+  return`<div class="wide"><span>Śnieg i mróz</span>
+    <b>${a.snowing>=.5?'🌨 pada śnieg':a.snow48>=0.5?'❄️ świeży śnieg ~'+Math.round(a.snow48)+' cm / 48 h':'bez świeżego śniegu'}</b>
+    <small>granica zera: ${a.fl==null?'–':'~'+Math.round(a.fl/50)*50+' m'}${a.fl!=null?(a.fl<elev?' (na szczycie mróz)':' (na szczycie plus)'):''} · szadź: ${a.tS==null?'–':rime} · ${lav}</small></div>`;
+}
 function statsHTML(a){
   const r=x=>Math.round(x);
   let margin,mc='';
@@ -770,6 +814,7 @@ function statsHTML(a){
     <div><span>Wiatr na szczycie</span><b class="${wind>50?'bad':wind>30?'mid':''}">${wind==null?'–':r(wind)+' km/h'}</b>${a.gust!=null&&a.gust>(wind||0)+10?`<small>porywy w dolinach ${r(a.gust)}</small>`:''}</div>
     ${a.fog!=null?`<div class="wide"><span>Mgła w dolinie (ok. ${Math.round(a.depth/10)*10} m pod Tobą)</span><b class="${a.fog>=60?'good':a.fog>=35?'mid':''}">${a.fog>=60?'duża szansa':a.fog>=35?'możliwa':'mało prawdopodobna'} <small style="display:inline">(${a.fog}/100)</small></b></div>`:''}
     <div><span>Opad</span><b class="${a.precip>=0.3?'bad':''}">${a.precip==null?'–':a.precip<0.1?'sucho':a.precip.toFixed(1)+' mm/h'}</b></div>
+    ${snowTile(a)}
   </div>`;
 }
 function trendHTML(d,i){
