@@ -274,8 +274,8 @@ class B{
   cone(r,h,x,y,z,c,seg=8){ return this.add(G.cone(seg),c,x,y+h/2,z,0,0,0,r,h,r); }
   sph(r,x,y,z,c,sy=1){ return this.add(G.sph,c,x,y,z,0,0,0,r,r*sy,r); }
   hemi(r,x,y,z,c,sy=1){ return this.add(G.hemi,c,x,y,z,0,0,0,r,r*sy,r); }
-  roofX(w,h,d,x,y,z,c){ return this.add(G.prism,c,x,y,z,0,0,0,w,h,d); }
-  roofZ(w,h,d,x,y,z,c){ return this.add(G.prism,c,x,y,z,0,Math.PI/2,0,d,h,w); }
+  roofX(w,h,d,x,y,z,c){ if(d>0.2&&w>0.2) this.add(G.box,shade(c,-0.2),x,y+0.025,z,0,0,0,w,0.05,d); return this.add(G.prism,c,x,y+(d>0.2&&w>0.2?0.05:0),z,0,0,0,w,h,d); }
+  roofZ(w,h,d,x,y,z,c){ if(d>0.2&&w>0.2) this.add(G.box,shade(c,-0.2),x,y+0.025,z,0,0,0,w,0.05,d); return this.add(G.prism,c,x,y+(d>0.2&&w>0.2?0.05:0),z,0,Math.PI/2,0,d,h,w); }
   pyr(w,h,x,y,z,c){ return this.add(G.pyr,c,x,y+h/2,z,0,0,0,w,h,w); }
   column(x,z,y0,h,r,c){ this.cyl(r*1.4,0.05,x,y0,z,c,8); this.cyl(r,h-0.1,x,y0+0.05,z,c,8,r*0.88); this.box(r*2.8,0.05,r*2.8,x,y0+h-0.05,z,c); return this; }
   cypress(x,z,h=0.75,y=0){ this.cyl(0.03,0.08,x,y,z,WOOD,5); this.cone(0.11,h,x,y+0.06,z,CYP,7); return this; }
@@ -573,6 +573,20 @@ D.column=(b,r)=>{
   for(let k=0;k<7;k++) b.cyl(0.148,0.035,0,0.5+k*0.27,0,'#e3d6bd',12);
   b.box(0.34,0.08,0.34,0,2.42,0,MARBLE); b.cyl(0.05,0.2,0,2.5,0,BRONZE,6); b.sph(0.045,0,2.75,0,BRONZE);
 };
+D.watchtower=(b,r)=>{
+  b.box(0.74,0.14,0.74,0,0,0,STONE);
+  b.box(0.6,1.5,0.6,0,0.12,0,WALLSTONE);
+  b.box(0.65,0.06,0.65,0,0.8,0,'#e6d6b4');
+  b.box(0.2,0.34,0.04,0,0.12,0.3,DOOR);
+  for(const [x,z,ry] of [[0,0.3,0],[0,-0.3,0],[0.3,0,Math.PI/2],[-0.3,0,Math.PI/2]]){ b.box(0.06,0.18,0.03,x,1.08,z,DARK,ry); b.box(0.06,0.16,0.03,x,0.5,z*(z?1:1),DARK,ry); }
+  for(const sx of [-1,1]) for(const sz of [-1,1]) b.add(G.box,WOOD,sx*0.33,1.56,sz*0.33,sx*0.5*0,0,0,0.06,0.12,0.06);
+  b.box(0.9,0.07,0.9,0,1.62,0,WOOD);
+  for(const [w,d,x,z] of [[0.9,0.035,0,0.43],[0.9,0.035,0,-0.43],[0.035,0.9,0.43,0],[0.035,0.9,-0.43,0]]) b.box(w,0.14,d,x,1.69,z,'#a8784e');
+  for(const sx of [-1,1]) for(const sz of [-1,1]) b.box(0.05,0.55,0.05,sx*0.42,1.69,sz*0.42,WOOD);
+  b.pyr(1.04,0.42,0,2.24,0,ROOF); b.box(1.0,0.04,1.0,0,2.22,0,shade(ROOF,-0.2));
+  b.cyl(0.015,0.35,0,2.6,0,WOOD,5); b.box(0.2,0.12,0.015,0.1,2.8,0,RED);
+  b.cyl(0.06,0.06,0.32,1.69,-0.32,'#5a4636',8); b.sph(0.06,0.32,1.79,-0.32,'#ff9a3c',1.3);
+};
 D.cypress=(b,r)=>{ b.cypress(-0.22,-0.18,0.7+r()*0.2); b.cypress(0.2,0.15,0.85+r()*0.2); b.cypress(-0.15,0.25,0.55); };
 D.pine=(b,r)=>{ b.cyl(0.04,0.7,0,0,0,WOOD,6,0.03); b.add(G.box,WOOD,0.08,0.62,0,0,0,-0.7,0.03,0.2,0.03); b.sph(0.36,0,0.82,0,'#6a9a4a',0.4); b.sph(0.22,0.12,0.92,0.05,'#78a854',0.45); };
 D.garden=(b,r)=>{
@@ -710,6 +724,7 @@ const DEFS={
   circus:{name:'Cyrk',cat:'rozr',w:5,d:16,v:1},
   theatre:{name:'Teatr',cat:'rozr',w:7,d:6,v:1},
   barracks:{name:'Koszary',cat:'woj',w:5,d:5,v:1,pop:480},
+  watchtower:{name:'Wieża strażnicza',cat:'woj',w:1,d:1,v:1,pop:4},
   palace:{name:'Pałac cesarski',cat:'publ',w:8,d:6,v:1,pop:300},
   trajanbaths:{name:'Termy Trajana',cat:'publ',w:9,d:9,v:1},
   mausoleum:{name:'Mauzoleum',cat:'ozd',w:4,d:4,v:1,decor:true},
@@ -809,6 +824,7 @@ const hemi=new THREE.HemisphereLight('#f4f0ff','#6e5a40',1.0); scene.add(hemi);
 const sun=new THREE.DirectionalLight('#fff3df',2.2); sun.castShadow=true;
 sun.shadow.mapSize.set(2048,2048); sun.shadow.bias=-0.0006; sun.shadow.normalBias=0.03; sun.shadow.radius=3;
 scene.add(sun); scene.add(sun.target);
+const fillLight=new THREE.DirectionalLight('#cfdcff',0.45); scene.add(fillLight);
 
 const bMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.78,metalness:0,flatShading:true,side:THREE.DoubleSide});
 const ghostMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.8,flatShading:true,side:THREE.DoubleSide,transparent:true,opacity:0.6,depthWrite:false});
@@ -870,7 +886,22 @@ const TR={
 };
 const _M=new THREE.Matrix4(), _Q=new THREE.Quaternion(), _P=new THREE.Vector3(), _S=new THREE.Vector3();
 function setInst(mesh,idx,x,y,z,sx,sy,sz,ry=0){ _P.set(x,y,z); _S.set(sx,sy,sz); if(ry) _Q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP,ry); else _Q.identity(); _M.compose(_P,_Q,_S); mesh.setMatrixAt(idx,_M); }
+const aoTex=(()=>{ const c=document.createElement('canvas'); c.width=c.height=64; const g=c.getContext('2d'); const im=g.createImageData(64,64);
+  for(let y=0;y<64;y++) for(let x=0;x<64;x++){ const dx=Math.max(0,Math.abs(x-31.5)/32-0.55)/0.45, dy=Math.max(0,Math.abs(y-31.5)/32-0.55)/0.45; const d=Math.min(1,Math.hypot(dx,dy)); const a=Math.pow(1-d,1.6); const k=(y*64+x)*4; im.data[k]=im.data[k+1]=im.data[k+2]=20; im.data[k+3]=Math.round(a*255); }
+  g.putImageData(im,0,0); const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; return t; })();
+const AO=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({map:aoTex,transparent:true,opacity:0.5,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1}),MAXC*2);
+AO.count=0; AO.frustumCulled=false; AO.renderOrder=1; scene.add(AO);
+let aoDirty=true;
+function rebuildAO(){
+  aoDirty=false; let n=0;
+  for(const b of buildings.values()){ if(n>=MAXC*2) break; if(!b.mesh.visible) continue; const def=DEFS[b.type]; if(def.decor&&b.type!=='arch') continue;
+    const [fw,fd]=fpSize(def,b.rot); const sc=todayMode?Math.max(0.3,b.target??1):1;
+    setInst(AO,n++,b.mesh.position.x,0.03,b.mesh.position.z,fw+0.55*sc,1,fd+0.55*sc); }
+  for(const [id,m] of lineMeshes){ if(n>=MAXC*2) break; const k=m.userData.key||''; const big=k.startsWith('tower'); setInst(AO,n++,m.position.x,0.03,m.position.z,big?1.25:1.1,1,big?1.25:1.1); }
+  AO.count=n; AO.instanceMatrix.needsUpdate=true;
+}
 function rebuildTerrain(){
+  aoDirty=true;
   const n={}; for(const k in T) n[k]=0; for(const k in TR) n[k]=0;
   const tile=(k,x,z,y0,h)=>setInst(T[k],n[k]++,x,y0+h/2,z,1,h,1);
   for(let j=0;j<N;j++) for(let i=0;i<N;i++){
@@ -938,7 +969,7 @@ function processLines(){
     const m=new THREE.Mesh(lineGeom(key),bMat); m.castShadow=m.receiveShadow=true; m.userData.key=key;
     m.position.set(wx(i),0,wx(j));
     if(ex) lineGroup.remove(ex); else { m.scale.set(1,0.01,1); growing.push({m,t:0}); }
-    lineGroup.add(m); lineMeshes.set(id,m);
+    lineGroup.add(m); lineMeshes.set(id,m); aoDirty=true;
     if(todayMode){ lineToday(m); m.userData.ts=m.userData.target; m.scale.y=m.userData.ts; const gi=growing.findIndex(g=>g.m===m); if(gi>=0) growing.splice(gi,1); }
   }
   dirtyLines.clear();
@@ -988,7 +1019,7 @@ function bestRot(type,x,z){ const def=DEFS[type]; const order=[0,1,2,3].sort(()=
   for(const r of order){ const [fw,fd]=fpSize(def,r); if(canPlace(type,x,z,r)&&frontHasRoad(x,z,fw,fd,r)) return r; }
   for(const r of order) if(canPlace(type,x,z,r)) return r; return -1; }
 function setRoad(i,j,v){ const id=I(i,j); if(road[id]===v) return false; road[id]=v; dirtyTerrain=true; dirtyRoads=true; dirtySave=true; if(line[id]) markLine(i,j); markHouses(i,j); return true; }
-function setLine(i,j,v){ const id=I(i,j); if(line[id]===v) return false; line[id]=v; markHouses(i,j); markLine(i,j); dirtyTerrain=true; dirtySave=true; return true; }
+function setLine(i,j,v){ const id=I(i,j); if(line[id]===v) return false; line[id]=v; dirtyWalls=true; markHouses(i,j); markLine(i,j); dirtyTerrain=true; dirtySave=true; return true; }
 function setTerrain(i,j,v){ const id=I(i,j); if(terrain[id]===v) return false; if(v===2&&bld[id]) return false; terrain[id]=v; dirtyTerrain=true; dirtySave=true; return true; }
 /* =========================================================
    Kamienice łączące się w bloki (jak w Townscaperze)
@@ -1021,6 +1052,9 @@ function buildHouse(b,r,c){
   const x0=W?-0.5:-s, x1=E?0.5:s, z0=Nn?-0.5:-s, z1=S?0.5:s, cx=(x0+x1)/2, cz=(z0+z1)/2, w=x1-x0, d=z1-z0;
   b.box(w,H,d,cx,0,cz,wc);
   b.box(w+0.03,0.07,d+0.03,cx,0,cz,shade(wc,-0.12));
+  { const qc=shade(wc,0.07); // jasne narożniki (opaski) – podkreślają bryłę
+    for(const [qx,qz,f1,f2] of [[x0,z0,1,2],[x1,z0,0,2],[x0,z1,1,3],[x1,z1,0,3]]) if(!has[f1]&&!has[f2]) b.box(0.075,H-0.02,0.075,qx+(qx<cx?0.03:-0.03),0,qz+(qz<cz?0.03:-0.03),qc); }
+  b.box(w+0.04,0.045,d+0.04,cx,H-0.045,cz,shade(wc,-0.08));                // gzyms pod dachem
   b.box(w+0.02,0.035,d+0.02,cx,fh-0.02,cz,shade(wc,-0.06));          // gzyms nad parterem
   // ściany: 0:E(+x) 1:W(-x) 2:N(-z) 3:S(+z)
   const face=(k,along,out,y,wd,ht,dp,col)=>{ // element na ścianie k, along – pozycja wzdłuż, out – wysunięcie
@@ -1032,7 +1066,7 @@ function buildHouse(b,r,c){
     const [a0,a1]=span(k), L=a1-a0, from=c.nf[k];           // piętra zasłonięte sąsiadem
     for(let f=from;f<fl;f++){
       const y=f*fh+0.13;
-      for(const t of [0.27,0.73]) face(k,a0+L*t,0,y,0.1,0.14,0.03,WIN);
+      for(const t of [0.27,0.73]){ face(k,a0+L*t,0,y,0.1,0.14,0.03,WIN); face(k,a0+L*t,0.012,y-0.025,0.14,0.025,0.05,'#f1e9db'); face(k,a0+L*t,0.008,y+0.14,0.13,0.02,0.035,shade(wc,0.05)); }
       if(f>=1){
         const q=R[k*8+f];
         if(q<0.24){ // balkon z kwiatami
@@ -1122,6 +1156,7 @@ function rle(a){ const out=[]; let prev=a[0],c=0; for(let k=0;k<a.length;k++){ i
 function unrle(s,n){ const a=new Uint8Array(n); let p=0; for(const part of s.split(',')){ const [v,c]=part.split('*').map(Number); a.fill(v,p,p+c); p+=c; } return a; }
 function serialize(){ const bl=[]; for(const b of buildings.values()) bl.push(b.fl?[b.type,b.x,b.z,b.rot,b.seed,b.lm||0,b.fl]:b.lm?[b.type,b.x,b.z,b.rot,b.seed,b.lm]:[b.type,b.x,b.z,b.rot,b.seed]); return JSON.stringify({v:2,N,t:rle(terrain),r:rle(road),l:rle(line),b:bl}); }
 function clearWorld(){
+  if(typeof wallGuards!=='undefined') wallGuards.length=0; dirtyWalls=true;
   for(const b of buildings.values()) buildGroup.remove(b.mesh); buildings.clear();
   for(const m of lineMeshes.values()) lineGroup.remove(m); lineMeshes.clear();
   growing.length=0; agents.length=0; patrols.length=0; chariots.clear();
@@ -1307,7 +1342,7 @@ function defaultWorld(){
 /* =========================================================
    Ludziki, wozy, patrole, rydwany
    ========================================================= */
-const MAXPED=380, MAXCART=30, PCAP=560, LCAP=48, CCAP=MAXCART, HCAP=24;
+const MAXPED=380, MAXCART=30, PCAP=600, LCAP=110, CCAP=MAXCART, HCAP=24;
 const agents=[], patrols=[], chariots=new Map();
 let roadList=[], wideList=[], doorList=[], barracksDoors=[];
 function rebuildRoadLists(){
@@ -1339,6 +1374,31 @@ function spawnCart(){
   agents.push({kind:'cart',ax:s.i,az:s.j,bx:s.i,bz:s.j,t:1,speed:0.16+rnd()*0.06,lane:0.17,col:pickArr(['#c9b08a','#b86a3c','#8f6040','#d9b24c','#a7b36b']),
     animal:pickArr(['#8a6a4a','#6b4a35','#9a9086','#c9b9a0']),driver:pickArr(TUNICS),skin:pickArr(SKINS),life:1e9,ph:0,pause:0,hx:0,hz:1,init:false,rx:0,rz:0,ry:0});
 }
+const wallGuards=[]; let wallCells=[];
+function isWallWalk(i,j){ return inb(i,j)&&line[I(i,j)]===1; }
+function wallY(i,j){ return wallGate(i,j)?1.31:1.0; }
+function updateWallGuards(dt){
+  if(dirtyWalls){ dirtyWalls=false; wallCells=[]; for(let id=0;id<N*N;id++) if(line[id]===1) wallCells.push({i:id%N,j:Math.floor(id/N)}); }
+  const target=peopleOn&&!todayMode?Math.min(14,Math.floor(wallCells.length/9)):0;
+  while(wallGuards.length<target){ const c=pickArr(wallCells); wallGuards.push({ax:c.i,az:c.j,bx:c.i,bz:c.j,t:1,speed:0.1+rnd()*0.05,pause:0,ph:rnd()*6,skin:pickArr(SKINS),init:false,rx:0,rz:0,ry:0,y:1,hx:0,hz:1,look:0}); }
+  while(wallGuards.length>target) wallGuards.pop();
+  for(let k=wallGuards.length-1;k>=0;k--){ const a=wallGuards[k];
+    if(!isWallWalk(a.bx,a.bz)||!isWallWalk(a.ax,a.az)){ wallGuards.splice(k,1); continue; }
+    if(a.pause>0){ a.pause-=dt; a.look=Math.sin(a.pause*1.3)*1.4; }
+    else { a.look*=0.9; a.t+=dt*a.speed;
+      if(a.t>=1){ const opts=[]; for(const [di,dj] of DIRS){ const ni=a.bx+di, nj=a.bz+dj; if(isWallWalk(ni,nj)&&!(ni===a.ax&&nj===a.az)) opts.push({i:ni,j:nj,st:di===a.bx-a.ax&&dj===a.bz-a.az}); }
+        let n; if(!opts.length) n={i:a.ax,j:a.az}; else { const st=opts.find(o=>o.st); n=st&&rnd()<0.8?st:pickArr(opts); }
+        if(n.i===a.bx&&n.j===a.bz) n={i:a.ax,j:a.az};
+        a.ax=a.bx; a.az=a.bz; a.bx=n.i; a.bz=n.j; a.t=0; if(rnd()<0.12) a.pause=2+rnd()*3; }
+      a.ph+=dt*a.speed*55; }
+    const t=Math.min(a.t,1), x0=wx(a.ax), z0=wx(a.az), x1=wx(a.bx), z1=wx(a.bz); let dx=x1-x0, dz=z1-z0; const L=Math.hypot(dx,dz);
+    if(L>0){ dx/=L; dz/=L; a.hx=dx; a.hz=dz; } else { dx=a.hx; dz=a.hz; }
+    const tx=x0+(x1-x0)*t, tz=z0+(z1-z0)*t, ty=t<0.5?wallY(a.ax,a.az):wallY(a.bx,a.bz);
+    if(!a.init){ a.rx=tx; a.rz=tz; a.y=ty; a.ry=Math.atan2(dx,dz); a.init=true; }
+    const kk=1-Math.exp(-dt*8); a.rx+=(tx-a.rx)*kk; a.rz+=(tz-a.rz)*kk; a.y+=(ty-a.y)*kk;
+    let dr=Math.atan2(dx,dz)-a.ry; dr=Math.atan2(Math.sin(dr),Math.cos(dr)); a.ry+=dr*Math.min(1,dt*6); }
+}
+let dirtyWalls=true;
 function spawnPatrol(){
   const src=barracksDoors.length?pickArr(barracksDoors):(roadList.length?pickArr(roadList):null); if(!src) return;
   patrols.push({lead:{kind:'patrol',ax:src.i,az:src.j,bx:src.i,bz:src.j,t:1,speed:0.17,lane:0,life:1e9,ph:0,pause:0,hx:0,hz:1,init:false,rx:0,rz:0,ry:0},trail:[],dist:0,skins:[...Array(7)].map(()=>pickArr(SKINS))});
@@ -1433,7 +1493,7 @@ function updateAgents(dt,time){
   for(let k=patrols.length-1;k>=0;k--){ const p=patrols[k]; if(!stepAgent(p.lead,dt)){ patrols.splice(k,1); continue; }
     const l=p.lead, last=p.trail[p.trail.length-1];
     if(!last){ p.trail.push({x:l.rx,z:l.rz,y:l.y,d:0}); }
-    else { const dd=Math.hypot(l.rx-last.x,l.rz-last.z); if(dd>0.025){ p.dist+=dd; p.trail.push({x:l.rx,z:l.rz,y:l.y,d:p.dist}); if(p.trail.length>260) p.trail.shift(); } } }
+    else { const dd=Math.hypot(l.rx-last.x,l.rz-last.z); if(dd>0.012){ p.dist+=dd; p.trail.push({x:l.rx,z:l.rz,y:l.y,d:p.dist}); if(p.trail.length>500) p.trail.shift(); } } }
   // render
   for(const k in PP) cnt[k]=0;
   for(const a of agents){
@@ -1453,11 +1513,24 @@ function updateAgents(dt,time){
       extra=0.22*Math.sin(Math.min(1,u/0.75)*Math.PI*0.5)*(u<0.75?1:Math.max(0,1-(u-0.75)/0.25)); } }
     for(let f=0;f<6;f++){ const row=1+Math.floor(f/2), side=f%2?1:-1, lag=row*0.2+(f===tf?extra:0); const target=p.dist-lag;
       if(target<0) continue;
-      let idx=tr.length-1; while(idx>0 && tr[idx].d>target) idx--; const A=tr[idx], Bp=tr[Math.min(idx+1,tr.length-1)];
-      let dx=Bp.x-A.x, dz=Bp.z-A.z; const L=Math.hypot(dx,dz)||1; dx/=L; dz/=L;
+      const at=d=>{ let i0=tr.length-1; while(i0>0&&tr[i0].d>d) i0--; const A=tr[i0], Bq=tr[Math.min(i0+1,tr.length-1)]; const sp=Bq.d-A.d; const u=sp>1e-6?clamp((d-A.d)/sp,0,1):0;
+        return [A.x+(Bq.x-A.x)*u, A.y+(Bq.y-A.y)*u, A.z+(Bq.z-A.z)*u]; };
+      const P0=at(target), P1=at(Math.min(p.dist,target+0.12)), Pm=at(Math.max(0,target-0.12));
+      let dx=P1[0]-Pm[0], dz=P1[2]-Pm[2]; const L=Math.hypot(dx,dz)||1; dx/=L; dz/=L;
+      const tx=P0[0]+(-dz)*side*0.085, tz=P0[2]+dx*side*0.085, tr_=Math.atan2(dx,dz);
+      p.fs=p.fs||[]; let fsm=p.fs[f]; if(!fsm){ fsm=p.fs[f]={x:tx,z:tz,ry:tr_}; }
+      const kk=1-Math.exp(-dt*10); fsm.x+=(tx-fsm.x)*kk; fsm.z+=(tz-fsm.z)*kk; let drr=tr_-fsm.ry; drr=Math.atan2(Math.sin(drr),Math.cos(drr)); fsm.ry+=drr*Math.min(1,dt*7);
       const me=f===tf;
-      person(A.x+(-dz)*side*0.085,A.y,A.z+dx*side*0.085,Math.atan2(dx,dz),1.0,'#b3332b',p.skins[f+1],me?l.ph*1.7:l.ph,null,true,me?tamp:1,me?tilt:0,me?flail:0); }
+      person(fsm.x,P0[1],fsm.z,fsm.ry,1.0,'#b3332b',p.skins[f+1],me?l.ph*1.7:l.ph,null,true,me?tamp:1,me?tilt:0,me?flail:0); }
   }
+  // strażnicy na murach – chodzą po koronie muru, przystają i rozglądają się
+  updateWallGuards(dt);
+  for(const g of wallGuards) person(g.rx,g.y,g.rz,g.ry+(g.look||0),1.0,'#b3332b',g.skin,g.ph,null,true,g.pause>0?0:1);
+  // wartownicy na wieżach strażniczych – obchodzą galerię
+  for(const b of buildings.values()){ if(b.type!=='watchtower'||todayMode||!b.mesh.visible) continue;
+    const a=time*0.22+b.id*1.7, rr=0.24, wob=Math.sin(time*0.8+b.id)*0.5;
+    const x=b.mesh.position.x+Math.cos(a)*rr, z=b.mesh.position.z+Math.sin(a)*rr, walk=Math.abs(Math.sin(time*0.35+b.id))>0.45;
+    person(x,1.69,z,walk?Math.atan2(-Math.sin(a),Math.cos(a)):Math.atan2(Math.cos(a),Math.sin(a))+wob,0.95,'#b3332b',SKINS[b.id%SKINS.length],time*6,null,true,walk?1:0); }
   // rydwany w cyrkach
   for(const b of buildings.values()){
     if(b.type!=='circus'||todayMode) continue;
@@ -1740,6 +1813,7 @@ function applyTime(){
   const t=+timeInput.value, el=Math.sin(t*Math.PI), warm=Math.pow(1-el,1.6);
   const dir=new THREE.Vector3(-Math.cos(t*Math.PI)*1.1,0.18+el*1.25,0.55).normalize();
   sun.position.copy(dir).multiplyScalar(N*1.6); sun.target.position.set(0,0,0);
+  fillLight.position.set(-dir.x*N,N*0.5,-dir.z*N); fillLight.intensity=0.3+0.25*el;
   sun.color.set('#fff1dc').lerp(new THREE.Color('#ff9a55'),warm); sun.intensity=1.5+2.1*el;
   hemi.color.set('#f4f0ff').lerp(new THREE.Color('#ffc9a0'),warm*0.7); hemi.intensity=0.62+0.38*el;
   const s1=new THREE.Color('#cfe6ee').lerp(new THREE.Color('#f4b48a'),warm), s2=new THREE.Color('#f6ead5').lerp(new THREE.Color('#f9dcbc'),warm);
@@ -1765,6 +1839,7 @@ const TOOLS=[
   ...['forum','temple','pantheon','basilica','curia','market','palace','baths','trajanbaths','caracalla','diocletian'].map(t=>({id:'b-'+t,cat:'publ',kind:'build',type:t})),
   ...['colosseum','circus','theatre'].map(t=>({id:'b-'+t,cat:'rozr',kind:'build',type:t})),
   {id:'b-barracks',cat:'woj',kind:'build',type:'barracks'},
+  {id:'b-watchtower',cat:'woj',kind:'build',type:'watchtower'},
   {id:'l-wall',cat:'woj',kind:'line',val:1,name:'Mur miejski',hint:'Przeciągnij, aby postawić mur. Mur na drodze zamienia się w bramę'},
   ...['arch','fountain','statue','column','mausoleum','pyramid','cypress','pine'].map(t=>({id:'b-'+t,cat:'ozd',kind:'build',type:t})),
 ];
@@ -1895,6 +1970,9 @@ const INFO={
   'l-wall':{era:'Mur Serwiański IV w. p.n.e., Mur Aureliana 271–275 n.e.',text:'Pierwszy wielki mur Rzymu wzniesiono po złupieniu miasta przez Galów (ok. 390 p.n.e.). Przez stulecia pokoju miasto rozrosło się daleko poza niego.',
     facts:['Mur Aureliana miał ok. 19 km długości i 383 wieże – w dużej części stoi do dziś.','Bramy stały tam, gdzie mur przecinały drogi – w grze mur na drodze sam zamienia się w bramę.']},
 };
+INFO.watchtower={name:'Wieża strażnicza',era:'na granicach imperium – od I w. n.e.',text:'Wzdłuż granic (limes) stały setki wież strażniczych. Załoga obserwowała okolicę i w razie zagrożenia dawała znak ogniem, dymem albo pochodnią – sygnał biegł od wieży do wieży aż do najbliższego fortu.',
+  facts:['Na Kolumnie Trajana widać drewniane wieże z pochodniami i stosami drewna nad Dunajem.','Na Wale Hadriana (od 122 n.e.) co rzymską milę stał fort, a między nimi po dwie wieżyczki.','Wzdłuż limesu w Germanii i Recji stało ok. 900 wież strażniczych.'],
+  today:'Na dawnym limesie zachowały się fundamenty wielu wież; kilka zrekonstruowano, a odcinek limesu jest na liście UNESCO.'};
 let infoAuto=true, infoKey=null;
 const infoEl=document.getElementById('info');
 function infoKeyFor(t){ if(!t) return null; if(t.type&&INFO[t.type]) return t.type; if(INFO[t.id]) return t.id; return null; }
@@ -2191,11 +2269,12 @@ function renderIcons(){
    ========================================================= */
 let todayMode=false;
 const ruinMat=new THREE.MeshStandardMaterial({color:'#cfc3ad',roughness:0.95,flatShading:true,side:THREE.DoubleSide});
-const TYPE_SURV={house:0,domus:0.03,insula:0.04,taberna:0,garden:0,fountain:0.3,statue:0.4,column:0.9,cypress:1,pine:1,arch:0.8,temple:0.15,forum:0.2,basilica:0.08,curia:0.9,market:0.5,baths:0.1,caracalla:0.45,diocletian:0.4,pantheon:1,colosseum:0.7,circus:0.02,theatre:0.5,barracks:0.1,palace:0.25,mausoleum:0.45,pyramid:1,trajanbaths:0.1};
+const TYPE_SURV={watchtower:0.2,house:0,domus:0.03,insula:0.04,taberna:0,garden:0,fountain:0.3,statue:0.4,column:0.9,cypress:1,pine:1,arch:0.8,temple:0.15,forum:0.2,basilica:0.08,curia:0.9,market:0.5,baths:0.1,caracalla:0.45,diocletian:0.4,pantheon:1,colosseum:0.7,circus:0.02,theatre:0.5,barracks:0.1,palace:0.25,mausoleum:0.45,pyramid:1,trajanbaths:0.1};
 function survOf(b){ const d=b.lm&&INFO[b.lm]; if(d&&d.surv!=null) return d.surv; return TYPE_SURV[b.type]??0; }
 function applyTodayTo(b,instant){ const s=survOf(b); b.target=todayMode?s:1; b.mesh.material=(todayMode&&s<0.95)?ruinMat:bMat; if(instant){ b.ts=b.target; b.mesh.scale.y=Math.max(0.001,b.ts); b.mesh.visible=b.ts>0.012; } }
 function lineToday(m){ const k=m.userData.key||''; const s=k.startsWith('aq')?0.45:0.3; m.userData.target=todayMode?s:1; if(m.userData.ts==null) m.userData.ts=1; m.material=todayMode?ruinMat:bMat; }
 function setToday(on){
+  setTimeout(()=>{ aoDirty=true; },1500);
   todayMode=on; for(const b of buildings.values()) applyTodayTo(b,false); for(const m of lineMeshes.values()) lineToday(m);
   document.querySelectorAll('#segEra button').forEach(b=>b.classList.toggle('on',(b.dataset.v==='1')===on));
   if(on){ agents.forEach(a=>{ if(a.kind==='cart') a.life=-99; }); toast('Rzym dziś – tyle przetrwało do naszych czasów'); } else toast('Z powrotem w starożytności');
@@ -2240,6 +2319,7 @@ function loop(now){
   const dt=clamp((now-last)/1000,0,0.05); last=now;
   if(dirtyLines.size) processLines();
   if(dirtyHouses.size) processHouses();
+  if(aoDirty) rebuildAO();
   if(dirtyTerrain){ rebuildTerrain(); dirtyTerrain=false; }
   camStep(dt); controls.update();
   for(let k=growing.length-1;k>=0;k--){ const g=growing[k]; g.t+=dt/0.42; const t=Math.min(1,g.t); const f=g.from||0; const sy=f+(1-f)*easeOutBack(t), sxz=g.keepXZ?1:0.75+0.25*Math.min(1,t*1.4);
