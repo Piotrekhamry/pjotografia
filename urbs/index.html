@@ -607,16 +607,37 @@ D.colosseum=(b,r)=>{
 };
 
 /* ---- Obóz legionowy (castra legionis) ---- */
-function campWalls(b,W,Dd,rc,h,t,gates,WS){
+const LOGS=['#8a5a36','#7b4f30','#94643d','#835536','#9a6b43'];
+function woodTower(b,x,z,h){ // drewniana wieża na palach
+  for(const sx of [-1,1]) for(const sz of [-1,1]) b.cyl(0.04,h+0.55,x+sx*0.2,0,z+sz*0.2,LOGS[1],6);
+  b.box(0.56,0.06,0.56,x,h+0.2,z,'#a8784e');
+  for(const [w,d,ox,oz] of [[0.56,0.03,0,0.27],[0.56,0.03,0,-0.27],[0.03,0.56,0.27,0],[0.03,0.56,-0.27,0]]) b.box(w,0.16,d,x+ox,h+0.26,z+oz,'#94643d');
+  b.add(G.box,LOGS[0],x,h*0.5,z,0.7,0,0,0.03,h*1.1,0.03); b.add(G.box,LOGS[0],x,h*0.5,z,-0.7,0,0,0.03,h*1.1,0.03);
+  b.pyr(0.66,0.3,x,h+0.55,z,'#7a5234'); }
+function campWalls(b,W,Dd,rc,h,t,gates,WS,wood=false){
   const hw=W/2, hd=Dd/2, gap=0.9;
-  const seg=(x0,x1,z,along)=>{ const L=x1-x0; if(L<=0.01) return; if(along==='x') b.box(L,h,t,(x0+x1)/2,0,z,WS); else b.box(t,h,L,z,0,(x0+x1)/2,WS); };
+  const logLine=(x0,z0,x1,z1)=>{ const L=Math.hypot(x1-x0,z1-z0); if(L<0.05) return; const n=Math.max(1,Math.round(L/0.105));
+    for(let k=0;k<=n;k++){ const u=k/n, x=x0+(x1-x0)*u, z=z0+(z1-z0)*u, hh=h+((k*7)%3)*0.035, c=LOGS[(k*3)%5];
+      b.cyl(0.054,hh,x,0,z,c,6); b.cone(0.054,0.11,x,hh,z,shade(c,0.08),6); } };
+  const rampart=(x0,z0,x1,z1,nx,nz)=>{ const L=Math.hypot(x1-x0,z1-z0); if(L<0.05) return; const ang=Math.atan2(x1-x0,z1-z0);
+    b.add(G.box,'#9c7a52',(x0+x1)/2+nx*0.2,h*0.3,(z0+z1)/2+nz*0.2,0,ang,0,0.3,h*0.6,L); b.add(G.box,'#a8784e',(x0+x1)/2+nx*0.2,h*0.6+0.015,(z0+z1)/2+nz*0.2,0,ang,0,0.3,0.03,L); };
+  const seg=(x0,x1,z,along)=>{ const L=x1-x0; if(L<=0.01) return;
+    if(wood){ if(along==='x'){ const nz=z>0?-1:1; logLine(x0,z,x1,z); rampart(x0,z,x1,z,0,nz); } else { const nx=z>0?-1:1; logLine(z,x0,z,x1); rampart(z,x0,z,x1,nx,0); } return; }
+    if(along==='x') b.box(L,h,t,(x0+x1)/2,0,z,WS); else b.box(t,h,L,z,0,(x0+x1)/2,WS); };
   const side=(len,c,fixed,along,hasGate,gpos=0)=>{ const a0=-len/2+rc, a1=len/2-rc; if(hasGate){ seg(a0,gpos-gap/2,fixed,along); seg(gpos+gap/2,a1,fixed,along); } else seg(a0,a1,fixed,along); };
   side(W,0,hd-t/2,'x',gates.s); side(W,0,-hd+t/2,'x',gates.n); side(Dd,0,hw-t/2,'z',gates.e,gates.ez||0); side(Dd,0,-hw+t/2,'z',gates.w,gates.ez||0);
   for(const [sx,sz,th] of [[1,1,0],[-1,1,-Math.PI/2],[-1,-1,Math.PI],[1,-1,Math.PI/2]]){
+    if(wood){ const ccx=sx*(hw-rc), ccz=sz*(hd-rc), R=rc-t/2, n=Math.max(3,Math.round(R*Math.PI/2/0.105));
+      for(let k=0;k<=n;k++){ const a=th+k/n*Math.PI/2, x=ccx+Math.sin(a)*R, z=ccz+Math.cos(a)*R, hh=h+((k*5)%3)*0.035, c=LOGS[(k*2)%5];
+        b.cyl(0.054,hh,x,0,z,c,6); b.cone(0.054,0.11,x,hh,z,shade(c,0.08),6); }
+      woodTower(b,sx*(hw-rc*0.6),sz*(hd-rc*0.6),h); continue; }
     b.add(new THREE.CylinderGeometry(rc,rc,h,10,1,true,th,Math.PI/2),WS,sx*(hw-rc),h/2,sz*(hd-rc));
     b.add(new THREE.CylinderGeometry(rc-t,rc-t,h,10,1,true,th,Math.PI/2),shade(WS,-0.05),sx*(hw-rc),h/2,sz*(hd-rc));
     const tx=sx*(hw-rc*0.55), tz=sz*(hd-rc*0.55); b.box(0.42,h+0.35,0.42,tx,0,tz,WS); b.pyr(0.52,0.26,tx,h+0.35,tz,ROOF); }
-  const gate=(x,z,ry)=>b.at(x,0,z,ry,()=>{ for(const sx of [-1,1]){ b.box(0.42,h+0.4,0.46,sx*0.66,0,0,WS); b.pyr(0.52,0.26,sx*0.66,h+0.4,0,ROOF); } b.box(0.9,0.2,0.36,0,h,0,WS); b.box(0.9,0.06,0.4,0,h+0.2,0,'#e6d6b4'); });
+  const gate=(x,z,ry)=>b.at(x,0,z,ry,()=>{ if(wood){ for(const sx of [-1,1]) woodTower(b,sx*0.66,0,h);
+      b.box(0.9,0.06,0.4,0,h+0.2,0,'#a8784e'); b.box(0.9,0.14,0.03,0,h+0.26,0.19,'#94643d'); b.box(0.9,0.14,0.03,0,h+0.26,-0.19,'#94643d');
+      for(const sx of [-1,1]) b.box(0.4,h,0.05,sx*0.22,0,0.05,'#7b4f30',sx*0.6); return; }
+    for(const sx of [-1,1]){ b.box(0.42,h+0.4,0.46,sx*0.66,0,0,WS); b.pyr(0.52,0.26,sx*0.66,h+0.4,0,ROOF); } b.box(0.9,0.2,0.36,0,h,0,WS); b.box(0.9,0.06,0.4,0,h+0.2,0,'#e6d6b4'); });
   if(gates.s) gate(0,hd-t/2,0); if(gates.n) gate(0,-hd+t/2,0); if(gates.e) gate(hw-t/2,gates.ez||0,Math.PI/2); if(gates.w) gate(-hw+t/2,gates.ez||0,Math.PI/2);
 }
 function barrackBlock(b,x,z,len){ b.box(len,0.36,0.34,x,0.04,z,'#efe2c6'); b.roofX(len+0.06,0.17,0.44,x,0.4,z,ROOF);
@@ -625,7 +646,8 @@ function barrackBlock(b,x,z,len){ b.box(len,0.36,0.34,x,0.04,z,'#efe2c6'); b.roo
 D.castra=(b,r)=>{
   const W=9.8, Dd=7.8;
   b.box(W,0.04,Dd,0,0,0,'#d9c08f');
-  campWalls(b,W,Dd,0.9,0.65,0.18,{n:1,s:1,e:1,w:1,ez:-0.3},WALLSTONE);
+  campWalls(b,W,Dd,0.9,0.7,0.18,{n:1,s:1,e:1,w:1,ez:-0.3},WALLSTONE,true);
+  for(const [x0,z0,x1,z1] of [[-W/2+0.03,-Dd/2+0.03,W/2-0.03,-Dd/2+0.03],[-W/2+0.03,Dd/2-0.03,W/2-0.03,Dd/2-0.03]]) b.box(x1-x0,0.012,0.06,(x0+x1)/2,0.04,z0,'#6f5a3c');
   b.box(W-0.4,0.045,0.55,0,0,-0.3,'#e9dcc0'); b.box(0.55,0.045,Dd/2+0.2,0,0,Dd/4-0.15,'#e9dcc0'); b.box(0.45,0.045,1.6,0,0,-2.9,'#e9dcc0');
   // principia z bazyliką i kaplicą znaków
   b.box(2.4,0.04,1.7,0,0.04,-1.65,'#ece2cc');
@@ -2220,7 +2242,7 @@ const INFO={
     facts:['Mur Aureliana miał ok. 19 km długości i 383 wieże – w dużej części stoi do dziś.','Bramy stały tam, gdzie mur przecinały drogi – w grze mur na drodze sam zamienia się w bramę.']},
 };
 
-INFO.castra={name:'Obóz legionowy (castra)',era:'od czasów republiki; stałe twierdze od I w. n.e.',text:'Stała twierdza legionu – ok. 5000 żołnierzy na ok. 20 hektarach. Plan w kształcie karty do gry: zaokrąglone narożniki, cztery bramy, dwie główne ulice (via principalis i via praetoria), pośrodku principia ze sztandarami, obok dom dowódcy, spichlerze, szpital, warsztaty i rzędy baraków.',
+INFO.castra={name:'Obóz legionowy (castra)',era:'od czasów republiki; stałe twierdze od I w. n.e.',text:'Obóz otaczał rów, wał ziemny i palisada z zaostrzonych bali – z czasem stałe twierdze dostawały mury z kamienia. Stała twierdza legionu – ok. 5000 żołnierzy na ok. 20 hektarach. Plan w kształcie karty do gry: zaokrąglone narożniki, cztery bramy, dwie główne ulice (via principalis i via praetoria), pośrodku principia ze sztandarami, obok dom dowódcy, spichlerze, szpital, warsztaty i rzędy baraków.',
   facts:['Z obozów legionowych wyrosło wiele miast: Wiedeń (Vindobona), York (Eboracum), Chester (Deva), Bonn, Moguncja, Strasburg czy Ratyzbona (Castra Regina).','Londyn i Paryż zaczynały inaczej – Londinium jako osada handlowa nad Tamizą, a Lutecja jako gród galijskiego plemienia Parysjów.','Najważniejszym miejscem obozu była kaplica w principiach, gdzie przechowywano orła legionu i kasę żołdu.'],
   today:'W wielu miastach ślady obozu widać w układzie ulic starego miasta, np. w Chester czy Ratyzbonie.',legacy:'Prostokątna siatka ulic obozu to jeden z wzorów dla planów miast aż do dziś.'};
 INFO.castellum={name:'Placówka (castellum)',era:'I–IV w. n.e.',text:'Mały fort na granicy imperium dla oddziału posiłkowego – od kilkudziesięciu do ok. 500 żołnierzy. Strzegł dróg, brodów i przejść przez limes.',
