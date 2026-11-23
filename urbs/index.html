@@ -1288,7 +1288,7 @@ function toggleDrawAt(c){
    a rzeki i drogi z krawędzi mapy biegną dalej w krajobraz
    ========================================================= */
 let rim=null, rimSig='';
-const rimMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,flatShading:true});
+const rimMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,flatShading:true,polygonOffset:true,polygonOffsetFactor:2,polygonOffsetUnits:4});
 const rimWaterMat=new THREE.MeshStandardMaterial({color:WATERC,roughness:0.25,metalness:0.05});
 const rimRoadMat={1:new THREE.MeshStandardMaterial({color:'#cfc2aa',roughness:0.95}),2:new THREE.MeshStandardMaterial({color:'#9c9488',roughness:0.95})};
 function edgeKind(i,j){ const id=I(i,j); return terrain[id]===2?'w':(road[id]?'r'+road[id]:(line[id]===2?'a':'.')); }
@@ -1307,7 +1307,7 @@ function corridorDist(x,z,sp){ const h=N/2; let best=99, kind=null;
   return [best,kind];
 }
 function rimHeight(x,z,sp){
-  const h=N/2, d=Math.max(Math.abs(x),Math.abs(z))-h; if(d<0.5) return -0.012;
+  const h=N/2, d=Math.max(Math.abs(x),Math.abs(z))-h; if(d<-2.6) return -1.5; if(d<0.5) return -0.012;
   const hills=(vnoise(x/9,z/9,77)*0.9+vnoise(x/22,z/22,78)*2.0)*smooth(0.5,7,d)*(0.35+Math.min(1.4,d/N*1.3));
   const mount=smooth(N*0.55,N*1.5,d)*(3+7*vnoise(x/17,z/17,79));
   let y=hills+mount-0.012;
@@ -3617,8 +3617,12 @@ function updateStats(){ let pop=0; for(const b of buildings.values()) pop+=STACK
   const walking=agents.filter(a=>a.kind==='ped').length+patrols.length*7;
   statsEl.textContent=`👥 ${pop.toLocaleString('pl-PL')} mieszkańców · 🚶 ${walking} na ulicach · ✨ ${cityNice} pięknych domów`; }
 let last=performance.now();
+let _nearSet=0;
+function fitClip(){ const d=camera.position.distanceTo(controls.target); const n=clamp(d*0.035,0.1,4);
+  if(Math.abs(n-_nearSet)>_nearSet*0.08){ _nearSet=n; camera.near=n; camera.updateProjectionMatrix(); } }
 function loop(now){
   requestAnimationFrame(loop);
+  fitClip();
   const dt=clamp((now-last)/1000,0,0.05); last=now;
   if(waterNetDirty) computeWater();
   if(beautyDirty) computeBeauty();
