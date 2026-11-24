@@ -1100,6 +1100,30 @@ D.baths=(b,r)=>{
   for(const x of [-2.0,-1.0]){ b.box(0.3,0.05,0.12,x,0.12,1.7,MARBLE); b.box(0.04,0.12,0.12,x-0.13,0.12,1.7,MARBLE); b.box(0.04,0.12,0.12,x+0.13,0.12,1.7,MARBLE); }
   b.cypress(2.0,1.45,0.6,0.12); b.cypress(-2.65,-0.3,0.55,0.12);
 };
+// Łuki: moduł arkad do piętrzenia jak w Townscaperze – każde piętro to kostka z łukami na czterech bokach,
+// dołem przechodzi ulica albo płynie rzeka; porządki jak w Koloseum: dorycki, joński, koryncki
+D.arcus=(b,r,o={})=>{
+  const fl=o.fl||1, TH=0.72, v=r();
+  const C=v<0.4?TRAV:(v<0.7?'#d89c74':MARBLE), C2=shade(C,-0.08), CAP=v<0.7&&v>=0.4?'#efe4d0':shade(C,0.05);
+  b.box(1.0,0.06,1.0,0,0,0,C2);
+  for(let k=0;k<fl;k++){ const y0=k*TH, hw=k===0?0.31:0.28, sp=TH*(k===0?0.5:0.52);
+    if(k>0) b.box(1.0,0.06,1.0,0,y0,0,C2);
+    for(let s=0;s<4;s++) b.at(0,y0,0,s*Math.PI/2,()=>{ b.add(archPanel(1.0,TH,0.1,[{c:0,hw,spring:sp}]),C,0,0,0.4);
+      b.add(arcRing(hw,hw+0.04,0.012),CAP,0,sp,0.5); b.box(0.12,0.04,0.015,0,sp+hw,0.506,CAP); });
+    for(const [x,z] of [[0.47,0.47],[-0.47,0.47],[0.47,-0.47],[-0.47,-0.47]]){
+      b.cyl(0.05,TH-0.12,x,y0+0.03,z,CAP,8,k===0?0.05:0.044);
+      if(k>=2) b.cyl(0.045,0.05,x,y0+TH-0.11,z,CAP,8,0.065); else if(k===1) b.box(0.12,0.03,0.12,x,y0+TH-0.1,z,CAP); }
+    for(let s=0;s<4;s++) b.at(0,y0,0,s*Math.PI/2,()=>{ b.box(1.04,0.07,0.08,0,TH-0.07,0.47,CAP); });
+  }
+  const top=fl*TH;
+  b.box(1.08,0.05,1.08,0,top,0,CAP);
+  const kind=Math.floor(r()*3);
+  if(kind===0){ for(let s=0;s<4;s++) b.at(0,top,0,s*Math.PI/2,()=>{ b.box(1.0,0.16,0.07,0,0.05,0.46,C); for(let k=-2;k<=2;k++) b.box(0.025,0.11,0.03,k*0.18,0.05,0.5,CAP); });
+    for(const [x,z] of [[0.46,0.46],[-0.46,-0.46]]){ b.box(0.1,0.1,0.1,x,top+0.05,z,C); b.cyl(0.03,0.16,x,top+0.15,z,GILT,6); b.sph(0.03,x,top+0.34,z,GILT); } }
+  else if(kind===1){ b.box(1.0,0.06,1.0,0,top+0.05,0,C2); b.pyr(1.06,0.38,0,top+0.11,0,ROOF); }
+  else { for(let s=0;s<4;s++) b.at(0,top,0,s*Math.PI/2,()=>b.box(1.0,0.12,0.06,0,0.05,0.47,C));
+    b.box(0.86,0.06,0.86,0,top+0.05,0,'#8c6a4a'); b.cypress(0.25,0.22,0.5,top+0.1); b.cyl(0.08,0.08,-0.22,top+0.1,-0.2,'#b8673f',8); b.sph(0.09,-0.22,top+0.24,-0.2,'#6fa84f'); b.sph(0.03,-0.17,top+0.3,-0.16,'#e05a6a'); }
+};
 D.watchtower=(b,r)=>{
   b.box(0.74,0.14,0.74,0,0,0,STONE);
   b.box(0.6,1.5,0.6,0,0.12,0,WALLSTONE);
@@ -1262,6 +1286,7 @@ const DEFS={
   praetoria:{name:'Castra Praetoria',cat:'woj',w:8,d:6,v:1,pop:900,desc:'Koszary gwardii pretoriańskiej – wychodzą z nich patrole pretorianów'},
   forumromanum:{name:'Forum Romanum',cat:'publ',w:6,d:6,v:1},
   trajanmarkets:{name:'Targi Trajana',cat:'publ',w:5,d:4,v:1,pop:120},
+  arcus:{name:'Łuki',cat:'domy',w:1,d:1,v:12,onRoad:true,overWater:true,desc:'Puste pole, ulica lub rzeka – arkada; stuknij arkadę – kolejne piętro (do 12)'},
   hut:{name:'Chata',cat:'domy',w:1,d:1,v:4,pop:5,desc:'Chata z plecionki i strzechy – tak mieszkali pierwsi Rzymianie na Palatynie'},
   barbican:{name:'Barbakan z kratą',cat:'woj',w:3,d:2,v:1,onRoad:true,pop:6,desc:'Stawiaj na drodze przed bramą · stuknij, aby podnieść lub opuścić kratę'},
   colossus:{name:'Kolos',cat:'ozd',w:2,d:2,v:1,decor:true},
@@ -1801,7 +1826,7 @@ function canPlace(type,x,z,rot){
     if(!inb(i,j)) return false; const id=I(i,j);
     if(bld[id]||line[id]) return false;
     if(road[id]&&!def.onRoad) return false;
-    if(terrain[id]===2&&!def.onWater) return false;
+    if(terrain[id]===2&&!def.onWater&&!def.overWater) return false;
     if(hgt[id]!==hgt[I(x,z)]) return false;
     if(onlyPlots && !def.decor && !def.onWater && terrain[id]!==1) return false;
   }
@@ -1813,7 +1838,7 @@ function addBuilding(type,x,z,rot,seed,anim=true,lm=null,fl=null){
   for(let j=z;j<z+fd;j++) for(let i=x;i<x+fw;i++) bld[I(i,j)]=id;
   const m=new THREE.Mesh(getGeom(type,seed,fl),bMat); m.castShadow=m.receiveShadow=true;
   m.position.set(x+fw/2-N/2,hgt[I(x,z)]*LH,z+fd/2-N/2); m.rotation.y=type==='house'?0:rot*Math.PI/2;
-  const constr=anim&&!def.decor&&type!=='house'&&!todayMode;
+  const constr=anim&&!def.decor&&type!=='house'&&type!=='arcus'&&!todayMode;
   if(anim&&!constr){ m.scale.set(0.01,0.01,0.01); growing.push({m,t:0}); }
   buildGroup.add(m);
   buildings.set(id,{id,type,x,z,rot,seed,mesh:m,lm:lm||null,ts:1,fl:fl||null});
@@ -1971,10 +1996,10 @@ const dirtyHouses=new Set();
 function markHouses(i,j){ for(let dj=-2;dj<=2;dj++) for(let di=-2;di<=2;di++){ if(Math.abs(di)+Math.abs(dj)>2) continue; const h=houseAt(i+di,j+dj); if(h) dirtyHouses.add(h.id); } }
 function processHouses(){ for(const id of dirtyHouses){ const b=buildings.get(id); if(!b) continue; const g=houseGeomFor(b); if(b.mesh.geometry!==g) b.mesh.geometry=g; } dirtyHouses.clear(); }
 
-const STACK={house:{min:1,max:6},insula:{min:2,max:7}};
+const STACK={house:{min:1,max:6,pop:4},insula:{min:2,max:7,pop:11},arcus:{min:1,max:12,pop:0}};
 function floorsOf(b){
   if(b.fl) return b.fl; const v=(b.seed>>>0)%DEFS[b.type].v, r=mulberry(v*9973+typeHash(b.type));
-  if(b.type==='house') return 1+Math.floor(r()*3); r(); r(); return 3+Math.floor(r()*2);
+  if(b.type==='house') return 1+Math.floor(r()*3); if(b.type==='arcus') return 1; r(); r(); return 3+Math.floor(r()*2);
 }
 function setFloors(b,n){
   const old=floorsOf(b); if(n===old) return false;
@@ -2617,7 +2642,7 @@ function updatePreview(c){
     const cells=stroke?lPath(stroke.start,c):(pending&&pending.kind==='path')?lPath(pending.start,pending.end):[[c.i,c.j]];
     showTiles(cells,(i,j)=>pathValid(i,j)?(tool.kind==='road'?'#ffffff':'#ffe08a'):'#ff6a5a'); return;
   }
-  if(tool.kind==='brush'){ showTiles([[c.i,c.j]],(i,j)=>{ if(!inb(i,j)) return '#ff6a5a'; const b=bld[I(i,j)]?buildings.get(bld[I(i,j)]):null; if(b&&STACK[b.type]) return floorsOf(b)<STACK[b.type].max?'#ffd36a':'#ff6a5a'; return canPlace('house',i,j,0)?'#7fd36a':'#ff6a5a'; }); return; }
+  if(tool.kind==='brush'){ showTiles([[c.i,c.j]],(i,j)=>{ if(!inb(i,j)) return '#ff6a5a'; const b=bld[I(i,j)]?buildings.get(bld[I(i,j)]):null; if(b&&STACK[b.type]&&brushStacks(b)) return floorsOf(b)<STACK[b.type].max?'#ffd36a':'#ff6a5a'; return canPlace(tool.type,i,j,0)?'#7fd36a':'#ff6a5a'; }); return; }
   if(tool.kind==='terrain'){ const col=['#a9d17b','#ecdcb4',WATERC,'#4e7d40','#e8c867'][tool.val]; showTiles(brushCells(c),()=>col); return; }
   if(tool.kind==='bulldoze'){ showTiles(brushCells(c),()=>'#ff6a5a'); return; }
   if(tool.kind==='height'){ showTiles(brushCells(c),(i,j)=>canRaise(i,j)?(tool.val>0?'#ffe08a':'#9fd0ff'):'#ff6a5a'); return; }
@@ -2643,9 +2668,11 @@ function paintAt(c){
   else if(tool.kind==='bulldoze'){ for(const [i,j] of brushCells(c)){ if(!inb(i,j)) continue; const id=I(i,j); if(stroke.visited.has(id)) continue; stroke.visited.add(id); if(bulldoze(i,j)){ stroke.changed=true; sfx('thud'); } } }
   else if(tool.kind==='brush'){ if(!inb(c.i,c.j)) return; const id=I(c.i,c.j); if(stroke.visited.has(id)) return; stroke.visited.add(id);
     const b=bld[id]?buildings.get(bld[id]):null;
-    if(b&&STACK[b.type]){ const f=floorsOf(b); if(f<STACK[b.type].max){ setFloors(b,f+1); stroke.changed=true; sfx('pop'); } else stroke.maxed=true; return; }
-    const r=bestRot('house',c.i,c.j); if(r>=0){ addBuilding('house',c.i,c.j,r,Math.floor(rnd()*1e6),true,null,1); stroke.changed=true; sfx('pop'); } }
+    if(b&&STACK[b.type]&&brushStacks(b)){ const f=floorsOf(b); if(f<STACK[b.type].max){ setFloors(b,f+1); stroke.changed=true; sfx('pop'); } else stroke.maxed=true; return; }
+    if(b) return;
+    const ty=tool.type, r=ty==='house'?bestRot('house',c.i,c.j):(canPlace(ty,c.i,c.j,0)?0:-1); if(r>=0){ addBuilding(ty,c.i,c.j,r,Math.floor(rnd()*1e6),true,null,1); stroke.changed=true; sfx('pop'); } }
 }
+function brushStacks(b){ return b.type===tool.type||(tool.type==='house'&&b.type==='insula'); }
 function tick(){ const t=performance.now(); if(t-lastTick>70){ lastTick=t; sfx('tick'); } }
 function paintLine(a,b){ const steps=Math.max(Math.abs(b.i-a.i),Math.abs(b.j-a.j)); for(let k=1;k<=steps;k++) paintAt({i:Math.round(a.i+(b.i-a.i)*k/steps),j:Math.round(a.j+(b.j-a.j)*k/steps)}); }
 function commitPath(a,b){
@@ -2764,7 +2791,7 @@ function touchUp(e){
     else pending.end={i:c.i,j:c.j};
     updatePreview(pending.end); showAct(); sfx('tick'); return; }
   if(isPaint()){ const snap=serialize(); stroke={start:c,last:c,cur:c,visited:new Set(),changed:false,pid:-1,snap};
-    paintAt(c); const ch=stroke.changed, mx=stroke.maxed; stroke=null; if(ch) pushUndo(snap); else if(tool.kind==='brush') { toast(mx?'To już najwyższe piętro':'Tu nie zmieści się dom'); sfx('no'); }
+    paintAt(c); const ch=stroke.changed, mx=stroke.maxed; stroke=null; if(ch) pushUndo(snap); else if(tool.kind==='brush') { toast(mx?'To już najwyższe piętro':(tool.type==='arcus'?'Tu nie zmieszczą się łuki':'Tu nie zmieści się dom')); sfx('no'); }
     updatePreview(c); setTimeout(()=>{ if(!pending&&!stroke){ prevTiles.count=0; } },350); }
 }
 function tapInfo(c){
@@ -2896,6 +2923,7 @@ const TOOLS=[
   {id:'b-port',cat:'drogi',kind:'build',type:'port'},
   {id:'b-pharos',cat:'drogi',kind:'build',type:'pharos'},
   {id:'l-aq',cat:'drogi',kind:'line',val:2,name:'Akwedukt',hint:'Przeciągnij, aby poprowadzić akwedukt (może iść nad drogą i wodą)'},
+  {id:'b-arcus',cat:'domy',kind:'brush',type:'arcus',name:'Łuki',hint:'Puste pole, ulica lub rzeka – arkada · stuknij arkadę – kolejne piętro (do 12) · przeciągaj, by stawiać mosty i wieże z łuków · ⛏️ Burz zdejmuje piętra'},
   {id:'b-house',cat:'domy',kind:'brush',type:'house',name:'Kamienice',hint:'Puste pole – nowy dom, dom lub insula – kolejne piętro · przeciągnij, by budować całe kwartały · ⛏️ Burz zdejmuje piętra'},
   ...['domus','insula','taberna','hut'].map(t=>({id:'b-'+t,cat:'domy',kind:'build',type:t})),
   ...['gardenS','garden','topiary','vineyard','peristyle','terrace','park'].map(t=>({id:'b-'+t,cat:'ogr',kind:'build',type:t})),
@@ -3430,6 +3458,7 @@ function renderIcons(){
     try{
       if(t.kind==='terrain'||t.kind==='road') t.icon=swatch(t.kind,t.val);
       else if(t.kind==='height') t.icon=swatch('height',t.val);
+      else if(t.kind==='brush'&&t.type==='arcus') t.icon=shot([M(getGeom('arcus',0,2),-0.5,0),M(getGeom('arcus',4,3),0.5,0)]);
       else if(t.kind==='brush') t.icon=shot([M(getGeom('house',3),-0.5,-0.5),M(getGeom('house',7),0.5,-0.5),M(getGeom('house',11),-0.5,0.5),M(getGeom('house',14),0.5,0.5)]);
       else if(t.id==='l-wall') t.icon=shot([M(lineGeom('tower-1'),-1),M(lineGeom('wall-x-pH'),0),M(lineGeom('gate-x-p'),1),M(lineGeom('wall-x-pT'),2),M(lineGeom('tower-2'),3)]);
       else if(t.id==='l-moat') t.icon=swatch('moat',3);
@@ -3973,7 +4002,7 @@ function scaffoldGeom(w,d,H,crane){
   const g=b.geom(); scafCache.set(key,g); return g;
 }
 function startConstruction(b){
-  const def=DEFS[b.type]; if(def.decor||b.type==='house'||todayMode) return false;
+  const def=DEFS[b.type]; if(def.decor||b.type==='house'||b.type==='arcus'||todayMode) return false;
   const bb=b.mesh.geometry.boundingBox; const H=Math.max(0.5,(bb?bb.max.y:1)*1.03); const big=def.w*def.d>=6;
   const sc=new THREE.Mesh(scaffoldGeom(def.w,def.d,H,big),bMat); sc.castShadow=true; sc.position.copy(b.mesh.position); sc.rotation.y=b.mesh.rotation.y; scene.add(sc);
   const hoist=new THREE.Mesh(G.box,bMat.clone()); hoist.material.vertexColors=false; hoist.material.color.set('#d9c8a5'); hoist.scale.set(0.16,0.12,0.16); hoist.visible=big; scene.add(hoist);
@@ -4218,6 +4247,9 @@ INFO.rome={...INFO.rome,name:'Rzym – makieta z siedmioma wzgórzami',era:'Wybi
   facts:['Stuknij rok w prawym górnym rogu – rozwinie się oś czasu od Romulusa do Konstantyna. Makieta przebuduje się, a nowe budowle powstaną na twoich oczach.',...INFO.rome.facts.slice(0,1),'Wzgórza: Kapitol i Palatyn nad Forum, Awentyn nad Tybrem, Celius, Eskwilin, Wiminał i Kwirynał – a za rzeką Janikulum i Watykan.',...INFO.rome.facts.slice(2)]};
 INFO.forumromanum={...INFO.forumRomanum}; INFO.trajanmarkets={...INFO.trajanMarkets}; INFO.hut={...INFO.casaRomuli,name:'Chata z plecionki'};
 INFO.praetoria={...INFO.castraPraetoria,facts:['Gwardię założył August; liczyła od ok. 4,5 do 10 tys. żołnierzy, lepiej opłacanych niż legioniści.','Z obozu wychodzą patrole pretorianów – poznasz ich po złotych hełmach, białych pióropuszach i purpurowych tarczach.','Konstantyn rozwiązał gwardię w 312 n.e., a mur obozu od strony miasta kazał rozebrać.',...(INFO.castraPraetoria.facts||[])]};
+INFO.arcus={name:'Łuki (arkady)',era:'element fantazyjny – w duchu Townscapera',text:'Łuk był sercem rzymskiej architektury: kamienie klinowe dociśnięte zwornikiem przenoszą ciężar w dół i na boki, więc można nim przekryć szeroki otwór bez jednej długiej belki. Tak wysokich wież z łuków Rzymianie nie budowali – to klocki do zabawy – ale ich piętra wzorowane są na fasadzie Koloseum.',
+  facts:['Fasada Koloseum ma piętra w trzech porządkach: na dole dorycki, wyżej joński, a najwyżej koryncki – tak jak tu kolejne piętra arkad.','Arkady Tabularium na Kapitolu (78 p.n.e.) to jeden z najstarszych przykładów łuków obramowanych półkolumnami.','Akwedukt Pont du Gard ma trzy kondygnacje łuków i prawie 50 m wysokości.','Stawiaj łuki na ulicy – ludzie przejdą pod nimi; na rzece – powstanie most.'],
+  today:'Rzymskie łuki stoją do dziś w mostach, akweduktach i amfiteatrach od Hiszpanii po Syrię.',legacy:'Arkady, wiadukty kolejowe i mosty z łuków to bezpośredni spadek po rzymskich inżynierach.'};
 const tlEl=document.createElement('div'); tlEl.id='timeline'; tlEl.className='hide'; document.body.appendChild(tlEl);
 function renderTimeline(){ tlEl.innerHTML=ROME_ERAS.map(e=>`<button data-y="${e.y}" class="${e.y===romeYear?'on':''}"><b>${e.label}</b><span>${e.who}</span></button>`).join('');
   tlEl.querySelectorAll('button').forEach(b=>b.onclick=()=>goEra(+b.dataset.y));
@@ -4273,7 +4305,7 @@ function updateLabels(){
    Pętla
    ========================================================= */
 const statsEl=document.getElementById('stats'); let statT=0, saveT=0, questT=-2;
-function updateStats(){ let pop=0; for(const b of buildings.values()) pop+=STACK[b.type]?(b.type==='house'?4:11)*floorsOf(b):(DEFS[b.type].pop||0);
+function updateStats(){ let pop=0; for(const b of buildings.values()) pop+=STACK[b.type]?STACK[b.type].pop*floorsOf(b):(DEFS[b.type].pop||0);
   const walking=agents.filter(a=>a.kind==='ped').length+patrols.length*7;
   statsEl.textContent=`👥 ${pop.toLocaleString('pl-PL')} mieszkańców · 🚶 ${walking} na ulicach · ✨ ${cityNice} pięknych domów`; }
 let last=performance.now();
