@@ -2358,6 +2358,7 @@ function setFloors(b,n){
   b.fl=n; b.mesh.geometry=b.type==='house'?houseGeomFor(b):(b.type==='arcus'?arcusGeomFor(b):buildGeom(b)); if(b.type==='house') markHouses(b.x,b.z); arcusDirty=true;
   const gi=growing.findIndex(g=>g.m===b.mesh); if(gi>=0) growing.splice(gi,1);
   b.mesh.scale.set(1,old/n,1); growing.push({m:b.mesh,t:0,from:old/n,keepXZ:true});
+  if(n>old&&!todayMode&&window.__fx){ const g=b.mesh.geometry; if(!g.boundingBox) g.computeBoundingBox(); const top=b.mesh.position.y+g.boundingBox.max.y*(old/n); dustBurst(b,5,top); dustBurst(b,4); debrisBurst(b,top,6,false); for(let k=0;k<4;k++) debrisToss(b,b.mesh.position.y,top); }
   dirtySave=true; labelsDirty=true; return true;
 }
 function bulldoze(i,j){
@@ -4202,7 +4203,8 @@ const BIRDS=30, wingL=new THREE.InstancedMesh(birdGeo,birdMat,BIRDS), wingR=new 
 for(const w of [wingL,wingR]){ w.frustumCulled=false; w.count=0; scene.add(w); }
 const flocks=[...Array(3)].map((_,f)=>({cx:0,cz:0,r:4+f*2.5,h:4.5+f*1.2,sp:(0.16+f*0.05)*(f%2?-1:1),ph:f*2.1,birds:[...Array(10)].map(()=>({da:(Math.random()-0.5)*0.9,dr:(Math.random()-0.5)*1.6,dh:(Math.random()-0.5)*0.8,fl:Math.random()*6,fs:9+Math.random()*4}))}));
 const _bq=new THREE.Quaternion(), _be=new THREE.Euler(), _bp=new THREE.Vector3(), _bs=new THREE.Vector3(1,1,1), _bm=new THREE.Matrix4();
-const smokeMesh=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.12,0),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1,transparent:true,opacity:0.42,depthWrite:false}),260);
+const PUFF_MAX=IS_MOBILE?320:480;
+const smokeMesh=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.12,0),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1,transparent:true,opacity:0.42,depthWrite:false}),PUFF_MAX);
 smokeMesh.setColorAt(0,new THREE.Color('#e9e4dc')); smokeMesh.frustumCulled=false; smokeMesh.count=0; scene.add(smokeMesh);
 const puffs=[]; let smokeSrc=[], smokeSig=-1, smokeAcc=0;
 const SMOKERS={baths:[[2.6,1.24,-2.55],[1.75,2.3,-1.85]],trajanbaths:[[3.8,1.3,-3.8],[-3.8,1.3,-3.8]],caracalla:[[3.8,1.3,-3.8],[-3.8,1.3,-3.8]],diocletian:[[5,1.3,-4.4],[-5,1.3,-4.4]],taberna:[[0.25,0.75,-0.25]],castra:[[-3,0.6,-2]],praetoria:[[2.2,0.7,-2.1]],palace:[[3.4,1.6,-2.4]]};
@@ -4222,11 +4224,11 @@ function updateAmbientFx(dt,time){
       const th=b.rot*Math.PI/2, c=Math.cos(th), s=Math.sin(th); for(const [lx,ly,lz] of S) smokeSrc.push({b,lx,ly,lz,c,s}); } }
   smokeAcc+=dt; const rate=(smokeSrc.length?0.45/Math.max(1,smokeSrc.length/14):1);
   while(smokeAcc>rate&&smokeSrc.length&&!todayMode){ smokeAcc-=rate; const q=pickArr(smokeSrc); const m=q.b.mesh; if(!m.visible||m.scale.y<0.95) continue;
-    if(puffs.length<250) puffs.push({x:m.position.x+q.lx*q.c+q.lz*q.s,y:m.position.y+q.ly,z:m.position.z-q.lx*q.s+q.lz*q.c,t:0,life:3.5+Math.random()*2,dx:(Math.random()-0.5)*0.1,s:0.5+Math.random()*0.5}); }
+    if(puffs.length<250&&puffs.length<PUFF_MAX-60) puffs.push({x:m.position.x+q.lx*q.c+q.lz*q.s,y:m.position.y+q.ly,z:m.position.z-q.lx*q.s+q.lz*q.c,t:0,life:3.5+Math.random()*2,dx:(Math.random()-0.5)*0.1,s:0.5+Math.random()*0.5}); }
   if(smokeAcc>2) smokeAcc=0;
   let k=0; const wind=0.18+ENV.rainF*0.2;
   for(let i=puffs.length-1;i>=0;i--){ const p=puffs[i]; p.t+=dt; if(p.t>p.life){ puffs.splice(i,1); continue; } const u=p.t/p.life;
-    const sc=p.s*(0.5+u*1.6)*(u>0.75?1-(u-0.75)*3.2:1); if(p.dust) _bp.set(p.x+p.dx*Math.min(p.t,1),p.y+p.t*0.12,p.z+(p.dz??0)*Math.min(p.t,1)); else _bp.set(p.x+p.dx*p.t+wind*p.t*0.6,p.y+p.t*0.32,p.z+wind*p.t*0.3); _bs.set(sc,sc,sc); _bq.identity(); _bm.compose(_bp,_bq,_bs); smokeMesh.setColorAt(k,_C.set(p.dust?'#cdb38f':'#ece7df')); smokeMesh.setMatrixAt(k++,_bm); }
+    const sc=p.s*(0.5+u*1.6)*(u>0.75?1-(u-0.75)*3.2:1); if(p.dust) _bp.set(p.x+p.dx*Math.min(p.t,1),p.y+p.t*0.12,p.z+(p.dz??0)*Math.min(p.t,1)); else _bp.set(p.x+p.dx*p.t+wind*p.t*0.6,p.y+p.t*0.32,p.z+wind*p.t*0.3); _bs.set(sc,sc,sc); _bq.identity(); _bm.compose(_bp,_bq,_bs); smokeMesh.setColorAt(k,_C.set(p.dust?'#cdb38f':p.grey?'#a9a39a':'#ece7df')); smokeMesh.setMatrixAt(k++,_bm); }
   _bs.set(1,1,1); smokeMesh.count=k; smokeMesh.instanceMatrix.needsUpdate=true; if(smokeMesh.instanceColor) smokeMesh.instanceColor.needsUpdate=true;
 }
 INFO.news={name:'Nowości w Urbs',era:'aktualizacja',text:'Wielka aktualizacja. Oto co nowego:',
@@ -4372,24 +4374,20 @@ function startConstruction(b){
   const bb=b.mesh.geometry.boundingBox; const H=Math.max(0.5,(bb?bb.max.y:1)*1.03); const big=def.w*def.d>=6;
   const sc=new THREE.Mesh(scaffoldGeom(def.w,def.d,H,big),bMat); sc.castShadow=true; sc.position.copy(b.mesh.position); sc.rotation.y=b.mesh.rotation.y; scene.add(sc);
   const hoist=new THREE.Mesh(G.box,bMat.clone()); hoist.material.vertexColors=false; hoist.material.color.set('#d9c8a5'); hoist.scale.set(0.16,0.12,0.16); hoist.visible=big; scene.add(hoist);
-  // budowa warstwami: materiał z płaszczyzną cięcia odsłania mury od dołu, a reszta widnieje jako niebieski plan
-  const base=b.mesh.position.y, cut=new THREE.Plane(new THREE.Vector3(0,-1,0),base+0.01), cutUp=new THREE.Plane(new THREE.Vector3(0,1,0),-(base+0.01));
+  // budowa warstwami: materiał z płaszczyzną cięcia odsłania mury od dołu; wokół kurz, dym i fruwające cegły
+  const base=b.mesh.position.y, cut=new THREE.Plane(new THREE.Vector3(0,-1,0),base+0.01);
   const mat=bMat.clone(); mat.onBeforeCompile=bMat.onBeforeCompile; mat.customProgramCacheKey=bMat.customProgramCacheKey; mat.clippingPlanes=[cut]; b.mesh.material=mat;
-  const ghost=new THREE.Mesh(b.mesh.geometry,new THREE.MeshBasicMaterial({color:'#8fc3ef',transparent:true,opacity:0.22,depthWrite:false,clippingPlanes:[cutUp]}));
-  ghost.position.copy(b.mesh.position); ghost.rotation.copy(b.mesh.rotation); scene.add(ghost);
-  const edges=new THREE.LineSegments(new THREE.EdgesGeometry(b.mesh.geometry,35),new THREE.LineBasicMaterial({color:'#5a9fd8',transparent:true,opacity:0.55,clippingPlanes:[cutUp]}));
-  edges.position.copy(b.mesh.position); edges.rotation.copy(b.mesh.rotation); scene.add(edges);
   b.mesh.scale.set(1,1,1);
-  builds.push({b,t:0,dur:clamp(1.6+0.6*Math.sqrt(def.w*def.d),2.2,6),sc,hoist,H,big,tick:0,cut,cutUp,mat,ghost,edges,base,dust:0});
+  builds.push({b,t:0,dur:clamp(1.6+0.6*Math.sqrt(def.w*def.d),2.2,6),sc,hoist,H,big,tick:0,cut,mat,base,dust:0,deb:0,smk:0});
   return true;
 }
 function endConstruction(q,instant){
   scene.remove(q.sc); scene.remove(q.hoist); q.hoist.material.dispose();
-  if(q.ghost){ scene.remove(q.ghost); q.ghost.material.dispose(); scene.remove(q.edges); q.edges.geometry.dispose(); q.edges.material.dispose(); if(q.b.mesh.material===q.mat) q.b.mesh.material=bMat; q.mat.dispose(); }
+  if(q.mat){ if(q.b.mesh.material===q.mat) q.b.mesh.material=bMat; q.mat.dispose(); }
   const k=builds.indexOf(q); if(k>=0) builds.splice(k,1);
   if(!buildings.has(q.b.id)) return;
   q.b.mesh.scale.set(1,todayMode?q.b.ts:1,1);
-  if(!instant){ sfx('done'); pulses.push({m:q.b.mesh,t:0}); spawnPedsNear(q.b,3); if(q.b.nice!==undefined) refreshGeom(q.b); dustBurst(q.b,18); }
+  if(!instant){ sfx('done'); pulses.push({m:q.b.mesh,t:0}); spawnPedsNear(q.b,3); if(q.b.nice!==undefined) refreshGeom(q.b); dustBurst(q.b,26); debrisBurst(q.b,q.base+q.H*0.7,18,true); }
 }
 function updateBuilds(dt,time){
   for(let k=builds.length-1;k>=0;k--){ const q=builds[k];
@@ -4397,8 +4395,10 @@ function updateBuilds(dt,time){
     q.t+=dt/q.dur; const u=Math.min(1,q.t);
     // fundamenty (krótko), potem warstwy murów rosną równo od dołu do góry
     const rise=u<0.1?0:(u<0.88?(u-0.1)/0.78:1), hNow=q.base+0.01+(q.H+0.05)*rise;
-    q.cut.constant=hNow; q.cutUp.constant=-hNow;
-    q.dust+=dt; if(q.dust>0.45&&u<0.9){ q.dust=0; dustBurst(q.b,2); }
+    q.cut.constant=hNow;
+    if(u<0.9){ q.dust+=dt; if(q.dust>0.16){ q.dust=0; dustBurst(q.b,q.big?3:2); dustBurst(q.b,q.big?2:1,hNow); }
+      q.deb+=dt; const rate=q.big?0.07:0.12; while(q.deb>rate){ q.deb-=rate; if(Math.random()<0.65) debrisToss(q.b,q.base,hNow); else debrisBurst(q.b,hNow,1,false); }
+      q.smk+=dt; if(q.smk>0.5){ q.smk=0; siteSmoke(q.b); } }
     q.sc.scale.y=u<0.88?1:Math.max(0.01,1-(u-0.88)/0.12);
     if(q.big){ const th=q.b.mesh.rotation.y, c=Math.cos(th), s=Math.sin(th), def=DEFS[q.b.type], lx=def.w/2+0.06-0.2, lz=def.d/2+0.06-0.2, hy=0.15+Math.abs(Math.sin(time*0.9))*q.H*0.95;
       q.hoist.position.set(q.b.mesh.position.x+lx*c+lz*s,hy+q.b.mesh.position.y,q.b.mesh.position.z-lx*s+lz*c); q.hoist.visible=u<0.88; }
@@ -4414,8 +4414,44 @@ function renderBuilders(time){
       person(fx,0.04,fz,th+(work?face+Math.PI/2:face+Math.PI),0.95,pick(['#8a6d4b','#b85c3c','#c9a36b','#7a9c8a'],()=>((k*37+b.id)%10)/10),SKINS[(k+b.id)%5],time*7,k%2?'#c9a36b':null,false,work?0:1,0,work?(Math.sin(time*9+k)>0?0.9:0.1):0); } }
 }
 // kurz budowy: jasnobrązowe kłęby wokół placu
-function dustBurst(b,n){ const def=DEFS[b.type]; const [fw,fd]=fpSize(def,b.rot); const p=b.mesh.position;
-  for(let k=0;k<n&&puffs.length<250;k++){ const a=Math.random()*Math.PI*2, rx=fw/2+0.1, rz=fd/2+0.1; puffs.push({x:p.x+Math.cos(a)*rx*(0.6+Math.random()*0.5),y:p.y+0.05,z:p.z+Math.sin(a)*rz*(0.6+Math.random()*0.5),t:0,life:1.4+Math.random(),dx:Math.cos(a)*0.25,dz:Math.sin(a)*0.25,s:0.6+Math.random()*0.6,dust:true}); } }
+function dustBurst(b,n,y){ const def=DEFS[b.type]; const [fw,fd]=fpSize(def,b.rot); const p=b.mesh.position;
+  for(let k=0;k<n&&puffs.length<PUFF_MAX-20;k++){ const a=Math.random()*Math.PI*2, rx=fw/2+0.1, rz=fd/2+0.1; puffs.push({x:p.x+Math.cos(a)*rx*(0.6+Math.random()*0.5),y:y??p.y+0.05,z:p.z+Math.sin(a)*rz*(0.6+Math.random()*0.5),t:0,life:1.4+Math.random(),dx:Math.cos(a)*0.35,dz:Math.sin(a)*0.35,s:0.8+Math.random()*0.8,dust:true}); } }
+// szary dym z dołu wapiennego / ogniska budowniczych
+function siteSmoke(b){ const [fw,fd]=fpSize(DEFS[b.type],b.rot), p=b.mesh.position; if(puffs.length>=PUFF_MAX-20) return;
+  const sx=Math.random()<0.5?-1:1; puffs.push({x:p.x+sx*(fw/2+0.35),y:p.y+0.1,z:p.z+(Math.random()-0.5)*fd,t:0,life:3+Math.random()*1.5,dx:(Math.random()-0.5)*0.1,s:0.55+Math.random()*0.4,grey:true}); }
+// fruwające cegły, dachówki, kamienie i deski
+const DEB_MAX=360, debris=[];
+const debMesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshStandardMaterial({roughness:0.85,flatShading:true}),DEB_MAX);
+debMesh.setColorAt(0,new THREE.Color('#fff')); debMesh.frustumCulled=false; debMesh.count=0; debMesh.castShadow=true; scene.add(debMesh);
+const DEB_KINDS=[ {sx:0.085,sy:0.04,sz:0.042,c:['#a9502c','#b8603a','#9a4628']},   // cegła
+  {sx:0.075,sy:0.014,sz:0.095,c:['#c4552e','#b54a28','#d0663a']},                  // dachówka
+  {sx:0.06,sy:0.05,sz:0.055,c:['#ddd3bd','#c9bc9f','#e8e1d0']},                   // kamień / marmur
+  {sx:0.17,sy:0.018,sz:0.04,c:['#9a6b43','#b8874f']} ];                           // deska
+function debPiece(x,y,z,vx,vy,vz,kind,land,toss){ if(debris.length>=DEB_MAX) debris.shift(); const K=DEB_KINDS[kind];
+  debris.push({x,y,z,vx,vy,vz,K,col:K.c[(Math.random()*K.c.length)|0],rx:Math.random()*6,ry:Math.random()*6,wx:(Math.random()-0.5)*14,wy:(Math.random()-0.5)*10,land,toss,t:0,rest:0,s:1.05+Math.random()*0.5}); }
+function debKind(){ const r=Math.random(); return r<0.45?0:r<0.72?1:r<0.9?2:3; }
+function edgePt(b,out){ const [fw,fd]=fpSize(DEFS[b.type],b.rot), p=b.mesh.position, hw=fw/2, hd=fd/2;
+  const side=(Math.random()*4)|0, t=Math.random()*2-1; let x,z,nx,nz;
+  if(side===0){ x=t*hw; z=-hd; nx=0; nz=-1; } else if(side===1){ x=hw; z=t*hd; nx=1; nz=0; } else if(side===2){ x=t*hw; z=hd; nx=0; nz=1; } else { x=-hw; z=t*hd; nx=-1; nz=0; }
+  return {x:p.x+x+nx*out, z:p.z+z+nz*out, nx, nz}; }
+// robotnicy podrzucają materiał z placu na rosnący mur
+function debrisToss(b,base,top){ const s=edgePt(b,0.45), e=edgePt(b,-0.05), T=0.55+Math.random()*0.25, g=9.8;
+  const ty=top+0.03, vy=(ty-(base+0.05))/T+0.5*g*T; debPiece(s.x,base+0.05,s.z,(e.x-s.x)/T,vy,(e.z-s.z)/T,debKind(),ty,T); }
+// odpryski spadające z rusztowania / z gotowego budynku
+function debrisBurst(b,y,n,big){ for(let k=0;k<n;k++){ const e=edgePt(b,0.05), sp=big?1.1+Math.random()*1.4:0.5+Math.random()*0.7;
+  debPiece(e.x,y,e.z,e.nx*sp+(Math.random()-0.5)*0.8,big?1.5+Math.random()*2:0.6+Math.random()*1.2,e.nz*sp+(Math.random()-0.5)*0.8,debKind(),null,0); } }
+const _dq=new THREE.Quaternion(), _de=new THREE.Euler();
+function debrisStep(dt){ let k=0;
+  for(let i=debris.length-1;i>=0;i--){ const d=debris[i]; d.t+=dt;
+    if(d.rest){ d.rest+=dt; if(d.rest>1.6){ debris.splice(i,1); continue; } }
+    else { d.vy-=9.8*dt; d.x+=d.vx*dt; d.y+=d.vy*dt; d.z+=d.vz*dt; d.rx+=d.wx*dt; d.ry+=d.wy*dt;
+      if(d.toss){ if(d.t>=d.toss){ debris.splice(i,1); continue; } }
+      else { const gy=hY(d.x,d.z)+d.K.sy*0.5; if(d.y<=gy&&d.vy<0){ d.y=gy; if(Math.abs(d.vy)>1.6){ d.vy*=-0.3; d.vx*=0.45; d.vz*=0.45; d.wx*=0.5; d.wy*=0.5; if(Math.random()<0.35&&puffs.length<PUFF_MAX-20) puffs.push({x:d.x,y:d.y,z:d.z,t:0,life:0.9,dx:0,dz:0,s:0.3,dust:true}); } else { d.rest=0.001; d.rx=Math.round(d.rx/Math.PI)*Math.PI; } } } }
+    const sh=d.rest>1?1-(d.rest-1)/0.6:1, sc=d.s*Math.max(0.01,sh);
+    _de.set(d.rx,d.ry,d.rest?0:d.rx*0.6); _dq.setFromEuler(_de); _bp.set(d.x,d.y,d.z); _bs.set(d.K.sx*sc,d.K.sy*sc,d.K.sz*sc); _bm.compose(_bp,_dq,_bs);
+    debMesh.setMatrixAt(k,_bm); debMesh.setColorAt(k,_C.set(d.col)); k++; }
+  _bs.set(1,1,1); debMesh.count=k; debMesh.instanceMatrix.needsUpdate=true; if(debMesh.instanceColor) debMesh.instanceColor.needsUpdate=true; }
+window.__fx=true;
 function spawnPedsNear(b,n){
   const [fw,fd]=fpSize(DEFS[b.type],b.rot); const cells=[];
   for(let j=b.z-1;j<=b.z+fd;j++) for(let i=b.x-1;i<=b.x+fw;i++) if(isRoad(i,j)) cells.push({i,j});
@@ -4705,7 +4741,7 @@ function loop(now){
   if(waterNetDirty) computeWater();
   if(beautyDirty) computeBeauty();
   if(decoDirty) rebuildDeco();
-  updateBuilds(dt,now/1000); camFlyStep(dt); sceneryStep(dt,now/1000); petalsStep(now/1000); eventsTick();
+  updateBuilds(dt,now/1000); debrisStep(Math.min(dt,0.05)); camFlyStep(dt); sceneryStep(dt,now/1000); petalsStep(now/1000); eventsTick();
   questT+=dt; if(questT>1.5){ questT=0; checkQuests(); }
   if(dirtyLines.size||aqLvlDirty||brDirty) processLines();
   if(arcusDirty) rebuildArcus();
