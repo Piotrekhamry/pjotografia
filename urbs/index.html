@@ -60,6 +60,7 @@ body.photo #photoBar{display:flex}
 .left{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .brand{background:var(--panel);border-radius:16px;padding:6px 10px 7px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:8px}
 .chipL{border:0;background:#f0e2cc;border-radius:10px;padding:4px 8px;font-weight:800;font-size:13px;cursor:pointer}.chipL.hide{display:none}
+  .chopinRow{display:flex;align-items:center;gap:8px;margin:-2px 0 2px 34px;font-size:13px;color:#6b5236}.chopinRow span{flex:1}.chNext{border:0;background:#f3e3c3;border-radius:10px;padding:4px 10px;font-size:14px;cursor:pointer}.chCredit{margin:0 0 6px 34px;font-size:11px;color:#9a8466}
 #laurelPop{position:fixed;right:calc(14px + env(safe-area-inset-right));top:calc(122px + env(safe-area-inset-top));width:min(270px,calc(100vw - 28px));transform:translateX(calc(100% + 40px));opacity:0;pointer-events:none;z-index:46;background:radial-gradient(circle at 20% 20%,#fffaf0,#f3e3c3);border-radius:18px;box-shadow:0 14px 40px rgba(90,60,20,.3);padding:12px 16px 14px 70px;text-align:left;border-left:5px solid var(--terra);transition:transform .45s cubic-bezier(.2,1.2,.4,1),opacity .3s}
 #laurelPop.show{opacity:1;transform:translateX(0)}
 #laurelPop .lp-ic{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:42px;line-height:1}#laurelPop .lp-t{font-family:Cinzel,serif;font-weight:700;font-size:17px;color:var(--terra2)}
@@ -3254,7 +3255,28 @@ window.addEventListener('blur',()=>keys.clear());
    Dźwięk (syntezowany, delikatny)
    ========================================================= */
 let actx=null;
-function ensureAudio(){ if(actx){ if(actx.state==='suspended') actx.resume(); return; } if(muted) return; try{ actx=new (window.AudioContext||window.webkitAudioContext)(); startAmbient(); }catch(e){} }
+/* ---- Muzyka: nokturny Chopina (nagrania z Wikimedia Commons, wyk. Patrizia Prati, CC BY-SA) ----
+   gra w tle z łagodnym wyciszaniem; gdy nagrania się nie wczytają (brak sieci), wraca dawna lira */
+const CHOPIN=[['Nokturn Es-dur op. 9 nr 2','8/81','9 n.2 Es-dur'],['Nokturn Des-dur op. 27 nr 2','4/42','27 n.2 Des-dur'],['Nokturn H-dur op. 32 nr 1','0/08','32 n.1 H-dur'],
+  ['Nokturn Fis-dur op. 15 nr 2','4/4b','15 n.2 Fis-dur'],['Nokturn b-moll op. 9 nr 1','3/33','9 n.1 b-moll'],['Nokturn As-dur op. 32 nr 2','6/6d','32 n.2 As-dur']];
+const chopinFile=k=>encodeURIComponent('Fryderyk_Chopin_-_Nocturne_op._'+CHOPIN[k][2].replaceAll(' ','_')+'_-_Patrizia_Prati.ogg');
+let chAudio=null, chIdx=Math.floor(Math.random()*CHOPIN.length), chFails=0, chopinFail=false, chTryOgg=false, chVol=0;
+function chopinTitle(){ return chopinFail?'Nagrania niedostępne – gra lira':'♪ '+CHOPIN[chIdx][0]; }
+function chopinSrc(){ const f=chopinFile(chIdx), h=CHOPIN[chIdx][1]; return chTryOgg?`https://upload.wikimedia.org/wikipedia/commons/${h}/${f}`:`https://upload.wikimedia.org/wikipedia/commons/transcoded/${h}/${f}/${f}.mp3`; }
+function chopinLoad(){ chAudio.src=chopinSrc(); chAudio.load(); const el=document.getElementById('chNow'); if(el) el.textContent=chopinTitle(); }
+function chopinNext(user){ if(!chAudio) return; chIdx=(chIdx+1+(user?0:Math.floor(Math.random()*(CHOPIN.length-1))))%CHOPIN.length; chTryOgg=false; chopinLoad(); if(chopinWant()) chAudio.play().catch(()=>{}); }
+function chopinWant(){ return !muted&&AUD.music&&!chopinFail&&!document.hidden; }
+function chopinInit(){ if(chAudio) return; chAudio=new Audio(); chAudio.preload='auto'; chAudio.volume=0;
+  chAudio.addEventListener('ended',()=>chopinNext(false));
+  chAudio.addEventListener('playing',()=>{ chFails=0; });
+  chAudio.addEventListener('error',()=>{ if(!chTryOgg&&chAudio.canPlayType('audio/ogg; codecs=vorbis')){ chTryOgg=true; chopinLoad(); chAudio.play().catch(()=>{}); return; }
+    if(++chFails>=3){ chopinFail=true; const el=document.getElementById('chNow'); if(el) el.textContent=chopinTitle(); return; } chopinNext(false); });
+  chopinLoad(); if(chopinWant()) chAudio.play().catch(()=>{}); }
+function chopinStep(dt){ if(!chAudio) return; const want=chopinWant(), target=want?0.55:0;
+  chVol+=clamp(target-chVol,-dt*0.6,dt*0.35); chAudio.volume=clamp(chVol,0,1);
+  if(want&&chAudio.paused&&chAudio.readyState>=0) chAudio.play().catch(()=>{});
+  if(!want&&chVol<=0.001&&!chAudio.paused) chAudio.pause(); }
+function ensureAudio(){ if(!muted) chopinInit(); if(actx){ if(actx.state==='suspended') actx.resume(); return; } if(muted) return; try{ actx=new (window.AudioContext||window.webkitAudioContext)(); startAmbient(); }catch(e){} }
 function cheer(sec=2){ if(muted||!actx) return; try{ const len=sec, buf=actx.createBuffer(1,actx.sampleRate*len,actx.sampleRate), d=buf.getChannelData(0); let v=0;
   for(let k=0;k<d.length;k++){ const u=k/d.length; v=v*0.97+(Math.random()*2-1)*0.3; d[k]=v*Math.sin(Math.PI*u)*(0.7+0.3*Math.sin(k/900)); }
   const src=actx.createBufferSource(); src.buffer=buf; const f=actx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=900; f.Q.value=0.6; const g=actx.createGain(); g.gain.value=0.5; src.connect(f); f.connect(g); g.connect(actx.destination); src.start(); }catch(e){} }
@@ -3721,7 +3743,7 @@ function renderMenu(){
       ${swrow('sNight','🌙','Noc',ENV.night)}${swrow('sCycle','⏱️','Upływ czasu (dzień i noc)',ENV.cycle)}
       <div class="ri static"><span class="ic">🌦️</span><span class="tx">Pogoda</span><div class="seg mini" id="sWeather">${[['clear','☀️'],['fog','🌫️'],['rain','🌧️']].map(([v,l])=>`<button data-w="${v}" class="${ENV.weather===v?'on':''}">${l}</button>`).join('')}</div></div>
       ${row('mPhoto','📷','Tryb fotograficzny','efekt makiety i zapis zdjęcia')}
-      ${swrow('sLabels','🏷️','Podpisy budowli',labelsOn)}${swrow('sPeople','🚶','Ludzie na ulicach',peopleOn)}${swrow('sGrid','▦','Siatka',gridOn)}${swrow('sSound','🔊','Dźwięki',!muted)}${swrow('sAmb','🐦','Odgłosy miasta i przyrody',AUD.amb)}${swrow('sMusic','🎵','Muzyka (lira)',AUD.music)}
+      ${swrow('sLabels','🏷️','Podpisy budowli',labelsOn)}${swrow('sPeople','🚶','Ludzie na ulicach',peopleOn)}${swrow('sGrid','▦','Siatka',gridOn)}${swrow('sSound','🔊','Dźwięki',!muted)}${swrow('sAmb','🐦','Odgłosy miasta i przyrody',AUD.amb)}${swrow('sMusic','🎹','Muzyka – nokturny Chopina',AUD.music)}<div class="chopinRow"><span id="chNow">${chopinTitle()}</span><button class="chNext" id="chNext" title="Następny utwór">⏭</button></div><div class="chCredit">Wykonanie: Patrizia Prati, nagrania z Wikimedia Commons (CC BY-SA)</div>
     </div>
     <div class="st">Cesarz i wydarzenia</div>
     <div class="list">${row('mQuests','🏆','Zadania od cesarza',`zdobyte wieńce: ${laurels.size}/${QUESTS.length}`)}
@@ -3773,6 +3795,7 @@ function renderMenu(){
   on('mPhoto','onclick',()=>enterPhoto());
   on('sAmb','onchange',e=>{ AUD.amb=e.target.checked; saveAud(); ensureAudio(); });
   on('sMusic','onchange',e=>{ AUD.music=e.target.checked; saveAud(); ensureAudio(); });
+  on('chNext','onclick',()=>{ AUD.music=true; saveAud(); ensureAudio(); chopinNext(true); const c=document.getElementById('sMusic'); if(c) c.checked=true; });
   on('mLegacy','onclick',()=>{ closeModal(); showInfo('legacy'); });
   on('sInfo','onchange',e=>{ infoAuto=e.target.checked; lsSet('urbs-info',infoAuto?'1':'0'); });
   on('sPlots','onchange',e=>{ onlyPlots=e.target.checked; });
@@ -3937,10 +3960,11 @@ function ambientStep(time){
   amb.city.gain.setTargetAtTime(on?0.07*near*life*(0.35+0.65*day):0,t,0.6);
   amb.water.gain.setTargetAtTime(on?0.012*near*Math.min(1,wetFountN/3):0,t,0.6);
   amb.rain.gain.setTargetAtTime(on?0.07*ENV.rainF:0,t,0.6);
-  amb.musicG.gain.setTargetAtTime(!muted&&AUD.music?0.055:0,t,0.4);
+  const lyre=!muted&&AUD.music&&chopinFail;
+  amb.musicG.gain.setTargetAtTime(lyre?0.055:0,t,0.4);
   if(on&&day>0.5&&ENV.rainF<0.5&&time>amb.nextBird){ chirp(t); amb.nextBird=time+3+Math.random()*7; }
   if(on&&ENV.nightF>0.6&&time>amb.nextCricket){ cricket(t); amb.nextCricket=time+0.5+Math.random()*1.4; }
-  if(!muted&&AUD.music&&time>amb.nextNote){
+  if(lyre&&time>amb.nextNote){
     amb.phrase++; if(amb.phrase%16===0){ amb.nextNote=time+2.5+Math.random()*2; return; }
     amb.deg=clamp(amb.deg+[-2,-1,-1,0,1,1,2][Math.floor(Math.random()*7)],0,SCALE.length-1);
     pluck(SCALE[amb.deg],t,0.9); if(amb.phrase%4===1) pluck(SCALE[Math.max(0,amb.deg-4)]/2,t,0.6);
@@ -4789,7 +4813,7 @@ function loop(now){
   T.water.material.emissive.setRGB(0.02+Math.sin(now/900)*0.015,0.05+Math.sin(now/900)*0.02,0.07);
   statT+=dt; if(statT>0.6){ statT=0; updateStats(); }
   saveT+=dt; if(saveT>2.5){ saveT=0; autosave(); }
-  ambientStep(now/1000);
+  ambientStep(now/1000); chopinStep(Math.min(dt,0.1));
   renderFrame();
 }
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden'&&dirtySave) saveCurrent(false); });
