@@ -560,48 +560,74 @@ D.column=(b,r)=>{
   b.box(0.34,0.08,0.34,0,2.42,0,MARBLE); b.cyl(0.05,0.2,0,2.5,0,BRONZE,6); b.sph(0.045,0,2.75,0,BRONZE);
 };
 /* ---- Koloseum: szczegółowa fasada, trybuny z widzami, loża cesarza ---- */
+// Koloseum: eliptyczna fasada z prawdziwymi arkadami w trzech porządkach, attyka z oknami i konsolami, velarium na masztach z linami do pachołków,
+// proporce w arkadach, posągi, portyki wejść, plac z trawertynu i kramy; w środku trybuny, loże i arena
 D.colosseum=(b,r)=>{
-  const a=4.25, s=3.3/4.25, n=40;
+  const a=4.22, s=3.28/4.22, n=40, TR2='#e9dcc3', CORN='#f2e8d3', DARKI='#9c8a6e';
   const E=(geom,c,y=0)=>b.add(geom,c,0,y,0,0,0,0,1,1,s);
-  const onE=(th,rad,y,w,h,dp,c,out=0)=>{ const nx=Math.cos(th), nz=Math.sin(th)/s, nl=Math.hypot(nx,nz);
-    b.add(G.box,c,Math.cos(th)*rad+nx/nl*out,y+h/2,Math.sin(th)*rad*s+nz/nl*out,0,Math.atan2(nx,nz),0,w,h,dp); };
-  // mur zewnętrzny i gzymsy między kondygnacjami
-  E(new THREE.CylinderGeometry(a,a,2.25,80,1,true),TRAV,1.125);
-  for(const y of [0.66,1.38,1.98]) E(lathe([[a-0.02,y],[a+0.06,y],[a+0.06,y+0.06],[a-0.02,y+0.06]],80),'#f1e7d0');
-  E(lathe([[4.08,2.2],[4.34,2.2],[4.34,2.36],[4.08,2.36],[4.08,2.2]],80),'#f1e7d0');
-  // arkady, półkolumny (3 porządki) i posągi w arkadach 2. i 3. kondygnacji
-  const tiers=[[0.1,0.5],[0.82,0.48],[1.52,0.44]];
-  tiers.forEach(([y,h],t)=>{ for(let k=0;k<n;k++){ const th=(k+0.5)/n*Math.PI*2;
-    const big=t===0&&(k===0||k===n/2-1||k===n/2||k===n-1);
-    onE(th,a,y,big?0.3:0.22,big?h+0.06:h,0.05,big?'#5d4c3c':'#8f7a5e',0.01);
-    if(t>0){ const nx=Math.cos(th), nz=Math.sin(th)/s, nl=Math.hypot(nx,nz), px=Math.cos(th)*a+nx/nl*0.04, pz=Math.sin(th)*a*s+nz/nl*0.04;
-      b.cyl(0.035,0.2,px,y+0.05,pz,'#f6f2ea',6,0.028); b.sph(0.03,px,y+0.29,pz,'#f6f2ea'); }
-    const th2=k/n*Math.PI*2; onE(th2,a,y-0.04,0.05,h+0.1,0.05,['#efe3c6','#f3e8cf','#f7eed9'][t],0.02); } });
-  // attyka: pilastry, okienka, maszty do velarium
-  for(let k=0;k<n;k++){ const th=(k+0.5)/n*Math.PI*2; if(k%2===0) onE(th,a,2.05,0.1,0.1,0.04,'#8f7a5e',0.01);
-    onE(k/n*Math.PI*2,a,2.0,0.05,0.2,0.05,'#f3e8cf',0.02); onE(k/n*Math.PI*2,a,2.36,0.025,0.32,0.025,WOOD,0.0); }
-  // trybuny: podium (marmur), trzy strefy schodów w różnych kolorach, murki między strefami
+  const P=(th,R)=>[Math.cos(th)*R,Math.sin(th)*R*s];
+  const nrm=th=>{ const nx=Math.cos(th)*s, nz=Math.sin(th); const l=Math.hypot(nx,nz); return [nx/l,nz/l]; };
+  // plac z trawertynu wokół i pachołki (cippi) do lin velarium
+  b.box(8.96,0.05,6.96,0,0,0,'#ddd2bc'); E(lathe([[a+0.05,0.05],[a+0.32,0.05],[a+0.32,0.1],[a+0.05,0.1]],80),'#e9e0cc');
+  const SEG=[]; for(let k=0;k<=n;k++) SEG.push(k/n*Math.PI*2);
+  const ring=(R,y,h,dep,col,arch,fn)=>{ for(let k=0;k<n;k++){ const [x0,z0]=P(SEG[k],R),[x1,z1]=P(SEG[k+1],R); const w=Math.hypot(x1-x0,z1-z0)+0.012, ry=Math.atan2(-(z1-z0),x1-x0);
+      const g=arch?archPanel(w,h,dep,[{c:0,hw:w*0.31,spring:h*0.5}]):new THREE.BoxGeometry(w,h,dep).translate(0,h/2,dep/2);
+      b.add(g,col,(x0+x1)/2,y,(z0+z1)/2,0,ry,0); if(fn) fn(k,(x0+x1)/2,(z0+z1)/2,ry); } };
+  const L=[[0.1,0.62],[0.78,0.58],[1.42,0.56]];
+  // trzy kondygnacje arkad (zewnętrzny pierścień) i drugi pierścień w głębi
+  L.forEach(([y,h],t)=>{ ring(a,y,h,0.1,TRAV,true); ring(a-0.34,y,h,0.08,TR2,true);
+    E(lathe([[a-0.36,y+h],[a+0.01,y+h],[a+0.01,y+h+0.06],[a-0.36,y+h+0.06]],80),CORN); });
+  E(lathe([[a-0.36,0.04],[a+0.04,0.04],[a+0.04,0.1],[a-0.36,0.1]],80),'#d9ccb0');
+  // półkolumny: dorycka, jońska, koryncka + gzymsy z belkowaniem
+  for(let k=0;k<n;k++){ const th=SEG[k], [nx,nz]=nrm(th), [x,z]=P(th,a), px=x+nx*0.035, pz=z+nz*0.035;
+    L.forEach(([y,h],t)=>{ b.cyl(0.045,h,px,y,pz,CORN,8,0.04); if(t===0) b.box(0.1,0.03,0.1,px,y+h-0.03,pz,CORN); else if(t===1){ b.box(0.11,0.025,0.06,px,y+h-0.03,pz,CORN); } else b.cyl(0.04,0.06,px,y+h-0.06,pz,CORN,8,0.065); }); }
+  for(const [y] of L.slice(1)) E(lathe([[a-0.02,y-0.08],[a+0.07,y-0.08],[a+0.07,y-0.02],[a-0.02,y-0.02]],80),CORN);
+  // posągi w arkadach 2. i 3. kondygnacji, proporce na filarach 2. kondygnacji
+  for(let k=0;k<n;k++){ const th=(k+0.5)/n*Math.PI*2, [nx,nz]=nrm(th), [x,z]=P(th,a-0.05);
+    for(const [y] of L.slice(1)){ b.box(0.08,0.05,0.08,x,y,z,CORN); b.cyl(0.03,0.2,x,y+0.05,z,'#f7f3ea',7,0.022); b.sph(0.024,x,y+0.27,z,'#f7f3ea'); }
+    if(k%2===0){ const th2=SEG[k], [mx,mz]=nrm(th2), [x2,z2]=P(th2,a), bx=x2+mx*0.09, bz=z2+mz*0.09, ry=Math.atan2(mx,mz);
+      b.add(G.box,'#b0302a',bx,1.08,bz,0,ry,0,0.09,0.42,0.012); b.add(G.box,GILT,bx,1.3,bz,0,ry,0,0.12,0.02,0.02); b.add(G.box,GILT,bx,1.0,bz,0,ry,0,0.09,0.035,0.014);
+      b.add(G.cone(4),GILT,bx,0.85,bz,Math.PI,ry,0,0.045,0.05,0.008); } }
+  // attyka: pełny mur z pilastrami, okienkami co drugie przęsło i konsolami pod maszty
+  ring(a,2.04,0.5,0.12,TRAV,false,(k,x,z,ry)=>{ if(k%2===0) b.add(G.box,'#5d4c3c',x,2.27,z,0,ry,0,0.16,0.14,0.02); });
+  ring(a-0.34,1.98,0.2,0.1,TR2,false);
+  for(let k=0;k<n;k++){ const th=SEG[k], [nx,nz]=nrm(th), [x,z]=P(th,a); b.box(0.06,0.5,0.04,x+nx*0.02,2.04,z+nz*0.02,CORN);
+    const th2=(k+0.5)/n*Math.PI*2, [mx,mz]=nrm(th2), [x2,z2]=P(th2,a); b.box(0.05,0.05,0.07,x2+mx*0.03,2.12,z2+mz*0.03,CORN); }
+  E(lathe([[a-0.36,2.54],[a+0.06,2.54],[a+0.06,2.6],[a-0.36,2.6]],80),CORN);
+  // velarium: maszty, płótno w pasach i liny do pachołków na placu
+  const VR=2.35, VY=2.42;
+  for(let k=0;k<n;k++){ const th=(k+0.5)/n*Math.PI*2, [x,z]=P(th,a-0.04); b.cyl(0.016,0.5,x,2.5,z,WOOD,5); }
+  for(let k=0;k<20;k++){ const g=new THREE.CylinderGeometry(a-0.05,VR,2.62-VY,3,1,true,k/20*Math.PI*2,Math.PI*2/20); b.add(g,k%2?'#e8d7b2':'#dcc597',0,(2.62+VY)/2+0.02,0,0,0,0,1,1,s); }
+  for(let k=0;k<n;k++){ const th=k/n*Math.PI*2, [x0,z0]=P(th,a-0.05),[x1,z1]=P(th,VR); b.add(G.box,'#8a6a48',(x0+x1)/2,2.53,(z0+z1)/2,0,Math.atan2(x1-x0,z1-z0),Math.atan2(2.62-VY,Math.hypot(x1-x0,z1-z0))*0,0.012,0.012,Math.hypot(x1-x0,z1-z0)); }
+  E(lathe([[VR-0.03,VY],[VR+0.02,VY],[VR+0.02,VY+0.03],[VR-0.03,VY+0.03]],60),'#8a6a48');
+  const _q=new THREE.Quaternion(), _e=new THREE.Euler(), Yv=new THREE.Vector3(0,1,0), dv=new THREE.Vector3();
+  for(let k=0;k<20;k++){ const th=(k+0.25)/20*Math.PI*2, [x0,z0]=P(th,a-0.04), y0=2.98, [x1,z1]=P(th,a+0.24), y1=0.12;
+    b.box(0.07,0.1,0.07,x1,0.05,z1,'#d9ccb0'); dv.set(x1-x0,y1-y0,z1-z0); const len=dv.length(); dv.normalize(); _q.setFromUnitVectors(Yv,dv); _e.setFromQuaternion(_q);
+    b.add(G.box,'#6b5640',(x0+x1)/2,(y0+y1)/2,(z0+z1)/2,_e.x,_e.y,_e.z,0.008,len,0.008); }
+  // portyki głównych wejść (oś krótka) i ciemne przejścia na arenę
+  for(const sd of [1,-1]){ const z=sd*(a*s+0.08); for(const x of [-0.26,0.26]) gcol(b,x,z,0.1,0.62,0.04,MARBLE,MARBLE);
+    b.box(0.68,0.08,0.24,0,0.72,z,CORN); b.roofX(0.72,0.16,0.28,0,0.8,z,ROOF); b.box(0.5,0.1,0.02,0,0.74,z+sd*0.125,'#d6c8ac'); }
+  // kramy na placu
+  for(const [x,z,ry] of [[-3.9,-2.9,0.6],[3.9,2.9,-2.5],[-4.0,2.8,2.4],[3.95,-2.85,-0.7]]) stall(b,x,z,ry,r);
+  // trybuny: podium (marmur), trzy strefy schodów, murki między strefami
   const zones=[[MARBLE,4],[STONE2,4],['#d9c6a2',4]]; let rr=1.95, yy=0.5;
   E(lathe([[1.95,0],[1.95,0.5],[2.05,0.5]],72),'#f4eee2');
   E(lathe([[1.93,0.42],[1.97,0.42],[1.97,0.5],[1.93,0.5]],72),RED);
   const steps=[];
-  zones.forEach(([c,cntS],zi)=>{ const pts=[[rr,yy]]; for(let k=0;k<cntS;k++){ rr+=0.18; pts.push([rr,yy]); yy+=0.135; pts.push([rr,yy]); steps.push([rr-0.09,yy-0.135]); }
+  zones.forEach(([c,cntS],zi)=>{ const pts=[[rr,yy]]; for(let k=0;k<cntS;k++){ rr+=0.15; pts.push([rr,yy]); yy+=0.15; pts.push([rr,yy]); steps.push([rr-0.075,yy-0.15]); }
     E(lathe(pts,72),c); if(zi<2) E(lathe([[rr,yy],[rr,yy+0.12],[rr+0.04,yy+0.12],[rr+0.04,yy]],72),'#efe4cc'); });
-  E(lathe([[rr,yy],[4.24,yy],[4.24,2.2]],72),'#e6d8bb');
-  // widzowie na trybunach
+  E(lathe([[rr,yy],[a-0.36,yy],[a-0.36,2.2]],72),'#e6d8bb');
   const CROWD=['#efe8d8','#efe8d8','#f4f0e6','#c9a36b','#b85c3c','#6e8fae','#a7b36b','#d9b25f','#9b6b8e','#c77d5a'];
   steps.forEach(([rad,y],si)=>{ const cntP=22+si*3; for(let m=0;m<cntP;m++){ const th=r()*Math.PI*2; if(Math.abs(Math.sin(th)-1)<0.06&&si<3) continue;
       if(r()<0.25) continue; const x=Math.cos(th)*rad, z=Math.sin(th)*rad*s;
       b.box(0.06,0.07,0.06,x,y,z,CROWD[Math.floor(r()*CROWD.length)]); b.box(0.04,0.04,0.04,x,y+0.07,z,pick(['#e9c19c','#d9a97c','#c58c62'],r)); } });
-  // wejścia na arenę (Porta Triumphalis i Libitinaria) i otwory vomitoriów
-  for(const th of [0,Math.PI]) onE(th,1.96,0.06,0.34,0.36,0.04,'#4a3c30',0.01);
-  for(let k=0;k<16;k++){ const th=(k+0.5)/16*Math.PI*2; onE(th,2.69,1.04,0.16,0.12,0.03,'#5d4c3c',0.0); onE(th,3.41,2.12-0.5,0.16,0.12,0.03,'#5d4c3c',0.0); }
-  // loża cesarza (pulvinar) i loża magistratów naprzeciwko
+  const onE=(th,rad,y,w,h,dp,c)=>{ const [x,z]=P(th,rad); b.add(G.box,c,x,y+h/2,z,0,Math.atan2(Math.cos(th),Math.sin(th)/s),0,w,h,dp); };
+  for(const th of [0,Math.PI]) onE(th,1.96,0.06,0.34,0.36,0.04,'#4a3c30');
+  for(let k=0;k<16;k++){ const th=(k+0.5)/16*Math.PI*2; onE(th,2.55,1.05,0.16,0.12,0.03,'#5d4c3c'); onE(th,3.15,1.65,0.16,0.12,0.03,'#5d4c3c'); }
   for(const [side,col] of [[1,'#7a3b6e'],[-1,'#b8382e']]){ const z=side*2.12*s;
     b.box(0.7,0.16,0.32,0,0.5,z,MARBLE); b.box(0.66,0.1,0.28,0,0.66,z,col);
     for(const x of [-0.3,0.3]) b.cyl(0.02,0.36,x,0.66,z-side*0.1,MARBLE,6);
     b.box(0.74,0.05,0.34,0,1.02,z,col); b.box(0.06,0.06,0.06,0,0.76,z,'#f6f2ea'); }
-  // arena
   E(new THREE.CylinderGeometry(1.96,1.96,0.06,48),SAND,0.03);
   b.box(2.6,0.01,0.05,0,0.06,0,'#cfae74'); b.box(0.05,0.01,1.9,0,0.06,0,'#cfae74');
   b.box(0.14,0.3,0.14,-0.9,0.06,0.45,WOOD); b.box(0.14,0.3,0.14,0.9,0.06,-0.45,WOOD);
