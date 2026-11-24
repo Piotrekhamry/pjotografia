@@ -60,10 +60,10 @@ body.photo #photoBar{display:flex}
 .left{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .brand{background:var(--panel);border-radius:16px;padding:6px 10px 7px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:8px}
 .chipL{border:0;background:#f0e2cc;border-radius:10px;padding:4px 8px;font-weight:800;font-size:13px;cursor:pointer}.chipL.hide{display:none}
-#laurelPop{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%) scale(.6);opacity:0;pointer-events:none;z-index:40;background:radial-gradient(circle at 50% 30%,#fffaf0,#f3e3c3);border-radius:24px;box-shadow:0 20px 60px rgba(90,60,20,.35);padding:18px 30px 20px;text-align:center;transition:all .35s cubic-bezier(.2,1.4,.4,1)}
-#laurelPop.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
-#laurelPop .lp-ic{font-size:54px;line-height:1}#laurelPop .lp-t{font-family:Cinzel,serif;font-weight:700;font-size:22px;color:var(--terra2);margin-top:4px}
-#laurelPop .lp-q{font-weight:800;font-size:16px;margin-top:4px}#laurelPop .lp-u{margin-top:8px;font-size:14px;background:#fff;border-radius:10px;padding:6px 10px}
+#laurelPop{position:fixed;right:calc(14px + env(safe-area-inset-right));top:calc(122px + env(safe-area-inset-top));width:min(270px,calc(100vw - 28px));transform:translateX(calc(100% + 40px));opacity:0;pointer-events:none;z-index:46;background:radial-gradient(circle at 20% 20%,#fffaf0,#f3e3c3);border-radius:18px;box-shadow:0 14px 40px rgba(90,60,20,.3);padding:12px 16px 14px 70px;text-align:left;border-left:5px solid var(--terra);transition:transform .45s cubic-bezier(.2,1.2,.4,1),opacity .3s}
+#laurelPop.show{opacity:1;transform:translateX(0)}
+#laurelPop .lp-ic{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:42px;line-height:1}#laurelPop .lp-t{font-family:Cinzel,serif;font-weight:700;font-size:17px;color:var(--terra2)}
+#laurelPop .lp-q{font-weight:800;font-size:14px;margin-top:2px}#laurelPop .lp-u{margin-top:6px;font-size:13px;background:#fff;border-radius:10px;padding:6px 10px}
 .item.locked{opacity:.45;filter:grayscale(.8)}
 .item .lock{position:absolute;top:4px;right:6px;font-size:11px;background:#fff;border-radius:8px;padding:1px 5px;box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .item{position:relative}
@@ -120,8 +120,8 @@ body.photo #photoBar{display:flex}
 #labels.small .lbl{font-size:10px;padding:2px 6px;opacity:.9}
 #info .surv{height:7px;border-radius:5px;background:#eadfcc;margin:6px 0 2px;overflow:hidden}
 #info .surv span{display:block;height:100%;background:linear-gradient(90deg,#b98c5a,#c8643b)}
-#toast{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) scale(.9);background:rgba(60,45,32,.88);color:#fff;padding:10px 18px;border-radius:14px;font-weight:700;opacity:0;pointer-events:none;transition:all .2s;z-index:20}
-#toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#toast{position:fixed;top:calc(122px + env(safe-area-inset-top));left:50%;transform:translate(-50%,-8px) scale(.95);max-width:min(88vw,520px);text-align:center;line-height:1.35;box-shadow:0 8px 24px rgba(40,25,10,.25);background:rgba(60,45,32,.88);color:#fff;padding:10px 18px;border-radius:14px;font-weight:700;opacity:0;pointer-events:none;transition:all .2s;z-index:45}
+#toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
 #modal{position:fixed;inset:0;background:rgba(60,40,20,.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom))}
 #modal.hidden{display:none}
 .card{background:#fcf7ee;border-radius:22px;box-shadow:0 20px 60px rgba(60,40,20,.35);width:min(520px,100%);max-height:calc(100vh - 28px);max-height:calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:18px 20px 20px}
@@ -3056,6 +3056,7 @@ const pointers=new Map();
 canvas.addEventListener('pointerdown',e=>{
   pointers.set(e.pointerId,1); ensureAudio();
   if(e.pointerType==='touch'){ touchDown(e); return; }
+  if(e.pointerType!=='touch'&&e.button===2&&tool.kind!=='camera'){ rDown={x:e.clientX,y:e.clientY,t:performance.now()}; return; }
   if(e.pointerType!=='touch'&&e.button!==0) return;
   if(tool.kind==='camera'){ camDown={x:e.clientX,y:e.clientY,id:e.pointerId,t:performance.now()}; return; }
   const c=cellAt(e,smartTool()); if(!c) return;
@@ -3077,16 +3078,17 @@ canvas.addEventListener('pointermove',e=>{
   }
   if(e.pointerType!=='touch') updatePreview(c); else if(stroke) updatePreview(c);
 });
-let camDown=null; const pulses=[];
+let camDown=null, rDown=null; const pulses=[];
 function endPointer(e){
   pointers.delete(e.pointerId);
+  if(rDown&&e.button===2){ const r=rDown; rDown=null; if(Math.hypot(e.clientX-r.x,e.clientY-r.y)<6&&performance.now()-r.t<500&&tool.kind!=='camera'){ if(pending) cancelPending(); selectTool('camera'); sfx('tick'); } return; }
   if(e.pointerType==='touch'){ touchUp(e); return; }
   if(camDown&&e.pointerId===camDown.id){ const cd=camDown; camDown=null;
     if(Math.hypot(e.clientX-cd.x,e.clientY-cd.y)<8&&performance.now()-cd.t<600&&pointers.size===0){ const c=cellAt(e,true); if(c) tapInfo(c); } }
   if(!stroke||e.pointerId!==stroke.pid) return;
   const s=stroke; stroke=null;
   if(tool.kind==='road'||tool.kind==='line') commitPath(s.start,s.cur);
-  else if(tool.kind==='build'){ if(!s.moved||e.pointerType==='mouse') placeAt(s.cur); }
+  else if(tool.kind==='build'){ if(!s.moved||e.pointerType==='mouse'){ placeAt(s.cur); if(pending){ pending=null; showAct(); } } }
   else if(isPaint()&&s.changed) pushUndo(s.snap);
   if(e.pointerType==='touch'){ ghost.visible=false; prevTiles.count=0; } else updatePreview(hoverCell);
 }
@@ -3310,7 +3312,10 @@ for(const t of TOOLS) if(t.type&&!t.name) t.name=DEFS[t.type].name;
 const SPECIAL={camera:{id:'camera',kind:'camera',name:'Rozglądaj',emoji:'✋'},bulldoze:{id:'bulldoze',kind:'bulldoze',name:'Burzenie',emoji:'⛏️'}};
 let curCat='domy', itemsOpen=false;
 const catsEl=document.getElementById('cats'), itemsEl=document.getElementById('items'), hintEl=document.getElementById('hint');
-const isTouch=matchMedia('(pointer:coarse)').matches;
+let isTouch=matchMedia('(pointer:coarse)').matches&&!matchMedia('(any-pointer:fine)').matches;
+// myszka i palec mają różne sterowanie – przełączamy się na to, czego gracz właśnie użył
+window.addEventListener('pointerdown',e=>{ const t=e.pointerType==='touch'; if(t===isTouch) return; isTouch=t;
+  if(!t&&pending&&pending.kind==='build'){ pending=null; showAct(); } updateHint(); renderItems(); },true);
 function renderCats(){ catsEl.innerHTML='';
   for(const c of CATS){ const b=document.createElement('button'); b.className='cat'+(itemsOpen&&c.id===curCat?' on':''); b.textContent=c.l;
     b.onclick=()=>{ if(itemsOpen&&curCat===c.id){ itemsOpen=false; if(tool.cat===c.id) selectTool('camera'); } else { curCat=c.id; itemsOpen=true; } renderCats(); renderItems(); }; catsEl.appendChild(b); }
@@ -3353,7 +3358,7 @@ function updateHint(){
     else if(tool.kind==='bulldoze') h='Stuknij, aby burzyć · przytrzymaj i przeciągnij, aby burzyć więcej · '+camHint;
     else h='Stuknij, aby malować · przytrzymaj i przeciągnij, aby malować dalej · '+camHint;
   }
-  else if(tool.kind==='build') h=(DEFS[tool.type].desc||('Kliknij albo przeciągnij z paska na mapę: '+DEFS[tool.type].name))+' · R obraca'+(DEFS[tool.type].onRoad?' · można stawiać na drodze':'')+' · '+camHint;
+  else if(tool.kind==='build') h=(DEFS[tool.type].desc||('Kliknij albo przeciągnij z paska na mapę: '+DEFS[tool.type].name))+' · klik stawia · R obraca · prawy klik lub Esc odkłada'+(DEFS[tool.type].onRoad?' · można stawiać na drodze':'')+' · '+camHint;
   else if(tool.kind==='bulldoze') h='Kliknij lub przeciągnij, aby burzyć · '+camHint;
   else h=(tool.hint||'')+' · '+camHint;
   hintEl.textContent=h; hintEl.style.opacity=tool.kind==='camera'&&hintShown?0:1; clearTimeout(hintT); hintT=setTimeout(()=>{ hintEl.style.opacity=0; },tool.kind==='camera'?3500:5000); if(tool.kind==='camera') hintShown=true;
@@ -3379,7 +3384,7 @@ document.getElementById('bGrid').onclick=toggleGrid;
 document.getElementById('bPeople').onclick=e=>{ peopleOn=!peopleOn; e.currentTarget.classList.toggle('off',!peopleOn); if(!peopleOn){ agents.length=0; patrols.length=0; } };
 document.getElementById('bSound').onclick=e=>{ muted=!muted; e.currentTarget.textContent=muted?'🔇':'🔊'; if(!muted) ensureAudio(); };
 let toastT=0; const toastEl=document.getElementById('toast');
-function toast(msg){ toastEl.textContent=msg; toastEl.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('show'),1500); }
+function toast(msg,ms){ toastEl.textContent=msg; toastEl.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('show'),ms||Math.max(1700,msg.length*55)); }
 
 /* =========================================================
    Ciekawostki historyczne
@@ -3737,7 +3742,8 @@ function renderMenu(){
   on('sSound','onchange',()=>document.getElementById('bSound').click());
   on('mAbout','onclick',()=>{ closeModal(); showInfo(scenery==='vesuvius'?'pompeii':'rome'); });
   on('mQuests','onclick',()=>{ menuPage='quests'; renderMenu(); card.scrollTop=0; });
-  on('eTriumph','onclick',()=>startTriumph()); on('eRace','onclick',()=>startRace()); on('eGames','onclick',()=>startGames()); on('eVes','onclick',()=>startEruption());
+  const ev=f=>()=>{ closeModal(); hideInfo(); f(); };
+  on('eTriumph','onclick',ev(()=>startTriumph())); on('eRace','onclick',ev(()=>startRace())); on('eGames','onclick',ev(()=>startGames())); on('eVes','onclick',ev(()=>startEruption()));
   on('mPhoto','onclick',()=>enterPhoto());
   on('sAmb','onchange',e=>{ AUD.amb=e.target.checked; saveAud(); ensureAudio(); });
   on('sMusic','onchange',e=>{ AUD.music=e.target.checked; saveAud(); ensureAudio(); });
@@ -4129,7 +4135,7 @@ function petalsStep(time){
 let triumph=null;
 function roadPathForTriumph(){
   const ends=[], starts=[];
-  for(const b of buildings.values()){ if(!['temple','forum','curia','pantheon'].includes(b.type)) continue; const [fw,fd]=fpSize(DEFS[b.type],b.rot);
+  for(const b of buildings.values()){ if(!['temple','forum','forumromanum','curia','pantheon','basilica','arch','palace'].includes(b.type)) continue; const [fw,fd]=fpSize(DEFS[b.type],b.rot);
     for(let j=b.z-1;j<=b.z+fd;j++) for(let i=b.x-1;i<=b.x+fw;i++) if(isRoad(i,j)) ends.push(I(i,j)); }
   if(!ends.length) return null;
   const dist=new Int32Array(N*N).fill(-1), q=[...ends]; ends.forEach(e=>dist[e]=0);
@@ -4141,7 +4147,7 @@ function roadPathForTriumph(){
   return path;
 }
 function startTriumph(silent){
-  const path=roadPathForTriumph(); if(!path){ if(!silent) toast('Potrzebna droga z bramy (albo z brzegu mapy) do forum lub świątyni'); return; }
+  const path=roadPathForTriumph(); if(!path){ if(!silent) toast('Do triumfu potrzebna jest droga (min. 6 pól) prowadząca do świątyni, forum, kurii, bazyliki lub łuku triumfalnego',4200); return; }
   const pts=path.map(id=>({x:wx(id%N),z:wx((id/N)|0),y:groundY(id%N,(id/N)|0)})); const cum=[0]; for(let k=1;k<pts.length;k++) cum.push(cum[k-1]+Math.hypot(pts[k].x-pts[k-1].x,pts[k].z-pts[k-1].z));
   const M=[]; const add=(kind,col,n,pair)=>{ for(let k=0;k<n;k++) M.push({kind,col,side:pair?(k%2?1:-1):0}); };
   add('lictor','#f4f0e6',4,true); add('tuba',GOLD,2,true); add('spoils','#c9a36b',4,true); add('captive','#8a8f96',3,false); add('praet',PRAET_BODY,4,true); add('quadriga',null,1,false); add('praet',PRAET_BODY,6,true); add('soldier','#b3332b',8,true);
@@ -4307,7 +4313,7 @@ function showNextPop(){
   const el=document.getElementById('laurelPop');
   el.innerHTML=`<div class="lp-ic">🌿</div><div class="lp-t">Wieniec laurowy!</div><div class="lp-q">${q.t}</div>${un?`<div class="lp-u">Odblokowano: <b>${DEFS[un[0]].name}</b> 🔓</div>`:''}`;
   el.classList.add('show'); sfx('fanfare');
-  setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>{ popBusy=false; showNextPop(); },450); },3000);
+  setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>{ popBusy=false; showNextPop(); },500); },4200);
 }
 function updateLaurelChip(){ const c=document.getElementById('laurelChip'); if(c) c.textContent='🌿 '+laurels.size; }
 function isLocked(type){ const u=UNLOCKS.find(x=>x[0]===type); return u&&laurels.size<u[1]?u[1]:0; }
@@ -4718,7 +4724,7 @@ function updateLabels(){
   labelsEl.style.display=labelsOn?'':'none'; if(!labelsOn) return;
   const [W,H]=viewSize(), far=camera.position.distanceTo(controls.target);
   labelsEl.classList.toggle('small',far>N*0.75);
-  for(const [id,el] of labelMap){ const b=buildings.get(id); if(!b) continue; const bb=b.mesh.geometry.boundingBox; const h=(bb?bb.max.y:1)*b.mesh.scale.y+0.3+b.mesh.position.y;
+  for(const [id,el] of labelMap){ const b=buildings.get(id); if(!b){ el.style.display='none'; labelsDirty=true; continue; } const bb=b.mesh.geometry.boundingBox; const h=(bb?bb.max.y:1)*b.mesh.scale.y+0.3+b.mesh.position.y;
     _lv.set(b.mesh.position.x,h,b.mesh.position.z).project(camera);
     if(_lv.z>1||_lv.x<-1.05||_lv.x>1.05||_lv.y<-1.05||_lv.y>1.05||!b.mesh.visible||(far>N*0.5&&!el.dataset.major)){ el.style.display='none'; continue; }
     el.style.display=''; el.style.transform=`translate(${((_lv.x+1)/2*W).toFixed(1)}px,${((1-_lv.y)/2*H).toFixed(1)}px) translate(-50%,-100%)`; }
