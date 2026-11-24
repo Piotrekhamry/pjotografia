@@ -288,6 +288,8 @@ const G={
   prism:prismGeom(),
   pyr:(()=>{ const g=new THREE.ConeGeometry(Math.SQRT1_2,1,4); g.rotateY(Math.PI/4); return g; })(),
   sph:new THREE.SphereGeometry(1,10,7),
+  ico:new THREE.IcosahedronGeometry(1,0),
+  petal:new THREE.CylinderGeometry(1,0.35,0.5,5),
   hemi:new THREE.SphereGeometry(1,22,9,0,Math.PI*2,0,Math.PI/2),
   cyl(seg){ return memo['c'+seg]||(memo['c'+seg]=new THREE.CylinderGeometry(1,1,1,seg)); },
   cone(seg){ return memo['k'+seg]||(memo['k'+seg]=new THREE.ConeGeometry(1,1,seg)); },
@@ -321,16 +323,16 @@ class B{
   box(w,h,d,x,y,z,c,ry=0){ if(FLOWER_SET.has(c)) return this.planter(w,h,d,x,y,z,c,ry); return this.add(G.box,c,x,y+h/2,z,0,ry,0,w,h,d); }
   planter(w,h,d,x,y,z,c,ry){ // skrzynka/rabata: zielone liście i rząd kwiatów z płatkami
     this.add(G.box,'#5c8f40',x,y+h*0.45,z,0,ry,0,w,h*0.9,d);
-    const L=Math.max(w,d), n=Math.max(1,Math.round(L/0.065)), ax=w>=d, cr=Math.cos(ry), sr=Math.sin(ry), s=Math.min(w,d,0.07)*0.55;
+    const L=Math.max(w,d), n=Math.min(8,Math.max(1,Math.round(L/0.08))), ax=w>=d, cr=Math.cos(ry), sr=Math.sin(ry), s=Math.min(w,d,0.07)*0.55;
     for(let k=0;k<n;k++){ const t=-L/2+(k+0.5)*L/n, lx=ax?t:0, lz=ax?0:t, px=x+lx*cr+lz*sr, pz=z-lx*sr+lz*cr; this.bloom(s,px,y+h*0.95,pz,k%3===2?'#ffffff':c,k); }
     return this; }
   bloom(r,x,y,z,c,seed=0){ // kwiat: płatki wokół żółtego środka
-    for(let k=0;k<5;k++){ const a=k*1.2566+seed*0.7; this.add(G.sph,c,x+Math.cos(a)*r*0.55,y+r*0.15,z+Math.sin(a)*r*0.55,0,0,0,r*0.42,r*0.22,r*0.42); }
-    return this.add(G.sph,c==='#f2c14e'?'#ffffff':'#f6d35a',x,y+r*0.28,z,0,0,0,r*0.24,r*0.2,r*0.24); }
+    this.add(G.petal,c,x,y+r*0.15,z,0,seed*0.7,0,r*0.95,r*0.4,r*0.95);
+    return this.add(G.ico,c==='#f2c14e'?'#ffffff':'#f6d35a',x,y+r*0.3,z,0,0,0,r*0.28,r*0.2,r*0.28); }
   cyl(r,h,x,y,z,c,seg=10,rt=null){ if(rt===null) return this.add(G.cyl(seg),c,x,y+h/2,z,0,0,0,r,h,r); return this.add(new THREE.CylinderGeometry(rt,r,h,seg),c,x,y+h/2,z); }
   cone(r,h,x,y,z,c,seg=8){ return this.add(G.cone(seg),c,x,y+h/2,z,0,0,0,r,h,r); }
   sph(r,x,y,z,c,sy=1){ if(FLOWER_SET.has(c)){ // krzaczek kwiatów zamiast kulki
-      this.add(G.sph,'#5f9a45',x,y-r*0.2,z,0,0,0,r*1.05,r*0.72,r*1.05); const n=r>0.05?4:3;
+      this.add(G.ico,'#5f9a45',x,y-r*0.2,z,0,0,0,r*1.05,r*0.72,r*1.05); const n=r>0.05?3:2;
       for(let k=0;k<n;k++){ const a=k/n*6.283+x*7.1+z*3.3; this.bloom(r*0.62,x+Math.cos(a)*r*0.45,y+r*0.28,z+Math.sin(a)*r*0.45,c,k); }
       return this; }
     return this.add(G.sph,c,x,y,z,0,0,0,r,r*sy,r); }
@@ -1945,7 +1947,7 @@ const rimMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,flatS
 const rimWaterMat=new THREE.MeshStandardMaterial({color:WATERC,roughness:0.25,metalness:0.05});
 const rimRoadMat={1:new THREE.MeshStandardMaterial({color:'#cfc2aa',roughness:0.95}),2:new THREE.MeshStandardMaterial({color:'#9c9488',roughness:0.95})};
 function edgeKind(i,j){ const id=I(i,j); return terrain[id]===2?'w':(road[id]?'r'+road[id]:(line[id]===2?'a':'.')); }
-function edgeSig(){ let s=''; for(let k=0;k<N;k++) s+=edgeKind(k,0)+edgeKind(k,N-1)+edgeKind(0,k)+edgeKind(N-1,k); return N+':'+s; }
+function edgeSig(){ let s=''; for(let k=0;k<N;k++) s+=edgeKind(k,0)+edgeKind(k,N-1)+edgeKind(0,k)+edgeKind(N-1,k); return N+':'+s+':'+(typeof romeYear==='undefined'?'':romeYear); }
 function rimSpans(){
   const sp=[];
   const scan=(side,get)=>{ let k=0; while(k<N){ const kd=get(k); if(kd==='.'||kd==='a'){ k++; continue; } let e=k; while(e+1<N&&get(e+1)===kd) e++; sp.push({side,a:k,b:e,kind:kd}); k=e+1; } };
@@ -1967,18 +1969,50 @@ function rimHeight(x,z,sp){
   const [cd,kind]=corridorDist(x,z,sp); if(kind){ const f=smooth(0.4,2.2,cd); y=(kind==='w'?-0.03:-0.012)*(1-f)+y*f; }
   return y;
 }
+// Rzym ciągnie się daleko poza planszę: gęsta zabudowa przedmieść (instancje – tanie w rysowaniu)
+function urbanRim(){ return typeof romeYear!=='undefined'&&romeYear!==null&&romeYear>-400; }
+function urbanF(d){ if(!urbanRim()) return 0; const reach=N*(romeYear<0?0.45:(romeYear<100?0.75:0.9))*(IS_MOBILE?0.75:1); return 1-smooth(reach*0.35,reach,d); }
+function buildCityRim(sp,S,h){
+  const boxes=[], roofs=[], white=[], greens=[]; const lim=IS_MOBILE?9000:18000;
+  const R0=Math.ceil(h+1), R1=Math.ceil(h+N*0.95);
+  for(let gz=-R1;gz<R1;gz++) for(let gx=-R1;gx<R1;gx++){
+    if(boxes.length>=lim) break;
+    const x=gx+0.5, z=gz+0.5, d=Math.max(Math.abs(x),Math.abs(z))-h; if(d<0.9) continue;
+    const u=urbanF(d); if(u<=0.02) continue;
+    const ox=vnoise(x/14,z/14,91)>0.5?1:0; if(((gx+ox*3)%7+7)%7===0||((gz+ox*2)%6+6)%6===0) continue; // ulice
+    if(hash2(gx+500,gz+500,7)>u*0.95) continue;
+    const [cd]=corridorDist(x,z,sp); if(cd<1.4) continue; const y=rimHeight(x,z,sp); if(y>3.2) continue;
+    const hv=hash2(gx,gz,11), big=hash2(gx,gz,13);
+    if(big<0.012&&d>3){ white.push([x,y,z,1.8+hv*1.2,0.9+hv*0.8,1.3+hv]); continue; }
+    if(big>0.985){ greens.push([x,y,z]); continue; }
+    const w=0.62+hv*0.32, dd=0.62+hash2(gx,gz,12)*0.32, H=(0.35+hv*hv*1.25)*(0.6+0.6*u);
+    boxes.push([x,y,z,w,H,dd,hash2(gx,gz,14)]); roofs.push([x,y+H,z,w*1.06,0.18+hv*0.08,dd*1.06,hash2(gx,gz,15)]); }
+  const g=new THREE.Group();
+  const bm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1).translate(0,0.5,0),new THREE.MeshStandardMaterial({roughness:0.9,flatShading:true}),Math.max(1,boxes.length));
+  const c=new THREE.Color(); boxes.forEach(([x,y,z,w,H,dd,cv],k)=>{ setInst(bm,k,x,y,z,w,H,dd); bm.setColorAt(k,c.set(WALLS[Math.floor(cv*WALLS.length)])); }); bm.count=boxes.length; bm.receiveShadow=true;
+  const pyr=new THREE.ConeGeometry(0.71,1,4).rotateY(Math.PI/4).translate(0,0.5,0);
+  const rm=new THREE.InstancedMesh(pyr,new THREE.MeshStandardMaterial({roughness:0.85,flatShading:true}),Math.max(1,roofs.length));
+  roofs.forEach(([x,y,z,w,H,dd,cv],k)=>{ setInst(rm,k,x,y,z,w,H,dd); rm.setColorAt(k,c.set(ROOFS[Math.floor(cv*ROOFS.length)])); }); rm.count=roofs.length;
+  const wm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1).translate(0,0.5,0),new THREE.MeshStandardMaterial({color:'#f3eee4',roughness:0.7,flatShading:true}),Math.max(1,white.length*2));
+  let k2=0; white.forEach(([x,y,z,w,H,dd])=>{ setInst(wm,k2++,x,y,z,w,H,dd); setInst(wm,k2++,x,y+H,z,w*0.7,0.25,dd*0.6); }); wm.count=k2;
+  const gm=new THREE.InstancedMesh(new THREE.SphereGeometry(0.5,6,4).scale(1,0.6,1),new THREE.MeshStandardMaterial({color:'#6a9a4a',roughness:0.9,flatShading:true}),Math.max(1,greens.length*3));
+  let k3=0; greens.forEach(([x,y,z])=>{ for(let q=0;q<3;q++) setInst(gm,k3++,x+(q-1)*0.3,y+0.3,z+((q*7)%3-1)*0.25,0.9,0.9,0.9); }); gm.count=k3;
+  for(const m of [bm,rm,wm,gm]){ m.frustumCulled=false; g.add(m); }
+  return g;
+}
 function buildRim(){
   rimSig=edgeSig();
   if(rim){ scene.remove(rim); rim.traverse(o=>{ if(o.geometry&&o.geometry!==G.box) o.geometry.dispose(); }); }
   rim=new THREE.Group(); const sp=rimSpans(), h=N/2, S=Math.max(220,N*5), seg=Math.min(170,Math.round(S/1.6));
   const g=new THREE.PlaneGeometry(S,S,seg,seg); g.rotateX(-Math.PI/2);
-  const pos=g.attributes.position, col=new Float32Array(pos.count*3), c=new THREE.Color(), haze=new THREE.Color('#e6e0d2'), grass=new THREE.Color('#9ccb68'), dark=new THREE.Color('#6f9f4e'), field=new THREE.Color('#d9bf63'), rock=new THREE.Color('#a8987a'), wet=new THREE.Color('#d8c99e');
+  const pos=g.attributes.position, col=new Float32Array(pos.count*3), c=new THREE.Color(), haze=new THREE.Color('#e6e0d2'), grass=new THREE.Color('#9ccb68'), dark=new THREE.Color('#6f9f4e'), field=new THREE.Color('#d9bf63'), rock=new THREE.Color('#a8987a'), urbanCol=new THREE.Color('#cdbfa2'), wet=new THREE.Color('#d8c99e');
   for(let v=0;v<pos.count;v++){ const x=pos.getX(v), z=pos.getZ(v), y=rimHeight(x,z,sp); pos.setY(v,y);
     const d=Math.max(Math.abs(x),Math.abs(z))-h, n1=vnoise(x/6,z/6,81), n2=vnoise(x/11,z/11,82);
     c.copy(grass).lerp(dark,clamp((n1-0.45)*2.2,0,1)*0.9);
     if(d<16&&n2>0.62) c.lerp(field,0.85);
     c.lerp(rock,smooth(2.5,6,y)*0.8);
     const [cd,kind]=corridorDist(x,z,sp); if(kind==='w'&&cd<1.6) c.lerp(wet,0.7*(1-cd/1.6));
+    const uf=urbanF(d); if(uf>0) c.lerp(urbanCol,uf*0.85);
     c.lerp(haze,smooth(N*0.7,N*2.3,d)*0.7);
     col[v*3]=c.r; col[v*3+1]=c.g; col[v*3+2]=c.b; }
   g.setAttribute('color',new THREE.BufferAttribute(col,3)); g.computeVertexNormals();
@@ -1994,13 +2028,14 @@ function buildRim(){
   // lasy, pinie i cyprysy za miastem
   const cones=[], pines=[];
   for(let k=0;k<5200&&cones.length+pines.length<2400;k++){ const x=(rnd()-0.5)*S*0.9, z=(rnd()-0.5)*S*0.9, d=Math.max(Math.abs(x),Math.abs(z))-h;
-    if(d<1.2||d>N*1.3) continue; const n=vnoise(x/6,z/6,81); if(n<0.5&&rnd()>0.08) continue; const [cd]=corridorDist(x,z,sp); if(cd<1.6) continue;
+    if(d<1.2||d>N*1.3) continue; if(urbanF(d)>0.15&&rnd()<0.9) continue; const n=vnoise(x/6,z/6,81); if(n<0.5&&rnd()>0.08) continue; const [cd]=corridorDist(x,z,sp); if(cd<1.6) continue;
     const y=rimHeight(x,z,sp); if(y>5.5) continue; const sc=0.8+rnd()*0.9; (rnd()<0.55?cones:pines).push([x,y,z,sc]); }
   const cm=new THREE.InstancedMesh(new THREE.ConeGeometry(0.16,1,6).translate(0,0.5,0),new THREE.MeshStandardMaterial({color:CYP,roughness:0.9,flatShading:true}),Math.max(1,cones.length));
   cones.forEach(([x,y,z,s],k)=>setInst(cm,k,x,y,z,s,s*(1.1+(k%3)*0.2),s)); cm.count=cones.length; cm.castShadow=true;
   const pm=new THREE.InstancedMesh(new THREE.SphereGeometry(0.34,7,4).scale(1,0.5,1).translate(0,0.75,0),new THREE.MeshStandardMaterial({color:'#6a9a4a',roughness:0.9,flatShading:true}),Math.max(1,pines.length));
   pines.forEach(([x,y,z,s],k)=>setInst(pm,k,x,y,z,s,s,s)); pm.count=pines.length; pm.castShadow=true;
   rim.add(cm); rim.add(pm);
+  if(urbanRim()) rim.add(buildCityRim(sp,S,h));
   scene.add(rim);
 }
 
@@ -2475,14 +2510,14 @@ function romeBuild(Y,opt){
   for(let j=0;j<N;j++) for(let i=0;i<N;i++) if(terrain[I(i,j)]===2) for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(inb(ni,nj)&&hgt[I(ni,nj)]>1) hgt[I(ni,nj)]=1; }
   calcHillMax();
   // --- zieleń: lasy na wzgórzach (dawniej więcej), ogrody (horti), pola na Polu Marsowym
-  const wild=Y<-300?0.25:(Y<0?0.5:0.62);
+  const wild=Y<-300?0.25:(Y<0?0.5:0.8);
   for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const id=I(i,j); if(terrain[id]===2) continue; const n=vnoise(i/4.2,j/4.2,11);
     if(hgt[id]>=1&&n>wild) terrain[id]=3;
     if(Y<-200&&i>=17&&i<=33&&j>=8&&j<=36&&n>0.35) terrain[id]=4; }
   const TRc=(x0,z0,w,d,v)=>{ for(let j=z0;j<z0+d;j++) for(let i=x0;i<x0+w;i++) if(inb(i,j)&&terrain[I(i,j)]!==2) terrain[I(i,j)]=v; };
   if(Y>=-60){ TRc(36,1,14,8,3); TRc(44,9,8,6,3); }   // ogrody Lukullusa i Salustiusza
   if(Y>=-10) TRc(0,26,7,8,3);                        // ogrody Agryppiny / Watykan
-  TRc(60,62,20,18,4); TRc(64,0,16,8,4); if(Y<200) TRc(0,66,18,14,4);
+  if(Y<100) TRc(60,62,20,18,4); TRc(64,0,16,8,4); if(Y<60) TRc(0,66,18,14,4);
   dirtyTerrain=true;
   const R=(a,b,v=1)=>{ for(const [i,j] of lPath({i:a[0],j:a[1]},{i:b[0],j:b[1]})){ const id=I(i,j); if(bld[id]) continue; if(road[id]===2&&v===1) continue; road[id]=v; } dirtyRoads=true; };
   const L=(a,b,v,skipWater=true)=>{ for(const [i,j] of lPath({i:a[0],j:a[1]},{i:b[0],j:b[1]})){ const id=I(i,j); if(bld[id]) continue; if(v===1&&terrain[id]===2) continue; setLine(i,j,v); } };
@@ -2579,16 +2614,18 @@ function romeBuild(Y,opt){
 function romeFinish(Y,opt){
   const pop=Y<-600?0:Y<-400?0.2:Y<-200?0.35:Y<-30?0.55:Y<60?0.75:Y<300?0.9:0.8;
   if(pop){ const H=(x,z,w,d,dn)=>fillHouses(x,z,w,d,dn*pop);
-    H(42,26,9,7,0.95);  // Subura
-    H(14,38,10,24,0.75); // Zatybrze
-    H(30,62,10,10,0.6);  // Awentyn
-    H(52,48,10,10,0.55); // Celius
-    H(60,26,14,14,0.45); // Eskwilin
-    H(52,18,10,8,0.6);   // Wiminał
-    H(40,14,12,10,0.5);  // Kwirynał
-    H(33,42,6,6,0.6);    // Welabrum
-    if(Y>-60) H(17,4,14,9,0.4); // północ Pola Marsowego
-    if(Y>40) H(24,48,10,6,0.6); }
+    H(42,26,9,7,1.0);   // Subura
+    H(14,38,10,24,0.9);  // Zatybrze
+    H(30,62,10,10,0.8);  // Awentyn
+    H(52,48,10,10,0.75); // Celius
+    H(60,26,14,14,0.65); // Eskwilin
+    H(52,18,10,8,0.8);   // Wiminał
+    H(40,14,12,10,0.7);  // Kwirynał
+    H(33,42,6,6,0.8);    // Welabrum
+    if(Y>-60) H(17,4,14,9,0.55); // północ Pola Marsowego
+    if(Y>40){ H(24,48,10,6,0.8); H(62,40,16,8,0.55); H(56,70,22,10,0.45); H(4,52,10,14,0.5); } }
+  if(Y>=-44){ // miasto zabudowane: wolne pola to bruk, podwórza i działki, nie łąka
+    const k=Y>=60?0.68:0.5; for(let j=0;j<N;j++) for(let i=6;i<N;i++){ const id=I(i,j); if(bld[id]||road[id]||line[id]||terrain[id]!==0) continue; if(vnoise(i/5,j/5,402)<k) terrain[id]=1; } }
   undoStack.length=0; dirtyTerrain=true; dirtyRoads=true; dirtySave=true;
   for(let id=0;id<N*N;id++) if(line[id]) dirtyLines.add(id);
   if(!opt.keepCam){ controls.target.set(wx(44),0,wx(44)); camera.position.set(wx(44)+16,21,wx(44)+24); controls.update(); }
