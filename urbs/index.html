@@ -268,6 +268,7 @@ const easeOutBack = t => { const c1=1.70158, c3=c1+1; return 1+c3*Math.pow(t-1,3
    ========================================================= */
 const WALLS=['#f2dfbf','#ecc995','#e8b48f','#f3d9a4','#efd6c4','#f4e8d2','#e3ad85','#f0c9a8','#eed9b0'];
 const ROOFS=['#c8643b','#bf5a35','#d0714a','#b9542f'];
+const FLOWER_SET=new Set(['#e86a7a','#f2c14e','#b57edc','#fdfaf2','#f08a4b','#e94f4f']);
 const WINL='#4b5d73';
 const MARBLE='#f5f0e6', STONE='#e6dcc7', STONE2='#dccfb4', TRAV='#e9dcc0', DARK='#5b4a3d', WIN='#6a584a', DOOR='#7a4f33',
       WOOD='#8f6040', BRONZE='#a87a45', GOLD='#d9b24c', RED='#b8382e', WATERC='#6cc3d5', SAND='#e6cd96', GREEN='#86b85e',
@@ -317,10 +318,22 @@ class B{
     g.clearGroups();
     this.parts.push(g); return this;
   }
-  box(w,h,d,x,y,z,c,ry=0){ return this.add(G.box,c,x,y+h/2,z,0,ry,0,w,h,d); }
+  box(w,h,d,x,y,z,c,ry=0){ if(FLOWER_SET.has(c)) return this.planter(w,h,d,x,y,z,c,ry); return this.add(G.box,c,x,y+h/2,z,0,ry,0,w,h,d); }
+  planter(w,h,d,x,y,z,c,ry){ // skrzynka/rabata: zielone liście i rząd kwiatów z płatkami
+    this.add(G.box,'#5c8f40',x,y+h*0.45,z,0,ry,0,w,h*0.9,d);
+    const L=Math.max(w,d), n=Math.max(1,Math.round(L/0.065)), ax=w>=d, cr=Math.cos(ry), sr=Math.sin(ry), s=Math.min(w,d,0.07)*0.55;
+    for(let k=0;k<n;k++){ const t=-L/2+(k+0.5)*L/n, lx=ax?t:0, lz=ax?0:t, px=x+lx*cr+lz*sr, pz=z-lx*sr+lz*cr; this.bloom(s,px,y+h*0.95,pz,k%3===2?'#ffffff':c,k); }
+    return this; }
+  bloom(r,x,y,z,c,seed=0){ // kwiat: płatki wokół żółtego środka
+    for(let k=0;k<5;k++){ const a=k*1.2566+seed*0.7; this.add(G.sph,c,x+Math.cos(a)*r*0.55,y+r*0.15,z+Math.sin(a)*r*0.55,0,0,0,r*0.42,r*0.22,r*0.42); }
+    return this.add(G.sph,c==='#f2c14e'?'#ffffff':'#f6d35a',x,y+r*0.28,z,0,0,0,r*0.24,r*0.2,r*0.24); }
   cyl(r,h,x,y,z,c,seg=10,rt=null){ if(rt===null) return this.add(G.cyl(seg),c,x,y+h/2,z,0,0,0,r,h,r); return this.add(new THREE.CylinderGeometry(rt,r,h,seg),c,x,y+h/2,z); }
   cone(r,h,x,y,z,c,seg=8){ return this.add(G.cone(seg),c,x,y+h/2,z,0,0,0,r,h,r); }
-  sph(r,x,y,z,c,sy=1){ return this.add(G.sph,c,x,y,z,0,0,0,r,r*sy,r); }
+  sph(r,x,y,z,c,sy=1){ if(FLOWER_SET.has(c)){ // krzaczek kwiatów zamiast kulki
+      this.add(G.sph,'#5f9a45',x,y-r*0.2,z,0,0,0,r*1.05,r*0.72,r*1.05); const n=r>0.05?4:3;
+      for(let k=0;k<n;k++){ const a=k/n*6.283+x*7.1+z*3.3; this.bloom(r*0.62,x+Math.cos(a)*r*0.45,y+r*0.28,z+Math.sin(a)*r*0.45,c,k); }
+      return this; }
+    return this.add(G.sph,c,x,y,z,0,0,0,r,r*sy,r); }
   hemi(r,x,y,z,c,sy=1){ return this.add(G.hemi,c,x,y,z,0,0,0,r,r*sy,r); }
   roofX(w,h,d,x,y,z,c){ if(d>0.2&&w>0.2) this.add(G.box,shade(c,-0.2),x,y+0.025,z,0,0,0,w,0.05,d); return this.add(G.prism,c,x,y+(d>0.2&&w>0.2?0.05:0),z,0,0,0,w,h,d); }
   roofZ(w,h,d,x,y,z,c){ if(d>0.2&&w>0.2) this.add(G.box,shade(c,-0.2),x,y+0.025,z,0,0,0,w,0.05,d); return this.add(G.prism,c,x,y+(d>0.2&&w>0.2?0.05:0),z,0,Math.PI/2,0,d,h,w); }
@@ -1548,11 +1561,39 @@ const bMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.78,meta
 const nightU={value:0};
 const litC=(()=>{ const c=new THREE.Color(WINL); const h={}; c.getHSL(h); c.setHSL(h.h,Math.min(1,h.s*1.18),h.l*0.96); const m=Math.max(c.r,c.g,c.b); return new THREE.Vector3(c.r/m,c.g/m,c.b/m); })();
 bMat.onBeforeCompile=sh=>{ sh.uniforms.uNight=nightU; sh.uniforms.uLit={value:litC};
-  sh.fragmentShader='uniform float uNight;\nuniform vec3 uLit;\n'+sh.fragmentShader.replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
+  // tekstury proceduralne: dachówka na dachach, bloki kamienne i cegła na ścianach, płyty na posadzkach i stopniach
+  sh.vertexShader='varying vec3 vWP;\nvarying vec3 vWN;\n'+sh.vertexShader.replace('#include <project_vertex>',`#include <project_vertex>
+  { vec4 wq=vec4(transformed,1.0); vec3 wn=objectNormal;
+    #ifdef USE_INSTANCING
+    wq=instanceMatrix*wq; wn=mat3(instanceMatrix)*wn;
+    #endif
+    vWP=(modelMatrix*wq).xyz; vWN=normalize(mat3(modelMatrix)*wn); }`);
+  sh.fragmentShader='uniform float uNight;\nuniform vec3 uLit;\nvarying vec3 vWP;\nvarying vec3 vWN;\nfloat uh(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }\n'+sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+  #ifdef USE_COLOR
+  { vec3 c=vColor.rgb; float mx=max(c.r,max(c.g,c.b)), mn=min(c.r,min(c.g,c.b)), dl=mx-mn, sat=dl/max(mx,1e-4), hu=0.0;
+    if(dl>1e-4){ if(mx==c.r) hu=mod((c.g-c.b)/dl,6.0); else if(mx==c.g) hu=(c.b-c.r)/dl+2.0; else hu=(c.r-c.g)/dl+4.0; hu/=6.0; }
+    vec3 Nw=normalize(vWN); float ny=abs(Nw.y); float fw=length(fwidth(vWP)); float det=1.0-smoothstep(0.018,0.06,fw);
+    if(det>0.0){
+      vec2 tg=normalize(vec2(-Nw.z,Nw.x)+vec2(1e-5)); float u=dot(vWP.xz,tg);
+      bool roof=(hu<0.075||hu>0.97)&&sat>0.5&&mx>0.42&&mx<0.95&&ny>0.2&&ny<0.97;
+      bool stone=sat<0.3&&mx>0.55;
+      bool brick=hu>0.03&&hu<0.11&&sat>=0.3&&sat<0.62&&mx>0.48&&mx<0.89;
+      if(roof){ float rw=vWP.y/0.05; float ro=floor(rw), rf=fract(rw); float uu=u/0.075+0.5*mod(ro,2.0);
+        float barrel=0.74+0.26*sin(fract(uu)*3.14159); float lip=0.72+0.28*smoothstep(0.0,0.22,rf);
+        diffuseColor.rgb*=mix(1.0,barrel*lip*(0.93+0.14*uh(vec2(ro,floor(uu)))),det*0.85); }
+      else if(ny<0.4&&((stone&&!(mx>0.92&&sat<0.1))||brick)){ float ch=brick?0.042:0.095, bl=brick?0.12:0.23;
+        float row=floor(vWP.y/ch), bu=(u+mod(row,2.0)*bl*0.5)/bl, jy=fract(vWP.y/ch), ju=fract(bu);
+        float mort=min(min(jy,1.0-jy)*ch,min(ju,1.0-ju)*bl); float j=smoothstep(0.002,0.009,mort);
+        float tint=0.93+0.12*uh(vec2(row,floor(bu)));
+        diffuseColor.rgb*=mix(1.0,(0.78+0.22*j)*tint,det*(brick?0.75:0.6)); }
+      else if(Nw.y>0.95&&stone){ vec2 g=vWP.xz/0.26; vec2 f=fract(g); float m=min(min(f.x,1.0-f.x),min(f.y,1.0-f.y))*0.26; float j=smoothstep(0.002,0.008,m);
+        diffuseColor.rgb*=mix(1.0,(0.84+0.16*j)*(0.95+0.08*uh(floor(g))),det*0.55); }
+    } }
+  #endif`).replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
   #ifdef USE_COLOR
   if(uNight>0.001){ vec3 cn=vColor.rgb/max(max(vColor.r,vColor.g),max(vColor.b,1e-4)); if(distance(cn,uLit)<0.07) totalEmissiveRadiance+=vec3(1.0,0.58,0.22)*1.7*uNight; }
   #endif`); };
-bMat.customProgramCacheKey=()=>'urbs-night';
+bMat.customProgramCacheKey=()=>'urbs-night-tex';
 const ghostMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.8,flatShading:true,side:THREE.DoubleSide,transparent:true,opacity:0.6,depthWrite:false});
 
 /* =========================================================
@@ -1958,7 +1999,7 @@ function setTerrain(i,j,v){ const id=I(i,j); if(terrain[id]===v) return false; i
    ========================================================= */
 const HDIR=[[1,0],[-1,0],[0,-1],[0,1]]; // E, W, N, S
 const FRONT_FACE=[3,0,2,1]; // rot -> indeks ściany frontowej (0:+z S, 1:+x E, 2:-z N, 3:-x W)
-const FLOWERS=['#e86a7a','#f2c14e','#b57edc','#ffffff','#f08a4b','#e94f4f'];
+const FLOWERS=['#e86a7a','#f2c14e','#b57edc','#fdfaf2','#f08a4b','#e94f4f'];
 function houseAt(i,j){ if(!inb(i,j)) return null; const o=bld[I(i,j)]; if(!o) return null; const b=buildings.get(o); return b&&b.type==='house'?b:null; }
 function freeRoad(i,j){ return inb(i,j)&&road[I(i,j)]>0&&!bld[I(i,j)]&&!line[I(i,j)]; }
 function houseCtx(b){
