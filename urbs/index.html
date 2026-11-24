@@ -693,29 +693,6 @@ function shipParts(b,x,y,z,ry,sail){
     b.cyl(0.02,0.25,0,0.2,-0.62,'#5e3f27',5,0.01); b.box(0.12,0.04,0.06,0,0.42,-0.62,GOLD);
     for(let k=0;k<3;k++) b.cyl(0.04,0.1,0.08-k*0.08,0.16,0.35+k*0.07,'#b86a3c',6,0.02); });
 }
-D.port=(b,r)=>{
-  // ląd: plac, magazyny (horrea), amfory, dźwig
-  b.box(5.9,0.12,2.5,0,0,-1.25,'#e3d6bc');
-  for(const x of [-1.55,1.55]){ b.box(2.4,0.9,1.1,x,0.12,-1.8,'#e3b48c'); b.roofX(2.5,0.3,1.2,x,1.02,-1.8,ROOF);
-    for(let k=0;k<5;k++) b.box(0.26,0.4,0.03,x-0.96+k*0.48,0.12,-1.24,DARK); windows(b,2.4,1.1,x,-1.8,0.75,5,2); }
-  for(let k=0;k<14;k++){ const x=-2.6+(k%7)*0.22, z=-0.7+Math.floor(k/7)*0.18; b.cyl(0.05,0.17,x,0.12,z,pick(['#b86a3c','#c98a4a','#a95f35'],r),7,0.03); }
-  for(let k=0;k<4;k++) b.box(0.26,0.18,0.22,1.0+k*0.3,0.12,-0.6,pick(['#c9b08a','#a7b36b','#d9b25f'],r));
-  // nabrzeże z kamienia, pachołki
-  b.box(5.9,0.3,0.55,0,-0.14,0.27,STONE); b.box(5.9,0.04,0.6,0,0.16,0.27,'#efe4cc');
-  for(let k=0;k<6;k++) b.cyl(0.04,0.1,-2.5+k*1.0,0.2,0.45,'#5a4636',6);
-  // dźwig z kołem deptakowym
-  b.add(new THREE.CylinderGeometry(0.32,0.32,0.08,14),WOOD,2.3,0.55,-0.25,0,0,Math.PI/2);
-  b.box(0.05,0.9,0.05,2.3,0.2,-0.25,WOOD); b.add(G.box,WOOD,2.3,1.05,0.25,0.9,0,0,0.05,1.15,0.05); b.box(0.01,0.5,0.01,2.3,0.9,0.75,'#3d3a36'); b.box(0.16,0.12,0.16,2.3,0.85,0.75,'#c9a36b');
-  // molo z latarnią (pharos)
-  b.box(0.6,0.24,2.1,-2.6,-0.08,1.55,STONE); b.box(0.64,0.04,2.14,-2.6,0.16,1.55,'#efe4cc');
-  b.box(0.55,0.7,0.55,-2.6,0.2,2.25,'#efe6d6'); b.box(0.42,0.5,0.42,-2.6,0.9,2.25,'#efe6d6'); b.cyl(0.15,0.32,-2.6,1.4,2.25,'#efe6d6',10);
-  b.sph(0.13,-2.6,1.82,2.25,'#ffb347',1.1); b.cone(0.17,0.15,-2.6,1.94,2.25,BRONZE,10);
-  for(const z of [1.0,1.5]) b.box(0.08,0.14,0.03,-2.6,0.35,z,DARK);
-  // statki przy nabrzeżu
-  shipParts(b,0.3,0.02,1.25,Math.PI/2,'#f1e6cf');
-  shipParts(b,0.6,0.02,2.05,Math.PI/2+0.08,'#d98a5a');
-  b.box(0.02,0.02,0.6,-0.6,0.18,0.75,'#8a6a48');
-};
 
 /* ---- ozdoby odblokowywane za wieńce laurowe ---- */
 D.colossus=(b,r)=>{
@@ -1206,6 +1183,121 @@ function rebuildArcus(){
     m.position.copy(b.mesh.position); m.rotation.y=s===0?-Math.PI/2:0; arcBridgeGroup.add(m); arcBridges.push({b,s,q}); } }
   aoDirty=true;
 }
+/* ---- Wielki most: wysokie łuki nad rzeką, pod którymi przepływają statki, z posągami na balustradach ---- */
+const DECK=1.15;
+let bridgeCnt=0, brH=new Float32Array(0), brA=new Float32Array(0), brB=new Float32Array(0), brAx=new Uint8Array(0), brDirty=true;
+function ponsShape(ea,eb,arch){ const s=new THREE.Shape(); s.moveTo(-0.5,0);
+  if(arch){ s.lineTo(-arch.hw,0); s.absarc(0,arch.sp,arch.hw,Math.PI,0,true); s.lineTo(arch.hw,0); }
+  s.lineTo(0.5,0); s.lineTo(0.5,Math.max(0.02,eb)); s.lineTo(-0.5,Math.max(0.02,ea)); s.lineTo(-0.5,0.0001);
+  return new THREE.ExtrudeGeometry(s,{depth:0.58,bevelEnabled:false,curveSegments:12}); }
+function bridgeStatue(b,x,y,z,s,k){ b.box(0.12,0.16,0.12,x,y,z,TRAV); b.box(0.15,0.03,0.15,x,y+0.16,z,'#efe4cc');
+  const c=k%3===2?BRONZE:MARBLE; b.cyl(0.035,0.2,x,y+0.19,z,c,7,0.028); b.sph(0.03,x,y+0.43,z,c); b.add(G.box,c,x+0.04*s,y+0.36,z,0,0,-0.9*s,0.02,0.12,0.02);
+  if(k%2===0){ b.add(G.box,c,x-0.03*s,y+0.33,z-0.03,0.5,0,0.5*s,0.01,0.12,0.06); b.add(G.box,c,x-0.03*s,y+0.33,z+0.03,-0.5,0,0.5*s,0.01,0.12,0.06); } }
+function ponsX(b,ea,eb,water,statue){
+  const top=(ea+eb)/2, L=Math.hypot(1,eb-ea), ang=Math.atan2(eb-ea,1);
+  const arch=water&&Math.min(ea,eb)>0.8?{hw:0.36,sp:Math.min(ea,eb)-0.56}:null;
+  b.add(ponsShape(ea-0.08,eb-0.08,arch),TRAV,0,0,-0.29);
+  b.add(G.box,'#b9ad98',0,top-0.03,0,0,0,ang,L,0.07,0.62);
+  for(const z of [-0.3,0.3]){ b.add(G.box,TRAV,0,top+0.06,z,0,0,ang,L,0.14,0.06); b.add(G.box,'#efe4cc',0,top+0.135,z,0,0,ang,L,0.03,0.09); }
+  if(water){ for(const x of [-0.5,0.5]) for(const s of [-1,1]){ b.add(G.prism,TRAV,x,0,s*0.38,0,s>0?0:Math.PI,0,0.24,Math.min(ea,eb)*0.45,0.22); }
+    if(arch){ b.add(arcRing(arch.hw,arch.hw+0.06,0.02),'#e6d6b4',0,arch.sp,0.29); b.add(arcRing(arch.hw,arch.hw+0.06,0.02),'#e6d6b4',0,arch.sp,-0.31); } }
+  if(statue) for(const s of [-1,1]) bridgeStatue(b,0,top+0.15,s*0.3,s,Math.round((ea+eb)*7));
+}
+// wysokości: woda – pełna wysokość pomostu, ląd – rampa od końców mostu
+function computeBridges(){
+  brDirty=false; const NN=N*N; if(brH.length!==NN){ brH=new Float32Array(NN); brA=new Float32Array(NN); brB=new Float32Array(NN); brAx=new Uint8Array(NN); }
+  const oldA=brA.slice(), oldB=brB.slice(); brH.fill(0); brA.fill(0); brB.fill(0);
+  const dEnd=new Int16Array(NN).fill(-1), q=[];
+  for(let id=0;id<NN;id++){ if(line[id]!==4) continue; const i=id%N, j=(id/N)|0; let n=0; for(const [di,dj] of DIRS) if(lineAt(i+di,j+dj)===4) n++; if(n<=1){ dEnd[id]=0; q.push(id); } }
+  for(let h=0;h<q.length;h++){ const id=q[h], i=id%N, j=(id/N)|0; for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(lineAt(ni,nj)!==4) continue; const nid=I(ni,nj); if(dEnd[nid]<0){ dEnd[nid]=dEnd[id]+1; q.push(nid); } } }
+  bridgeCnt=0; for(let id=0;id<NN;id++) if(line[id]===4) bridgeCnt++;
+  for(let id=0;id<NN;id++){ if(line[id]!==4) continue; brH[id]=terrain[id]===2?DECK:Math.min(DECK,(Math.max(0,dEnd[id])+1)*DECK/3); }
+  for(let id=0;id<NN;id++){ if(line[id]!==4) continue; const i=id%N, j=(id/N)|0;
+    const hx=lineAt(i+1,j)===4||lineAt(i-1,j)===4; brAx[id]=hx?0:1;
+    const [ai,aj,bi,bj]=hx?[i-1,j,i+1,j]:[i,j-1,i,j+1];
+    brA[id]=lineAt(ai,aj)===4?(brH[id]+brH[I(ai,aj)])/2:0; brB[id]=lineAt(bi,bj)===4?(brH[id]+brH[I(bi,bj)])/2:0;
+    if(oldA[id]!==brA[id]||oldB[id]!==brB[id]) dirtyLines.add(id); }
+}
+function bridgeY(id,fx,fz){ const u=(brAx[id]?fz:fx)+0.5; return brA[id]+(brB[id]-brA[id])*clamp(u,0,1); }
+/* ---- zakończenie akweduktu: castellum z kaskadą do basenu ---- */
+function aqEnd(b,e){
+  const H0=e*LH, TOP=2.08+H0;
+  b.box(1.0,0.16,0.34,-0.25,1.92+H0,0,'#efe3c8'); b.box(0.5,0.02,0.16,-0.25,2.08+H0,0,WATERC); // kanał
+  b.box(0.42,TOP+0.12,0.62,-0.2,0,0,TRAV); b.box(0.48,0.08,0.68,-0.2,TOP+0.12,0,'#efe3c8'); b.roofX(0.5,0.18,0.7,-0.2,TOP+0.2,0,ROOF); // castellum aquae
+  b.add(archPanel(0.62,0.9,0.03,[{c:0,hw:0.12,spring:0.45}]),'#efe3c8',-0.01,TOP-1.0,-0.31,0,Math.PI/2,0);
+  for(const z of [-0.27,0.27]){ b.cyl(0.04,TOP-0.15,0.03,0.05,z,MARBLE,8); b.box(0.1,0.12,0.1,0.03,TOP-0.12,z,'#efe3c8'); b.sph(0.045,0.03,TOP+0.02,z,BRONZE); }
+  b.sph(0.06,0.03,TOP-0.1,0,BRONZE); b.box(0.12,0.03,0.12,0.1,TOP-0.15,0,'#efe3c8'); // wylewka (lwia paszcza)
+  b.box(0.16,TOP-0.55,0.02,0.18,0.5,0,'#cfeef6'); b.box(0.12,TOP-0.6,0.02,0.2,0.5,0.03,'#bfe6f0');           // spadająca woda
+  b.cyl(0.2,0.05,0.16,0.42+H0*0.4,0,MARBLE,12); b.cyl(0.18,0.02,0.16,0.46+H0*0.4,0,WATERC,12);          // misa pośrednia
+  basin(b,0.2,0,0,0.46,0.4,0.24,MARBLE,18);
+  for(const z of [-0.36,0.36]) b.cypress(-0.02,z,0.5,0);
+}
+/* ---- Nimfeum: wielka fontanna z arkadami, kaskadą po skałach i posągiem boga rzeki ---- */
+D.nymphaeum=(b,r)=>{
+  const C=TRAV, CAP='#efe4cc', W=2.96, Z0=-0.9;
+  b.box(W,0.08,1.96,0,0,0,'#e6dcc8');
+  b.add(archPanel(W,1.05,0.3,[{c:-1.05,hw:0.24,spring:0.55},{c:0,hw:0.36,spring:0.62},{c:1.05,hw:0.24,spring:0.55}]),C,0,0.08,Z0);
+  b.box(W+0.06,0.09,0.38,0,1.13,Z0+0.15,CAP);
+  b.add(archPanel(W,0.78,0.26,[-1.2,-0.6,0,0.6,1.2].map(c=>({c,hw:0.16,spring:0.42}))),C,0,1.22,Z0+0.02);
+  b.box(W+0.06,0.08,0.34,0,2.0,Z0+0.15,CAP); b.box(W*0.7,0.32,0.28,0,2.08,Z0+0.13,C); b.box(W*0.72,0.05,0.32,0,2.4,Z0+0.13,CAP);
+  b.box(0.8,0.13,0.012,0,2.17,Z0+0.275,'#d9ccb3');
+  for(const x of [-1.4,-0.6,0.6,1.4]){ gcol(b,x,Z0+0.38,0.08,1.05,0.06,GRANITE,MARBLE); gcol(b,x,Z0+0.34,1.22,0.78,0.05,CIPOL,MARBLE); }
+  for(const x of [-1.05,1.05]){ b.box(0.14,0.12,0.12,x,0.08,Z0+0.22,MARBLE); b.cyl(0.05,0.32,x,0.2,Z0+0.22,MARBLE,8); b.sph(0.045,x,0.56,Z0+0.22,MARBLE); }
+  for(const x of [-1.2,-0.6,0.6,1.2]){ b.cyl(0.03,0.2,x,1.3,Z0+0.12,MARBLE,6); b.sph(0.03,x,1.53,Z0+0.12,MARBLE); }
+  for(const x of [-1.0,0,1.0]){ b.box(0.12,0.12,0.12,x,2.45,Z0+0.13,MARBLE); b.cyl(0.035,0.2,x,2.57,Z0+0.13,x?MARBLE:GILT,7); b.sph(0.035,x,2.8,Z0+0.13,x?MARBLE:GILT); }
+  // kaskada po skałach z centralnego łuku i posąg boga rzeki
+  const RK=['#cdbf9f','#bfb08f','#d8cbad'];
+  for(let k=0;k<14;k++){ const a=r()*Math.PI, rr=0.15+r()*0.5; b.add(new THREE.DodecahedronGeometry(1,0),pickR(r,RK),Math.cos(a)*rr*1.1,0.08+r()*0.25,Z0+0.45+Math.sin(a)*rr*0.6,r(),r(),r(),0.12+r()*0.12,0.1+r()*0.12,0.12+r()*0.1); }
+  b.box(0.5,1.0,0.03,0,0.25,Z0+0.32,'#cfeef6'); b.box(0.36,0.4,0.25,0,0.2,Z0+0.5,'#bfe6f0');
+  for(const x of [-0.25,0.25]) b.box(0.12,0.35,0.02,x,0.12,Z0+0.62,'#cfeef6');
+  b.box(0.2,0.2,0.16,0,0.36,Z0+0.62,'#d8cbad'); b.cyl(0.07,0.32,0,0.56,Z0+0.62,MARBLE,8,0.055); b.sph(0.06,0,0.96,Z0+0.62,MARBLE); b.add(G.box,MARBLE,0.1,0.82,Z0+0.62,0,0,-0.7,0.025,0.2,0.025); b.cyl(0.01,0.4,0.18,0.62,Z0+0.62,BRONZE,4);
+  // wielki basen
+  b.box(W-0.1,0.26,1.05,0,0.08,0.38,MARBLE); b.box(W-0.24,0.27,0.91,0,0.08,0.38,WATERC); b.box(W-0.05,0.04,1.1,0,0.34,0.38,CAP);
+  for(const x of [-1.1,1.1]){ b.cyl(0.14,0.05,x,0.35,0.38,MARBLE,10); jet(b,x,0.38,0.38,0.32); }
+};
+/* ---- Port: wielki dźwig z kołem deptakowym, horrea z portykami, plac rozładunkowy i drewniane doki ---- */
+D.port=(b,r)=>{
+  b.box(5.9,0.12,2.5,0,0,-1.25,'#ddd0b4');
+  // horrea – magazyny z portykiem od strony placu
+  for(const x of [-1.75,1.75]){ b.box(2.3,1.0,0.95,x,0.12,-2.0,'#d9a07a'); b.roofX(2.4,0.3,1.05,x,1.12,-2.0,ROOF);
+    for(let k=0;k<4;k++){ b.box(0.3,0.5,0.03,x-0.84+k*0.56,0.12,-1.52,DARK); b.box(0.36,0.06,0.04,x-0.84+k*0.56,0.62,-1.51,TRAV); }
+    for(let k=0;k<6;k++) gcol(b,x-1.05+k*0.42,-1.3,0.12,0.72,0.035,'#e6dcc8','#e6dcc8');
+    b.box(2.36,0.07,0.5,x,0.84,-1.35,'#efe4cc'); b.roofX(2.4,0.12,0.5,x,0.91,-1.35,ROOF); }
+  // urząd portowy (statio) z frontonem
+  b.box(0.9,0.85,0.8,0,0.12,-2.05,STUCCO); for(let k=0;k<4;k++) gcol(b,-0.33+k*0.22,-1.58,0.12,0.75,0.03); b.box(1.0,0.08,1.1,0,0.94,-1.9,MARBLE); pedimentFront(b,1.0,0.28,1.1,0,1.02,-1.9,ROOF,MARBLE);
+  // plac rozładunkowy: piramidy amfor, worki, beczki, skrzynie i wóz
+  for(let row=0;row<3;row++) for(let k=0;k<5-row;k++) b.cyl(0.05,0.17,-2.55+k*0.11+row*0.055,0.12+row*0.11,-0.75,pick(['#b86a3c','#c98a4a','#a95f35'],r),7,0.028);
+  for(let row=0;row<3;row++) for(let k=0;k<5-row;k++) b.cyl(0.05,0.17,-2.55+k*0.11+row*0.055,0.12+row*0.11,-0.58,pick(['#b86a3c','#c98a4a'],r),7,0.028);
+  for(let k=0;k<6;k++) b.sph(0.09,-1.6+(k%3)*0.17,0.2+Math.floor(k/3)*0.12,-0.7,'#d8c39a',0.7);
+  for(let k=0;k<4;k++){ b.cyl(0.08,0.2,-0.6+k*0.2,0.12,-0.75,'#8a5a36',10); b.cyl(0.082,0.02,-0.6+k*0.2,0.2,-0.75,IRON,10); }
+  for(let k=0;k<5;k++) b.box(0.22,0.16,0.2,0.4+(k%3)*0.25,0.12+Math.floor(k/3)*0.16,-0.72,pick(['#c9b08a','#a7b36b','#d9b25f'],r));
+  b.box(0.36,0.12,0.6,1.5,0.24,-0.8,'#8a5a36'); for(const z of [-1.0,-0.6]) for(const x of [1.3,1.7]) b.add(G.cyl(8),'#5e3f27',x,0.22,z,0,0,Math.PI/2,0.1,0.04,0.1);
+  for(let k=0;k<3;k++) b.cyl(0.04,0.14,1.45+k*0.05,0.36,-0.85+k*0.07,'#b86a3c',6,0.025);
+  // nabrzeże: kamień, schody do wody, pachołki
+  b.box(5.9,0.3,0.55,0,-0.14,0.27,STONE); b.box(5.9,0.04,0.6,0,0.16,0.27,'#efe4cc');
+  for(let k=0;k<6;k++) b.cyl(0.04,0.1,-2.5+k*1.0,0.2,0.48,'#5a4636',6);
+  for(let k=0;k<3;k++) b.box(0.5,0.16-k*0.06,0.12,-0.1,-0.14+0.0,0.6+k*0.12,'#d8ccb4');
+  // drewniane doki na palach
+  for(const x of [-1.2,0.95]){ b.box(0.5,0.06,1.95,x,0.1,1.5,'#9a6b43'); for(let k=0;k<5;k++){ const z=0.65+k*0.45; for(const s of [-1,1]) b.cyl(0.035,0.5,x+s*0.22,-0.32,z,'#6e4a30',6); }
+    for(let k=0;k<12;k++) b.box(0.5,0.012,0.012,x,0.16,0.6+k*0.16,'#7a5233'); b.cyl(0.035,0.14,x+0.2,0.16,2.35,'#5a4636',6); }
+  // wielki dźwig z kołem deptakowym, pochylony nad wodą
+  const cx=2.3; b.box(0.7,0.1,0.7,cx,0.12,-0.25,'#7a5233');
+  b.add(new THREE.CylinderGeometry(0.5,0.5,0.22,18,1,true),'#8a5a36',cx,0.72,-0.55,0,0,Math.PI/2); for(let k=0;k<8;k++) b.add(G.box,'#6e4a30',cx,0.72,-0.55,k*Math.PI/8,0,0,0.04,0.98,0.03);
+  b.cyl(0.04,0.3,cx,0.55,-0.55,'#5e3f27',6); b.box(0.06,0.06,0.3,cx,0.65,-0.55,'#5e3f27');
+  const len=Math.hypot(2.2,1.3), ang=Math.atan2(1.3,2.2);
+  for(const sx of [-0.18,0.18]) b.add(G.box,WOOD,cx+sx*(1-0.5),0.2+1.1,-0.25+0.65,ang,0,sx*0.12,0.07,len,0.07);
+  b.box(0.42,0.08,0.1,cx,2.36,1.0,'#5e3f27'); b.cyl(0.07,0.06,cx,2.28,1.05,IRON,8);
+  b.box(0.012,1.0,0.012,cx-0.04,1.3,1.05,'#3d3a36'); b.box(0.012,1.0,0.012,cx+0.04,1.3,1.05,'#3d3a36');
+  b.box(0.012,0.012,1.6,cx,2.3,0.25,'#3d3a36'); b.add(G.box,'#3d3a36',cx,1.2,-0.9,0.75,0,0,0.012,2.2,0.012);
+  b.box(0.26,0.18,0.22,cx,1.12,1.05,'#c9a36b'); b.box(0.28,0.02,0.24,cx,1.3,1.05,'#3d3a36');
+  // molo z latarnią
+  b.box(0.6,0.24,2.1,-2.6,-0.08,1.55,STONE); b.box(0.64,0.04,2.14,-2.6,0.16,1.55,'#efe4cc');
+  b.box(0.55,0.7,0.55,-2.6,0.2,2.25,'#efe6d6'); b.box(0.42,0.5,0.42,-2.6,0.9,2.25,'#efe6d6'); b.cyl(0.15,0.32,-2.6,1.4,2.25,'#efe6d6',10);
+  b.sph(0.13,-2.6,1.82,2.25,'#ffb347',1.1); b.cone(0.17,0.15,-2.6,1.94,2.25,BRONZE,10);
+  // statki przy dokach
+  shipParts(b,-0.12,0.02,1.55,0,'#f1e6cf'); shipParts(b,1.62,0.02,1.6,0.04,'#d98a5a');
+  b.box(0.02,0.02,0.5,0.95,0.22,1.0,'#8a6a48');
+};
 D.watchtower=(b,r)=>{
   b.box(0.74,0.14,0.74,0,0,0,STONE);
   b.box(0.6,1.5,0.6,0,0.12,0,WALLSTONE);
@@ -1368,6 +1460,7 @@ const DEFS={
   praetoria:{name:'Castra Praetoria',cat:'woj',w:8,d:6,v:1,pop:900,desc:'Koszary gwardii pretoriańskiej – wychodzą z nich patrole pretorianów'},
   forumromanum:{name:'Forum Romanum',cat:'publ',w:6,d:6,v:1},
   trajanmarkets:{name:'Targi Trajana',cat:'publ',w:5,d:4,v:1,pop:120},
+  nymphaeum:{name:'Nimfeum',cat:'publ',w:3,d:2,v:1,pop:0},
   arcus:{name:'Łuki',cat:'domy',w:1,d:1,v:12,onRoad:true,overWater:true,desc:'Puste pole, ulica lub rzeka – arkada; stuknij arkadę – kolejne piętro (do 12)'},
   hut:{name:'Chata',cat:'domy',w:1,d:1,v:4,pop:5,desc:'Chata z plecionki i strzechy – tak mieszkali pierwsi Rzymianie na Palatynie'},
   barbican:{name:'Barbakan z kratą',cat:'woj',w:3,d:2,v:1,onRoad:true,pop:6,desc:'Stawiaj na drodze przed bramą · stuknij, aby podnieść lub opuścić kratę'},
@@ -1512,6 +1605,8 @@ function lineGeom(key){
     for(const [bit,ry] of [[1,0],[2,Math.PI],[4,Math.PI/2],[8,-Math.PI/2]]) if(m&bit) b.at(0,0,0,ry,()=>wallStub(b)); }
   else if(wp[0]==='gate'){ const side=wp[2]||null; if(wp[1]==='x') gateX(b,side); else rotZ(()=>gateX(b,side)); }
   else if(wp[0]==='moat') moatG(b,+wp[1]);
+  else if(wp[0]==='pons'){ const qa=+wp[2], qb=parseInt(wp[3]), w=wp[3].includes('w'), st=wp[3].includes('s'); const fn=()=>ponsX(b,qa/24,qb/24,w,st); if(wp[1]==='x') fn(); else b.at(0,0,0,-Math.PI/2,fn); }
+  else if(wp[0]==='aqe'){ const m=key.match(/^aqe-([EWNS])(?:\+(\d+))?$/); const th={W:0,E:Math.PI,N:-Math.PI/2,S:Math.PI/2}[m[1]]; b.at(0,0,0,th,()=>aqEnd(b,+(m[2]||0))); }
   else if(key==='aq-x') aqX(b); else if(key==='aq-z') rotZ(aqX);
   else if(key.startsWith('aqp-')){ const m=+key.slice(4);
     b.box(0.5,1.92,0.42,0,0,0,TRAV); b.box(0.54,0.16,0.46,0,1.92,0,'#efe3c8');
@@ -1620,7 +1715,8 @@ const wx=i=>i-N/2+0.5;
 const cellH=(i,j)=>inb(i,j)?hgt[j*N+i]*LH:0;
 function calcHillMax(){ let m=0; for(let k=0;k<N*N;k++) if(hgt[k]>m) m=hgt[k]; hillMax=m; }
 // wysokość gruntu w punkcie świata – z płynnymi schodami między drogami na sąsiednich poziomach
-function hY(x,z){ if(!hillMax) return 0; const i=Math.floor(x+N/2), j=Math.floor(z+N/2); if(!inb(i,j)) return 0; const id=j*N+i, h=hgt[id]; let y=h*LH;
+function hY(x,z){ if(!hillMax&&!bridgeCnt) return 0; const i=Math.floor(x+N/2), j=Math.floor(z+N/2); if(!inb(i,j)) return 0; const id=j*N+i, h=hgt[id]; let y=h*LH;
+  if(bridgeCnt&&line[id]===4&&brA.length===N*N) return y+bridgeY(id,x-wx(i),z-wx(j));
   if(road[id]){ const fx=x-wx(i), fz=z-wx(j); for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(!inb(ni,nj)) continue; const nid=nj*N+ni;
     if(road[nid]&&hgt[nid]===h+1){ const d=di?fx*di:fz*dj; if(d>0) y=Math.max(y,h*LH+LH*Math.min(1,d/0.5)); } } }
   return y; }
@@ -1698,7 +1794,7 @@ function rebuildAO(){
   for(const b of buildings.values()){ if(n>=7000) break; if(!b.mesh.visible) continue; const def=DEFS[b.type]; if(def.decor&&b.type!=='arch') continue;
     const [fw,fd]=fpSize(def,b.rot); const sc=todayMode?Math.max(0.3,b.target??1):1;
     setInst(AO,n++,b.mesh.position.x,0.03+b.mesh.position.y,b.mesh.position.z,fw+0.55*sc,1,fd+0.55*sc); }
-  for(const [id,m] of lineMeshes){ if(n>=7000) break; const k=m.userData.key||''; if(k.startsWith('moat')) continue; const big=k.startsWith('tower'); setInst(AO,n++,m.position.x,0.03+m.position.y,m.position.z,big?1.25:1.1,1,big?1.25:1.1); }
+  for(const [id,m] of lineMeshes){ if(n>=7000) break; const k=m.userData.key||''; if(k.startsWith('moat')||k.startsWith('pons')) continue; const big=k.startsWith('tower'); setInst(AO,n++,m.position.x,0.03+m.position.y,m.position.z,big?1.25:1.1,1,big?1.25:1.1); }
   AO.count=n; AO.instanceMatrix.needsUpdate=true;
 }
 
@@ -1844,7 +1940,7 @@ function rebuildTerrain(){
     if(t===2) for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(!inb(ni,nj)||terrain[I(ni,nj)]===2) continue;
       if(di) si(T.bank,n.bank++,x+di*0.46,0.015,z,0.08,0.03,1); else si(T.bank,n.bank++,x,0.015,z+dj*0.46,1,0.03,0.08); }
     if(r&&drawInfo(i,j)){ /* most zwodzony rysowany osobno */ }
-    else if(r){
+    else if(r&&line[id]!==4){
       const br=t===2; const y0=br?-0.06:0, h=br?0.2:(r===2?0.04:0.035);
       tile(br?'bridge':(r===1?'road1':'road2'),x,z,y0,h);
       const ch=br?0.31:0.075, cy=br?-0.06:0;
@@ -1884,6 +1980,8 @@ function wallSide(i,j,ax){
 function isWet(i,j){ return !inb(i,j)||terrain[I(i,j)]===2||line[I(i,j)]===3; }
 function lineKey(i,j){
   const k=lineAt(i,j); if(!k) return null;
+  if(k===4){ const hx=lineAt(i+1,j)===4||lineAt(i-1,j)===4; const id4=I(i,j), w=terrain[id4]===2; const qa=brA.length===N*N?Math.round(brA[id4]*24):0, qb=brA.length===N*N?Math.round(brB[id4]*24):0;
+    return 'pons-'+(hx?'x':'z')+'-'+qa+'-'+qb+(w?'w':'l')+(w&&(i+j)%2===0?'s':''); }
   if(k===3) return 'moat-'+((isWet(i+1,j)?1:0)+(isWet(i-1,j)?2:0)+(isWet(i,j-1)?4:0)+(isWet(i,j+1)?8:0));
   const nE=lineAt(i+1,j)===k, nW=lineAt(i-1,j)===k, nN=lineAt(i,j-1)===k, nS=lineAt(i,j+1)===k;
   const hx=nE||nW, hz=nN||nS;
@@ -1909,6 +2007,7 @@ function lineKey(i,j){
   }
   const dry=aqWet.length===N*N&&!aqWet[I(i,j)]?'-d':'';
   const lid=I(i,j), ex=aqLvl.length===N*N?Math.max(0,aqLvl[lid]-hgt[lid]):0, up=ex?'+'+ex:'';
+  if(mask&&(mask&(mask-1))===0&&i>0&&j>0&&i<N-1&&j<N-1) return 'aqe-'+(nE?'E':nW?'W':nN?'N':'S')+up+dry;
   if(hx&&hz) return 'aqp-'+((nE?1:0)+(nW?2:0)+(nN?4:0)+(nS?8:0))+up+dry;
   return 'aq-'+(hz?'z':'x')+up+dry;
 }
@@ -1929,6 +2028,7 @@ function computeAqLevels(){
 }
 function processLines(){
   if(aqLvlDirty) computeAqLevels();
+  if(brDirty) computeBridges();
   for(const id of dirtyLines){
     const i=id%N, j=Math.floor(id/N); const key=lineKey(i,j); const ex=lineMeshes.get(id);
     if(!key){ if(ex){ lineGroup.remove(ex); lineMeshes.delete(id); } continue; }
@@ -2010,10 +2110,11 @@ function smoothAround(i0,j0){ const q=[[i0,j0]];
   calcHillMax(); aqLvlDirty=true; dirtyTerrain=true; dirtyRoads=true; }
 function setHeight(i,j,v){ if(!canRaise(i,j)) return false; const id=I(i,j); v=clamp(v,0,HMAX); if(hgt[id]===v) return false; hgt[id]=v; calcHillMax(); aqLvlDirty=true;
   dirtyTerrain=true; dirtyRoads=true; dirtySave=true; aoDirty=true; beautyDirty=true; return true; }
-function setLine(i,j,v){ const id=I(i,j); if(line[id]===v) return false; const was=line[id]; line[id]=v; arcusDirty=true; if(v===2||was===2) aqLvlDirty=true;
+function setLine(i,j,v){ const id=I(i,j); if(line[id]===v) return false; const was=line[id]; line[id]=v; arcusDirty=true;
+  if(v===4||was===4){ brDirty=true; dirtyWater=true; if(v===4&&!road[id]){ road[id]=2; dirtyRoads=true; waterNetDirty=true; } } if(v===2||was===2) aqLvlDirty=true;
   if(v===3){ terrain[id]=2; dirtyWater=true; } else if(was===3&&v===0&&terrain[id]===2) terrain[id]=0;
   for(const [di,dj] of DIRS) if(lineAt(i+di,j+dj)===3) dirtyLines.add(I(i+di,j+dj)); waterNetDirty=true; dirtyWalls=true; markHouses(i,j); markLine(i,j); dirtyTerrain=true; dirtySave=true; return true; }
-function setTerrain(i,j,v){ const id=I(i,j); if(terrain[id]===v) return false; if(v===2&&(bld[id]||hgt[id])) return false; if(line[id]===3&&v!==2) return false; terrain[id]=v;
+function setTerrain(i,j,v){ const id=I(i,j); if(terrain[id]===v) return false; if(line[id]===4) brDirty=true; if(v===2&&(bld[id]||hgt[id])) return false; if(line[id]===3&&v!==2) return false; terrain[id]=v;
   for(const [di,dj] of DIRS) if(lineAt(i+di,j+dj)===3) dirtyLines.add(I(i+di,j+dj)); dirtyWater=true; dirtyTerrain=true; dirtySave=true; return true; }
 /* =========================================================
    Kamienice łączące się w bloki (jak w Townscaperze)
@@ -2158,7 +2259,7 @@ function clearCell(i,j){ const id=I(i,j); if(bld[id]) removeBuilding(bld[id]); s
 function rle(a){ const out=[]; let prev=a[0],c=0; for(let k=0;k<a.length;k++){ if(a[k]===prev) c++; else { out.push(prev+'*'+c); prev=a[k]; c=1; } } out.push(prev+'*'+c); return out.join(','); }
 function unrle(s,n){ const a=new Uint8Array(n); let p=0; for(const part of s.split(',')){ const [v,c]=part.split('*').map(Number); a.fill(v,p,p+c); p+=c; } return a; }
 function serialize(){ const bl=[]; for(const b of buildings.values()) bl.push(b.u||b.fl?[b.type,b.x,b.z,b.rot,b.seed,b.lm||0,b.fl||0,b.u?1:0]:b.lm?[b.type,b.x,b.z,b.rot,b.seed,b.lm]:[b.type,b.x,b.z,b.rot,b.seed]); const o={v:2,N,t:rle(terrain),r:rle(road),l:rle(line),b:bl}; if(hillMax) o.h=rle(hgt); if(romeYear!==null) o.ry=romeYear; if(rebuild) o.rb=rebuild.targets.map(t=>[t.type,t.x,t.z,t.rot,t.lm,t.done?1:0]); if(scenery) o.sc=scenery; return JSON.stringify(o); }
-function clearWorld(){ romeYear=null; aqLvlDirty=true; arcusDirty=true; if(typeof arcBridgeGroup!=='undefined') arcBridgeGroup.clear();
+function clearWorld(){ romeYear=null; aqLvlDirty=true; arcusDirty=true; brDirty=true; if(typeof arcBridgeGroup!=='undefined') arcBridgeGroup.clear();
   if(typeof setScenery!=='undefined') setScenery(null);
   if(typeof clearRebuildMarkers!=='undefined'){ clearRebuildMarkers(); rebuild=null; triumph=null; race=null; games=null; follow=null; cortege=null; }
   if(typeof builds!=='undefined') while(builds.length) endConstruction(builds[0],true);
@@ -2467,7 +2568,7 @@ function spawnCart(){
 
 /* ---- statki kupieckie pływające po wodzie (gdy w mieście jest port) ---- */
 let shipMesh=null; const ships=[]; let waterList=[], dirtyWater=true;
-function shipOk(i,j){ if(!inb(i,j)) return false; const id=I(i,j); return terrain[id]===2&&!road[id]&&!line[id]&&!bld[id]; }
+function shipOk(i,j){ if(!inb(i,j)) return false; const id=I(i,j); return terrain[id]===2&&!bld[id]&&(line[id]===4||(!road[id]&&!line[id])); }
 function updateShips(dt,time){
   if(!shipMesh){ const bb=new B(); shipParts(bb,0,0,0,0,'#f1e6cf'); shipMesh=new THREE.InstancedMesh(bb.geom(),bMat,24); shipMesh.count=0; shipMesh.frustumCulled=false; shipMesh.castShadow=true; scene.add(shipMesh); }
   if(dirtyWater){ dirtyWater=false; waterList=[]; for(let j=0;j<N;j++) for(let i=0;i<N;i++) if(shipOk(i,j)){ let n=0; for(const [di,dj] of DIRS) if(shipOk(i+di,j+dj)) n++; if(n>=1) waterList.push({i,j}); } }
@@ -2754,7 +2855,7 @@ let nextSeed=Math.floor(rnd()*1e6);
 function pathValid(i,j){
   const id=I(i,j);
   if(tool.kind==='road'){ const b=bld[id]; return !b || !!DEFS[buildings.get(b)?.type]?.onRoad; }
-  if(tool.kind==='line'){ if(bld[id]) return false; const l=line[id]; if(tool.val===3) return !l||l===3; if(tool.val===1) return l!==3; return true; }
+  if(tool.kind==='line'){ if(bld[id]) return false; const l=line[id]; if(tool.val===3) return !l||l===3; if(tool.val===4) return !l||l===4; if(tool.val===1) return l!==3&&l!==4; return l!==4; }
   return true;
 }
 function updatePreview(c){
@@ -2930,7 +3031,7 @@ function tapInfo(c){
   if(!c.inside){ hideInfo(); return; }
   if(toggleDrawAt(c)) return; toggleBarbican(c); const id=bld[I(c.i,c.j)]; let key=null;
   if(id){ const b=buildings.get(id); key=b.lm&&INFO[b.lm]?b.lm:b.type; pulses.push({m:b.mesh,t:0}); }
-  else if(line[I(c.i,c.j)]) key=['','l-wall','l-aq','l-moat'][line[I(c.i,c.j)]];
+  else if(line[I(c.i,c.j)]){ key=['','l-wall','l-aq','l-moat','l-pons'][line[I(c.i,c.j)]]; if((lineMeshes.get(I(c.i,c.j))?.userData.key||'').startsWith('aqe')) key='aqEnd'; }
   else if(road[I(c.i,c.j)]) key=road[I(c.i,c.j)]===2?'r-wide':'r-narrow';
   if(key&&INFO[key]){ showInfo(key); sfx('tick'); } else hideInfo();
 }
@@ -3051,6 +3152,7 @@ const TOOLS=[
   {id:'t-up',cat:'teren',kind:'height',val:1,name:'Wzgórze',hint:'Przeciągnij, aby usypać wzgórze o poziom wyżej. Drogi między poziomami dostają schody'},
   {id:'t-down',cat:'teren',kind:'height',val:-1,name:'Obniż',hint:'Przeciągnij, aby obniżyć teren o poziom'},
   {id:'r-narrow',cat:'drogi',kind:'road',val:1,name:'Ulica',hint:'Przeciągnij od punktu do punktu — ulica biegnie prosto, z jednym zakrętem pod kątem prostym'},
+  {id:'l-pons',cat:'drogi',kind:'line',val:4,name:'Wielki most',hint:'Przeciągnij przez rzekę od brzegu do brzegu – wysokie łuki, pod którymi przepłyną statki, i posągi na balustradach'},
   {id:'r-wide',cat:'drogi',kind:'road',val:2,name:'Via (szeroka)',hint:'Szeroka droga — jeżdżą nią wozy, piesi idą poboczem'},
   {id:'b-port',cat:'drogi',kind:'build',type:'port'},
   {id:'b-pharos',cat:'drogi',kind:'build',type:'pharos'},
@@ -3059,7 +3161,7 @@ const TOOLS=[
   {id:'b-house',cat:'domy',kind:'brush',type:'house',name:'Kamienice',hint:'Puste pole – nowy dom, dom lub insula – kolejne piętro · przeciągnij, by budować całe kwartały · ⛏️ Burz zdejmuje piętra'},
   ...['domus','insula','taberna','hut'].map(t=>({id:'b-'+t,cat:'domy',kind:'build',type:t})),
   ...['gardenS','garden','topiary','vineyard','peristyle','terrace','park'].map(t=>({id:'b-'+t,cat:'ogr',kind:'build',type:t})),
-  ...['forum','forumromanum','temple','pantheon','basilica','curia','market','trajanmarkets','palace','baths','trajanbaths','caracalla','diocletian'].map(t=>({id:'b-'+t,cat:'publ',kind:'build',type:t})),
+  ...['forum','forumromanum','temple','pantheon','basilica','curia','market','trajanmarkets','nymphaeum','palace','baths','trajanbaths','caracalla','diocletian'].map(t=>({id:'b-'+t,cat:'publ',kind:'build',type:t})),
   ...['colosseum','circus','theatre'].map(t=>({id:'b-'+t,cat:'rozr',kind:'build',type:t})),
   {id:'b-castra',cat:'woj',kind:'build',type:'castra'},
   {id:'b-castellum',cat:'woj',kind:'build',type:'castellum'},
@@ -4191,7 +4293,7 @@ function spawnPedsNear(b,n){
 /* =========================================================
    Woda: akwedukt od krawędzi mapy → rury pod ulicami → fontanny i termy
    ========================================================= */
-const NEED_WATER=new Set(['fountain','baths','caracalla','diocletian','trajanbaths']);
+const NEED_WATER=new Set(['fountain','baths','caracalla','diocletian','trajanbaths','nymphaeum']);
 let aqWet=new Uint8Array(0), roadWet=new Uint8Array(0), aqDist=new Int16Array(0), waterNetDirty=true, waterInit=true, dryHint=false;
 function buildGeom(b){ return getGeom(b.type,b.seed,b.fl,{dry:NEED_WATER.has(b.type)&&b.wet===false,nice:!!b.nice}); }
 function refreshGeom(b){ b.mesh.geometry=b.type==='house'?houseGeomFor(b):(b.type==='arcus'?arcusGeomFor(b):buildGeom(b)); }
@@ -4244,6 +4346,14 @@ function updateWaterFx(time){
     const p=b.mesh.position;
     for(let k=0;k<10;k++){ const u=(time*0.8+k/10)%1, a=k/10*Math.PI*2+b.id;
       const r=0.05+u*0.2, y=0.78+0.18*u-0.62*u*u; setInst(dropMesh,d++,p.x+Math.cos(a)*r,Math.max(0.15,y)+p.y,p.z+Math.sin(a)*r,1,1,1); } }
+  if(!todayMode) for(const [id,m] of lineMeshes){ if(d>=680) break; const k=m.userData.key||''; if(!k.startsWith('aqe-')||k.endsWith('-d')) continue;
+    const th={W:0,E:Math.PI,N:-Math.PI/2,S:Math.PI/2}[k[4]], c=Math.cos(th), s=Math.sin(th), bx=m.position.x+0.2*c, bz=m.position.z-0.2*s, top=2.0+(+(k.split('+')[1]||0))*LH;
+    for(let q=0;q<8;q++){ const u=(time*1.1+q/8)%1, a=q*2.4+id; setInst(dropMesh,d++,bx+Math.cos(a)*u*0.22,m.position.y+0.25+0.12*Math.sin(u*3.14),bz+Math.sin(a)*u*0.22,1,1,1); }
+    for(let q=0;q<5;q++){ const u=(time*0.9+q/5)%1; setInst(dropMesh,d++,m.position.x+0.19*c,m.position.y+top-u*(top-0.3),m.position.z-0.19*s,1,1,1); } }
+  if(!todayMode) for(const b of buildings.values()){ if(d>=690) break; if(b.type!=='nymphaeum'||b.wet===false||b.mesh.scale.y<0.98) continue; const p=b.mesh.position, th=b.rot*Math.PI/2, c=Math.cos(th), s=Math.sin(th);
+    const W=(lx,y,lz)=>setInst(dropMesh,d++,p.x+lx*c+lz*s,p.y+y,p.z-lx*s+lz*c,1,1,1);
+    for(let q=0;q<10;q++){ const u=(time*0.9+q/10)%1, a=q*2.1; W(Math.cos(a)*u*0.4,0.36+0.1*Math.sin(u*3.14),-0.3+Math.sin(a)*u*0.2); }
+    for(const sx of [-1.1,1.1]) for(let q=0;q<6;q++){ const u=(time*0.8+q/6)%1, a=q*1.05; W(sx+Math.cos(a)*u*0.15,0.38+0.35*u-0.5*u*u,0.38+Math.sin(a)*u*0.15); } }
   dropMesh.count=d; dropMesh.instanceMatrix.needsUpdate=true;
 }
 
@@ -4384,6 +4494,14 @@ INFO.praetoria={...INFO.castraPraetoria,facts:['Gwardię założył August; licz
 INFO.arcus={name:'Łuki (arkady)',era:'element fantazyjny – w duchu Townscapera',text:'Łuk był sercem rzymskiej architektury: kamienie klinowe dociśnięte zwornikiem przenoszą ciężar w dół i na boki, więc można nim przekryć szeroki otwór bez jednej długiej belki. Tak wysokich wież z łuków Rzymianie nie budowali – to klocki do zabawy – ale ich piętra wzorowane są na fasadzie Koloseum.',
   facts:['Fasada Koloseum ma piętra w trzech porządkach: na dole dorycki, wyżej joński, a najwyżej koryncki – tak jak tu kolejne piętra arkad.','Arkady Tabularium na Kapitolu (78 p.n.e.) to jeden z najstarszych przykładów łuków obramowanych półkolumnami.','Akwedukt Pont du Gard ma trzy kondygnacje łuków i prawie 50 m wysokości.','Stawiaj łuki na ulicy – ludzie przejdą pod nimi; na rzece – powstanie most.'],
   today:'Rzymskie łuki stoją do dziś w mostach, akweduktach i amfiteatrach od Hiszpanii po Syrię.',legacy:'Arkady, wiadukty kolejowe i mosty z łuków to bezpośredni spadek po rzymskich inżynierach.'};
+INFO['l-pons']={name:'Wielki most',era:'od II w. p.n.e. – mosty kamienne',text:'Rzymianie przerzucali przez rzeki mosty z kamiennych łuków opartych na filarach z ostrogami, które rozcinały nurt. Łuki były na tyle wysokie, że pod spodem mogły przepływać łodzie, a na balustradach stawiano posągi i pomniki.',
+  facts:['Pons Fabricius (62 p.n.e.) prowadzi na Wyspę Tyberyjską i od ponad 2000 lat jest w użyciu – to najstarszy czynny most Rzymu.','Pons Aelius Hadriana prowadził do jego mauzoleum. W XVII w. Bernini i jego uczniowie ustawili na nim słynne anioły – dziś to Ponte Sant’Angelo.','Most Trajana na Dunaju (105 n.e.) miał ponad kilometr długości i przez tysiąc lat pozostał najdłuższym mostem łukowym świata.','Przeciągnij most przez rzekę – pod łukami popłyną statki, a po moście przejdą ludzie i wozy.'],
+  today:'Ponte Fabricio i Ponte Cestio łączą Wyspę Tyberyjską z brzegami do dziś.',legacy:'Kamienne mosty łukowe budowano według rzymskich zasad aż do XIX wieku.'};
+INFO.nymphaeum={name:'Nimfeum – wielka fontanna',era:'I–III w. n.e.',text:'Nimfea były monumentalnymi fontannami poświęconymi nimfom: wielopiętrowe fasady z arkadami, niszami pełnymi posągów i kaskadami wody spływającymi do ogromnych basenów. Często stały na końcu akweduktu i pokazywały mieszkańcom, ile wody płynie do miasta.',
+  facts:['Septizodium Septymiusza Sewera (203 n.e.) było trzypiętrową fasadą z kolumnami u stóp Palatynu – witało podróżnych z Via Appia.','Nimfeum Aleksandra przy dzisiejszym Piazza Vittorio rozdzielało wodę akweduktu Aqua Julia.','Fontanna di Trevi to nowożytny potomek nimfeum – stoi na końcu akweduktu Aqua Virgo, który płynie od 19 p.n.e.','Potrzebuje wody z akweduktu, jak fontanny i termy.'],
+  today:'Aqua Virgo wciąż zasila Fontannę di Trevi i fontanny na Piazza Navona.',legacy:'Barokowe fontanny Rzymu – Trevi, Fontanna Czterech Rzek – kontynuują tradycję nimfeów.'};
+INFO.aqEnd={name:'Castellum aquae – zakończenie akweduktu',era:'od I w. p.n.e.',text:'Akwedukt kończył się zbiornikiem rozdzielczym (castellum aquae), z którego woda płynęła rurami do fontann, term i domów. Przy castellum często budowano okazałą fontannę – „mostrę” – żeby pokazać, że woda dotarła do miasta.',
+  facts:['W Pompejach zachował się castellum przy Bramie Wezuwiańskiej, który dzielił wodę na trzy główne rury – tak jak opisuje Witruwiusz.','Zakończ akwedukt w środku mapy, a powstanie zbiornik z kaskadą do basenu.']};
 const tlEl=document.createElement('div'); tlEl.id='timeline'; tlEl.className='hide'; document.body.appendChild(tlEl);
 function renderTimeline(){ tlEl.innerHTML=ROME_ERAS.map(e=>`<button data-y="${e.y}" class="${e.y===romeYear?'on':''}"><b>${e.label}</b><span>${e.who}</span></button>`).join('');
   tlEl.querySelectorAll('button').forEach(b=>b.onclick=()=>goEra(+b.dataset.y));
@@ -4455,7 +4573,7 @@ function loop(now){
   if(decoDirty) rebuildDeco();
   updateBuilds(dt,now/1000); camFlyStep(dt); sceneryStep(dt,now/1000); petalsStep(now/1000); eventsTick();
   questT+=dt; if(questT>1.5){ questT=0; checkQuests(); }
-  if(dirtyLines.size||aqLvlDirty) processLines();
+  if(dirtyLines.size||aqLvlDirty||brDirty) processLines();
   if(arcusDirty) rebuildArcus();
   if(dirtyHouses.size) processHouses();
   if(aoDirty){ rebuildAO(); rebuildGlow(); }
