@@ -1855,7 +1855,7 @@ const T={};
 function treePool(geom,color,cap){ const m=new THREE.InstancedMesh(geom,new THREE.MeshStandardMaterial({color,roughness:0.85,flatShading:true}),cap); m.count=0; m.frustumCulled=false; m.castShadow=true; m.receiveShadow=true; scene.add(m); return m; }
 const TRSPEC={trunk:[new THREE.CylinderGeometry(0.035,0.045,1,5).translate(0,0.5,0),WOOD,3],cyp:[new THREE.ConeGeometry(0.12,1,7).translate(0,0.5,0),CYP,3],
   pine:[new THREE.SphereGeometry(0.3,8,5).scale(1,0.45,1),'#6a9a4a',3],rock:[new THREE.DodecahedronGeometry(0.12,0),'#c2b49c',1],olive:[new THREE.SphereGeometry(0.19,7,5),'#9bb07a',3],bush:[new THREE.SphereGeometry(0.12,6,4),'#86b85e',1]};
-const TR={}; let tCap=0; let cliffM=null, capM=null, stairM=null;
+const TR={}; let tCap=0; let cliffM=null, capM=null, stairM=null, cliffCell=[], capCell=[];
 function stairGeo(){ const b=new B(); const n=4; for(let k=0;k<n;k++) b.box(0.9,LH*(k+1)/n,0.5-k*0.125,0,0,0.25+k*0.0625,'#d8ccb4'); b.box(0.06,LH+0.05,0.5,-0.47,0,0.25,'#efe7d8'); b.box(0.06,LH+0.05,0.5,0.47,0,0.25,'#efe7d8'); return b.geom(); }
 function makeHillMeshes(cap){
   for(const m of [cliffM,capM,stairM]) if(m){ scene.remove(m); m.dispose(); }
@@ -2049,8 +2049,8 @@ function rebuildTerrain(){
   for(let j=0;j<N;j++) for(let i=0;i<N;i++){
     const id=I(i,j), t=terrain[id], r=road[id], x=wx(i), z=wx(j), occ=bld[id]||line[id]||r; const h=hgt[id]; hb=h*LH;
     let lo=h; if(h){ for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; lo=Math.min(lo,inb(ni,nj)?hgt[I(ni,nj)]:0); }
-      for(let L=lo;L<h-0;L++){ if(nc>=cliffM.instanceMatrix.count) break; setInst(cliffM,nc,x,L*LH,z,1,L===h-1?LH-0.07:LH,1); _C.set((hash2(i,j,91+L)<0.3?ROCKY:GRASSY)[(L+i+j)%3]); cliffM.setColorAt(nc,_C); nc++; }
-      setInst(capM,ncap++,x,hb+0.001,z,1,lo<h?0.075:0.02,1); }
+      for(let L=lo;L<h-0;L++){ if(nc>=cliffM.instanceMatrix.count) break; cliffCell[nc]=id; setInst(cliffM,nc,x,L*LH,z,1,L===h-1?LH-0.07:LH,1); _C.set((hash2(i,j,91+L)<0.3?ROCKY:GRASSY)[(L+i+j)%3]); cliffM.setColorAt(nc,_C); nc++; }
+      capCell[ncap]=id; setInst(capM,ncap++,x,hb+0.001,z,1,lo<h?0.075:0.02,1); }
     if(r) for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(!inb(ni,nj)) continue; const nid=I(ni,nj); if(road[nid]&&hgt[nid]===h+1) setInst(stairM,nst++,x,hb,z,1,1,1,Math.atan2(di,dj)); }
     if(t===1) tile('plot',x,z,0,0.02);
     else if(t===2) tile('water',x,z,0,0.012);
@@ -2187,7 +2187,7 @@ function addBuilding(type,x,z,rot,seed,anim=true,lm=null,fl=null){
   const def=DEFS[type]; const [fw,fd]=fpSize(def,rot); const id=nextId++;
   for(let j=z;j<z+fd;j++) for(let i=x;i<x+fw;i++) bld[I(i,j)]=id;
   const m=new THREE.Mesh(getGeom(type,seed,fl),bMat); m.castShadow=m.receiveShadow=true;
-  m.position.set(x+fw/2-N/2,hgt[I(x,z)]*LH,z+fd/2-N/2); m.rotation.y=type==='house'?0:rot*Math.PI/2;
+  m.position.set(x+fw/2-N/2,hgt[I(x,z)]*LH,z+fd/2-N/2); m.rotation.y=type==='house'?0:rot*Math.PI/2; m.userData.bid=id;
   const constr=anim&&!def.decor&&type!=='house'&&type!=='arcus'&&!todayMode;
   if(anim&&!constr){ m.scale.set(0.01,0.01,0.01); growing.push({m,t:0}); }
   buildGroup.add(m);
@@ -3008,7 +3008,18 @@ function updatePreview(c){
 let tool={id:'camera',kind:'camera'};
 let stroke=null, hoverCell=null;
 const ray=new THREE.Raycaster(), ndc=new THREE.Vector2(), groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0), hitP=new THREE.Vector3();
-function cellAt(e){ const r=canvas.getBoundingClientRect(); ndc.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1); ray.setFromCamera(ndc,camera);
+// celowanie: przy dokładaniu pięter, burzeniu, wzgórzach i podglądzie liczy się to, co widać pod palcem –
+// budynek albo zbocze – a nie punkt na ziemi za nim
+const smartTool=()=>['brush','bulldoze','height','camera'].includes(tool.kind);
+function pickVisible(){
+  let best=null;
+  if(tool.kind!=='height'){ const hits=ray.intersectObjects(buildGroup.children,false); for(const h of hits){ const bid=h.object.userData.bid; const b=bid&&buildings.get(bid); if(!b||!b.mesh.visible) continue;
+      const [fw,fd]=fpSize(DEFS[b.type],b.rot); const i=clamp(Math.floor(h.point.x+N/2),b.x,b.x+fw-1), j=clamp(Math.floor(h.point.z+N/2),b.z,b.z+fd-1); best={d:h.distance,i,j}; break; } }
+  if(hillMax&&cliffM&&capM){ for(const [m,map] of [[cliffM,cliffCell],[capM,capCell]]){ const hits=ray.intersectObject(m,false); for(const h of hits){ const id=map[h.instanceId]; if(id===undefined) continue; if(!best||h.distance<best.d) best={d:h.distance,i:id%N,j:(id/N)|0}; break; } } }
+  if(best){ const o=ray.ray.origin, dr=ray.ray.direction; if(dr.y<0){ const tp=-o.y/dr.y, pi=Math.floor(o.x+dr.x*tp+N/2), pj=Math.floor(o.z+dr.z*tp+N/2); if(tp<best.d-0.02&&inb(pi,pj)&&!hgt[I(pi,pj)]&&!bld[I(pi,pj)]) return null; } }
+  return best?{i:best.i,j:best.j,inside:inb(best.i,best.j)}:null; }
+function cellAt(e,smart=false){ const r=canvas.getBoundingClientRect(); ndc.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1); ray.setFromCamera(ndc,camera);
+  if(smart){ const v=pickVisible(); if(v) return v; }
   if(hillMax){ const o=ray.ray.origin, d=ray.ray.direction; const top=hillMax*LH+0.02;
     if(d.y<0){ let t0=o.y>top?(top-o.y)/d.y:0; const t1=(0-o.y)/d.y; for(let t=t0;t<=t1;t+=0.04){ const x=o.x+d.x*t, y=o.y+d.y*t, z=o.z+d.z*t; const i=Math.floor(x+N/2), j=Math.floor(z+N/2);
         if(inb(i,j)&&y<=hgt[I(i,j)]*LH+0.001) return {i,j,inside:true}; } } }
@@ -3046,7 +3057,7 @@ canvas.addEventListener('pointerdown',e=>{
   if(e.pointerType==='touch'){ touchDown(e); return; }
   if(e.pointerType!=='touch'&&e.button!==0) return;
   if(tool.kind==='camera'){ camDown={x:e.clientX,y:e.clientY,id:e.pointerId,t:performance.now()}; return; }
-  const c=cellAt(e); if(!c) return;
+  const c=cellAt(e,smartTool()); if(!c) return;
   stroke={start:{i:c.i,j:c.j},last:c,cur:c,visited:new Set(),changed:false,x0:e.clientX,y0:e.clientY,pid:e.pointerId,moved:false,snap:null};
   if(isPaint()){ stroke.snap=serialize(); paintAt(c); }
   updatePreview(c);
@@ -3057,7 +3068,7 @@ canvas.addEventListener('pointermove',e=>{
     if(ghostDrag.moved){ const c=cellAt({clientX:e.clientX,clientY:e.clientY-FINGER}); if(c){ const ni=clamp(c.i,0,N-1), nj=clamp(c.j,0,N-1); if(ni!==pending.c.i||nj!==pending.c.j){ pending.c={i:ni,j:nj}; updatePreview(pending.c); showAct(); } } }
     return; }
   if(e.pointerType==='touch'&&touchT&&e.pointerId===touchT.id&&!touchT.hold){ if(Math.hypot(e.clientX-touchT.x,e.clientY-touchT.y)>10){ touchT.moved=true; clearTimeout(touchT.timer); } return; }
-  const c=cellAt(e); hoverCell=c;
+  const c=cellAt(e,smartTool()); hoverCell=c;
   if(stroke&&e.pointerId===stroke.pid&&c){
     if(Math.hypot(e.clientX-stroke.x0,e.clientY-stroke.y0)>9) stroke.moved=true;
     if(isPaint()&&(c.i!==stroke.last.i||c.j!==stroke.last.j)) paintLine(stroke.last,c);
@@ -3070,7 +3081,7 @@ function endPointer(e){
   pointers.delete(e.pointerId);
   if(e.pointerType==='touch'){ touchUp(e); return; }
   if(camDown&&e.pointerId===camDown.id){ const cd=camDown; camDown=null;
-    if(Math.hypot(e.clientX-cd.x,e.clientY-cd.y)<8&&performance.now()-cd.t<600&&pointers.size===0){ const c=cellAt(e); if(c) tapInfo(c); } }
+    if(Math.hypot(e.clientX-cd.x,e.clientY-cd.y)<8&&performance.now()-cd.t<600&&pointers.size===0){ const c=cellAt(e,true); if(c) tapInfo(c); } }
   if(!stroke||e.pointerId!==stroke.pid) return;
   const s=stroke; stroke=null;
   if(tool.kind==='road'||tool.kind==='line') commitPath(s.start,s.cur);
@@ -3115,7 +3126,7 @@ function touchDown(e){
     if(c&&c.i>=f.x-1&&c.i<=f.x+f.fw&&c.j>=f.z-1&&c.j<=f.z+f.fd){
       ghostDrag={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false,di:c.i-pending.c.i,dj:c.j-pending.c.j}; controls.enabled=false; return; } }
   if(pointers.size>1){ if(touchT){ clearTimeout(touchT.timer); if(touchT.hold){ controls.enabled=true; if(stroke){ if(isPaint()) cancelStroke(); else { stroke=null; } } } touchT=null; } return; }
-  touchT={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now(),cell:cellAt(e),moved:false,hold:false,timer:0};
+  touchT={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now(),cell:cellAt(e,smartTool()),moved:false,hold:false,timer:0};
   if(tool.kind==='camera') return;
   if(isPaint()||tool.kind==='road'||tool.kind==='line'){
     touchT.timer=setTimeout(()=>{ const tt=touchT; if(!tt||tt.moved||pointers.size!==1) return; const c=tt.cell; if(!c) return;
@@ -3134,7 +3145,7 @@ function touchUp(e){
     else { pending={kind:'path',start:s.start,end:{i:s.cur.i,j:s.cur.j}}; updatePreview(pending.end); showAct(); }
     return; }
   if(tt.moved||performance.now()-tt.t>700||pointers.size>0) return;
-  const c=cellAt(e); if(!c) return;
+  const c=cellAt(e,smartTool()); if(!c) return;
   if(tool.kind==='camera'){ tapInfo(c); return; }
   if(tool.kind==='build'){
     if(pending&&pending.kind==='build'){ const {f}=placementFor(tool.type,pending.c);
