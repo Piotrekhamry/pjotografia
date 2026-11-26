@@ -2632,7 +2632,7 @@ function addBuilding(type,x,z,rot,seed,anim=true,lm=null,fl=null){
   const constr=anim&&!def.decor&&type!=='house'&&type!=='arcus'&&!isMod(type)&&!todayMode;
   if(anim&&!constr){ m.scale.set(0.01,0.01,0.01); growing.push({m,t:0}); }
   buildGroup.add(m);
-  buildings.set(id,{id,type,x,z,rot,seed,mesh:m,lm:lm||null,ts:1,fl:fl||null});
+  buildings.set(id,{id,type,x,z,rot,seed,mesh:m,lm:lm||null,ts:1,fl:fl||null}); trailsDirty=true;
   if(todayMode){ applyTodayTo(buildings.get(id),true); }
   if(type==='barbican') attachPortcullis(buildings.get(id));
   if(type==='house') markHouses(x,z);
@@ -2644,7 +2644,7 @@ function addBuilding(type,x,z,rot,seed,anim=true,lm=null,fl=null){
   dirtyTerrain=true; dirtyRoads=true; dirtySave=true;
   return id;
 }
-function removeBuilding(id){
+function removeBuilding(id){ trailsDirty=true;
   const b=buildings.get(id); if(!b) return;
   const [fw,fd]=fpSize(DEFS[b.type],b.rot);
   for(let j=b.z;j<b.z+fd;j++) for(let i=b.x;i<b.x+fw;i++) if(inb(i,j)&&bld[I(i,j)]===id) bld[I(i,j)]=0;
@@ -2674,7 +2674,7 @@ function setLine(i,j,v){ const id=I(i,j); if(line[id]===v) return false; const w
   if(v===4||was===4){ brDirty=true; dirtyWater=true; if(v===4&&!road[id]){ road[id]=2; dirtyRoads=true; waterNetDirty=true; } } if(v===2||was===2) aqLvlDirty=true;
   if(v===3){ terrain[id]=2; dirtyWater=true; } else if(was===3&&v===0&&terrain[id]===2) terrain[id]=0;
   for(const [di,dj] of DIRS) if(lineAt(i+di,j+dj)===3) dirtyLines.add(I(i+di,j+dj)); waterNetDirty=true; dirtyWalls=true; markHouses(i,j); markLine(i,j); dirtyTerrain=true; dirtySave=true; return true; }
-function setTerrain(i,j,v){ const id=I(i,j); if(terrain[id]===v) return false; if(line[id]===4) brDirty=true; if(v===2&&(bld[id]||hgt[id])) return false; if(line[id]===3&&v!==2) return false; terrain[id]=v;
+function setTerrain(i,j,v){ const id=I(i,j); if(terrain[id]===v) return false; try{ trailsDirty=true; }catch(_){} if(line[id]===4) brDirty=true; if(v===2&&(bld[id]||hgt[id])) return false; if(line[id]===3&&v!==2) return false; terrain[id]=v;
   for(const [di,dj] of DIRS) if(lineAt(i+di,j+dj)===3) dirtyLines.add(I(i+di,j+dj)); dirtyWater=true; dirtyTerrain=true; dirtySave=true; return true; }
 /* =========================================================
    Kamienice łączące się w bloki (jak w Townscaperze)
@@ -3123,7 +3123,8 @@ function roadPath(si,sj,ti,tj){ if(si===ti&&sj===tj) return []; const S=I(si,sj)
   for(let h=0;h<q.length&&h<6000;h++){ const u=q[h]; if(u===T) break; const ui=u%N, uj=(u/N)|0;
     for(const [di,dj] of DIRS){ const ni=ui+di, nj=uj+dj; if(!inb(ni,nj)) continue; const v=I(ni,nj); if(from[v]>=0||!road[v]||isDrawUp(ni,nj)||isGateShut(ni,nj)||Math.abs(hgt[v]-hgt[u])>1) continue; from[v]=u; q.push(v); } }
   if(from[T]<0) return null; const out=[]; for(let v=T;v!==S;v=from[v]) out.push({i:v%N,j:(v/N)|0}); return out.reverse(); }
-function pickGoal(a){ if(!destDoors.length) return false;
+function pickGoal(a){ if(trails.length&&rnd()<0.25){ const t=trails[Math.floor(rnd()*trails.length)], ri=t.road%N, rj=(t.road/N)|0; if(Math.abs(ri-a.bx)+Math.abs(rj-a.bz)<=34){ const p=roadPath(a.bx,a.bz,ri,rj); if(p){ a.path=p; a.pi=0; a.goal={i:ri,j:rj,kind:'home',tr:t}; return true; } } }
+  if(!destDoors.length) return false;
   for(let tries=0;tries<6;tries++){ let c=destDoors[Math.floor(rnd()*destDoors.length)]; if(VISIT_T.size&&rnd()<0.5){ const v=destDoors.filter(d=>d.kind==='visit'); if(v.length) c=v[Math.floor(rnd()*v.length)]; }
     if(Math.abs(c.i-a.bx)+Math.abs(c.j-a.bz)>34) continue; const p=roadPath(a.bx,a.bz,c.i,c.j); if(!p) continue; a.path=p; a.pi=0; a.goal=c; return true; }
   return false; }
@@ -3194,6 +3195,54 @@ function spawnPatrol(pr=false){
   const ds=pr?praetDoors:barracksDoors; const src=ds.length?pickArr(ds):(roadList.length?pickArr(roadList):null); if(!src) return;
   patrols.push({pr,lead:{kind:'patrol',ax:src.i,az:src.j,bx:src.i,bz:src.j,t:1,speed:0.17,lane:0,life:1e9,ph:0,pause:0,hx:0,hz:1,init:false,rx:0,rz:0,ry:0},trail:[],dist:0,skins:[...Array(7)].map(()=>pickArr(SKINS))});
 }
+
+/* ---- Ścieżki wydeptane przez mieszkańców ----
+   Domy mieszkalne (bez willi), które nie stoją przy ulicy, łączą się z najbliższą drogą najkrótszą drogą na przełaj.
+   Ścieżka rodzi się słabo widoczna i ciemnieje z każdym przejściem; nowe ścieżki chętnie łączą się ze starymi. */
+const TRAIL_T=new Set(['house','insula','insblock','hut','taberna','tabrow']);
+let trails=[], trailsDirty=true, trailWear=new Float32Array(0), trailDrawT=0, trailEdges=[];
+const trailM=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1}),6000);
+trailM.count=0; trailM.frustumCulled=false; trailM.receiveShadow=true; trailM.setColorAt(0,new THREE.Color(1,1,1)); scene.add(trailM);
+const tJit=(i,j)=>[(hash2(i,j,301)-0.5)*0.32,(hash2(i,j,302)-0.5)*0.32];
+const tPt=(i,j)=>{ const o=tJit(i,j); return [wx(i)+o[0],wx(j)+o[1]]; };
+function trailFree(i,j){ if(!inb(i,j)) return false; const id=I(i,j); return !bld[id]&&!road[id]&&terrain[id]!==2&&(!line[id]||line[id]===4); }
+function rebuildTrails(){ trailsDirty=false; if(trailWear.length!==N*N) trailWear=new Float32Array(N*N); trails=[]; const used=new Set();
+  for(const b of buildings.values()){ if(!TRAIL_T.has(b.type)) continue; const [fw,fd]=fpSize(DEFS[b.type],b.rot);
+    let touch=false; const starts=[]; for(let j=b.z-1;j<=b.z+fd;j++) for(let i=b.x-1;i<=b.x+fw;i++){ const edge=(i===b.x-1||i===b.x+fw)!==(j===b.z-1||j===b.z+fd); if(!edge||!inb(i,j)) continue; if(road[I(i,j)]) touch=true; else if(trailFree(i,j)) starts.push(I(i,j)); }
+    if(touch||!starts.length) continue;
+    // Dijkstra na przełaj (także po skosie), istniejące ścieżki są „tańsze” – sieć się łączy
+    const g=new Map(), from=new Map(), open=[]; for(const s0 of starts){ g.set(s0,0); open.push([0,s0]); } let goal=-1, it=0;
+    while(open.length&&it++<5000){ let bi=0; for(let k=1;k<open.length;k++) if(open[k][0]<open[bi][0]) bi=k; const [gc,u]=open[bi]; open[bi]=open[open.length-1]; open.pop(); if(gc>g.get(u)) continue;
+      const ui=u%N, uj=(u/N)|0; if(gc>26) break; let hit=-1;
+      for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){ const ni=ui+di, nj=uj+dj; if(!inb(ni,nj)) continue; const v=I(ni,nj);
+        if(road[v]&&!(di&&dj)){ hit=v; break; } if(!trailFree(ni,nj)) continue; if(di&&dj&&(!trailFree(ui+di,uj)||!trailFree(ui,uj+dj))) continue; if(Math.abs(hgt[v]-hgt[u])>1) continue;
+        const c=(di&&dj?1.414:1)*(trailWear[v]>0.25?0.6:1)+Math.abs(hgt[v]-hgt[u])*0.5, ng=gc+c; if(ng<(g.get(v)??1e9)){ g.set(v,ng); from.set(v,u); open.push([ng,v]); } }
+      if(hit>=0){ from.set(hit,u); goal=hit; break; } }
+    if(goal<0) continue; const cells=[]; for(let v=goal;v!==undefined;v=from.get(v)){ cells.push(v); if(!from.has(v)) break; } cells.reverse(); // od domu do drogi
+    trails.push({b:b.id,cells,road:goal,next:2+rnd()*10}); for(let k=0;k<cells.length-1;k++){ const a=cells[k], c=cells[k+1]; used.add(Math.min(a,c)+':'+Math.max(a,c)); } }
+  trailEdges=[...used].map(k=>k.split(':').map(Number)); trailDrawT=0; }
+function drawTrails(){ let k=0; const C=new THREE.Color(), G1=new THREE.Color('#8fb85e'), D1=new THREE.Color('#c9ab78');
+  const seg=(x0,z0,x1,z1,w)=>{ const L=Math.hypot(x1-x0,z1-z0); if(L<0.01||k>=6000) return; const mx=(x0+x1)/2, mz=(z0+z1)/2; setInst(trailM,k,mx,hY(mx,mz)+0.012,mz,w,0.012,L+w*0.6,Math.atan2(x1-x0,z1-z0)); trailM.setColorAt(k,C); k++; };
+  for(const [a,c] of trailEdges){ const ai=a%N, aj=(a/N)|0, ci=c%N, cj=(c/N)|0, wr=Math.min(trailWear[a],trailWear[c]); if(wr<0.04) continue;
+    C.copy(G1).lerp(D1,clamp(wr,0,1)); const w=0.07+0.09*clamp(wr,0,1); const pa=road[a]?[wx(ai),wx(aj)]:tPt(ai,aj), pc=road[c]?[wx(ci),wx(cj)]:tPt(ci,cj);
+    const m=[(pa[0]+pc[0])/2,(pa[1]+pc[1])/2]; seg(pa[0],pa[1],m[0],m[1],w); seg(m[0],m[1],pc[0],pc[1],w); }
+  for(const t of trails){ const b=buildings.get(t.b), c0=t.cells[0]; if(!b||c0===undefined||road[c0]) continue; const wr=trailWear[c0]; if(wr<0.04) continue;
+    const [fw,fd]=fpSize(DEFS[b.type],b.rot), p0=tPt(c0%N,(c0/N)|0), cx=clamp(p0[0],wx(b.x)-0.5,wx(b.x+fw-1)+0.5), cz=clamp(p0[1],wx(b.z)-0.5,wx(b.z+fd-1)+0.5);
+    C.copy(G1).lerp(D1,clamp(wr,0,1)); seg(cx,cz,p0[0],p0[1],0.07+0.09*clamp(wr,0,1)); }
+  trailM.count=k; trailM.instanceMatrix.needsUpdate=true; if(trailM.instanceColor) trailM.instanceColor.needsUpdate=true; }
+let trailWalkers=0;
+function trailsStep(dt){ if(trailsDirty) rebuildTrails(); trailDrawT-=dt; if(trailDrawT<=0){ trailDrawT=0.8; drawTrails(); }
+  if(!peopleOn||todayMode) return; trailWalkers=0; for(const a of agents) if(a.mode==='trail') trailWalkers++;
+  for(const t of trails){ t.next-=dt*(1-0.7*ENV.nightF); if(t.next>0||trailWalkers>=45) continue; t.next=6+rnd()*14; spawnTrailWalker(t,true); trailWalkers++; } }
+function trailPts(t,out){ const pts=t.cells.map(v=>road[v]?[wx(v%N),wx((v/N)|0)]:tPt(v%N,(v/N)|0)); const b=buildings.get(t.b); if(b){ const p=b.mesh.position; pts.unshift([p.x*0.35+pts[0][0]*0.65,p.z*0.35+pts[0][1]*0.65]); } return out?pts:pts.reverse(); }
+function spawnTrailWalker(t,out){ spawnPed({i:t.road%N,j:(t.road/N)|0}); const a=agents[agents.length-1]; a.path=null; a.goal=null; a.mode='trail'; a.tr=t; a.tout=out; a.tpts=trailPts(t,out); a.tk=0;
+  a.rx=a.tpts[0][0]; a.rz=a.tpts[0][1]; a.y=0.02; a.init=true; return a; }
+function trailStep(a,dt){ if(a.pause>0){ a.pause-=dt; return true; } const p=a.tpts[a.tk+1]; if(!p){ // koniec ścieżki
+    if(a.tout){ const v=a.tr.road; a.mode=null; a.ax=a.bx=v%N; a.az=a.bz=(v/N)|0; a.t=1; if(!pickGoal(a)) a.path=null; return true; } return false; }
+  const dx=p[0]-a.rx, dz=p[1]-a.rz, d=Math.hypot(dx,dz), st=a.speed*0.9*dt;
+  if(d<=st){ a.rx=p[0]; a.rz=p[1]; a.tk++; const c=a.tr.cells[a.tout?Math.max(0,a.tk-1):Math.max(0,a.tr.cells.length-a.tk)]; if(c!==undefined&&!road[c]) trailWear[c]=Math.min(1.2,trailWear[c]+0.07); }
+  else { a.rx+=dx/d*st; a.rz+=dz/d*st; let dr=Math.atan2(dx,dz)-a.ry; dr=Math.atan2(Math.sin(dr),Math.cos(dr)); a.ry+=dr*Math.min(1,dt*7); a.hx=dx/d; a.hz=dz/d; }
+  a.y+=(0.02-a.y)*Math.min(1,dt*5); a.ph+=dt*a.speed*52/(a.sc||1); return true; }
 // mijanie: przechodnie rozstępują się, schodzą na bok przed wozami, patrolami i oddziałami (a przy nich na chwilę przystają)
 const _AV=new Map();
 function avoidStep(dt){ _AV.clear(); const add=(x,z,t,ref)=>{ const k=Math.floor(x*3)+','+Math.floor(z*3); let c=_AV.get(k); if(!c){ c=[]; _AV.set(k,c); } c.push({x,z,t,ref}); };
@@ -3218,6 +3267,7 @@ function visitStep(a,dt){ const b=buildings.get(a.vb); if(!b){ a.mode=null; retu
   a.y+=(0.05-a.y)*Math.min(1,dt*4); a.ph+=dt*a.speed*52/(a.sc||1); return true; }
 function stepAgent(a,dt){
   if(a.mode==='visit') return visitStep(a,dt);
+  if(a.mode==='trail') return trailStep(a,dt);
   if(a.leaving){ if(a.pause>0){ a.pause-=dt; return true; } return false; }
   if(a.yld>0) a.yld-=dt;
   if(a.pause>0) a.pause-=dt;
@@ -3228,6 +3278,7 @@ function stepAgent(a,dt){
         if(a.path){ if(a.pi<a.path.length){ const n=a.path[a.pi++]; if(!isRoad(n.i,n.j)||Math.abs(n.i-a.bx)+Math.abs(n.j-a.bz)!==1){ a.path=null; } else { a.ax=a.bx; a.az=a.bz; a.bx=n.i; a.bz=n.j; a.t=0; if(rnd()<0.012) a.pause=1+rnd()*2; } }
           if(a.path&&a.t>=1){ const g=a.goal; a.path=null;
             if(g.kind==='visit'&&buildings.has(g.b)){ a.mode='visit'; a.vb=g.b; a.vt=10+rnd()*18; a.vtgt=null; a.vexit=false; return true; }
+            if(g.kind==='home'&&trails.includes(g.tr)){ a.mode='trail'; a.tr=g.tr; a.tout=false; a.tpts=trailPts(g.tr,false); a.tk=0; a.tpts[0]=[a.rx,a.rz]; return true; }
             a.leaving=true; a.pause=0.5; return true; }
           if(a.t<1) return true; }
         if(a.life<0 && (adjBuilding(a.bx,a.bz)||a.life<-25)) return false; if(rnd()<0.035) a.pause=1+rnd()*3; }
@@ -3335,7 +3386,8 @@ function trackPos(s,R){
 }
 let spawnAcc=0;
 function updateAgents(dt,time){
-  if(dirtyRoads){ rebuildRoadLists(); dirtyRoads=false; }
+  if(dirtyRoads){ rebuildRoadLists(); dirtyRoads=false; trailsDirty=true; }
+  trailsStep(dt);
   let peds=0, carts=0; for(const a of agents) a.kind==='ped'?peds++:carts++;
   const pedT=peopleOn&&roadList.length?Math.round(Math.min(MAXPED,roadList.length*0.4+buildings.size*1.1)*(1-0.7*ENV.nightF)*(1-0.6*ENV.rainF)):0;
   const cartT=peopleOn&&!todayMode?Math.min(MAXCART,Math.floor(wideList.length/6)):0;
