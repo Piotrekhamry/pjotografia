@@ -241,21 +241,24 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
    liczymy w JS (wskazywanie palcem, podpisy) – funkcja odwrotna rozwiązywana iteracyjnie. Przy brzegu mapy wygięcie zanika. */
 const WARP={on:true,key:'',half:16}; try{ WARP.on=localStorage.getItem('urbs-warp')!=='0'; }catch(e){}
 function warpXZ(x,z){ let f=Math.min(1,Math.max(0,(WARP.half-Math.max(Math.abs(x),Math.abs(z)))*0.4)); f=f*f*(3-2*f);
-  return [x+f*(0.17*Math.sin(0.83*z+1.3)+0.11*Math.sin(0.55*x+0.37*z+2.1)+0.07*Math.sin(1.9*z-1.4*x+0.4)),
-          z+f*(0.17*Math.sin(0.79*x+0.4)+0.11*Math.sin(0.47*z-0.61*x+0.7)+0.07*Math.sin(1.7*x+1.5*z+2.6))]; }
+  return [x+f*(0.17*Math.sin(0.83*z+1.3)+0.11*Math.sin(0.55*x+0.37*z+2.1)+0.04*Math.sin(1.9*z-1.4*x+0.4)),
+          z+f*(0.17*Math.sin(0.79*x+0.4)+0.11*Math.sin(0.47*z-0.61*x+0.7)+0.04*Math.sin(1.7*x+1.5*z+2.6))]; }
 function unwarpXZ(x,z){ if(!WARP.on) return [x,z]; let qx=x,qz=z; for(let k=0;k<10;k++){ const w=warpXZ(qx,qz); qx+=x-w[0]; qz+=z-w[1]; } return [qx,qz]; }
 const _baseCommon=THREE.ShaderChunk.common;
 THREE.ShaderChunk.project_vertex=THREE.ShaderChunk.project_vertex.replace('mvPosition = modelViewMatrix * mvPosition;',
-  '#ifdef URBS_WARP\n\t{ vec4 uwp = modelMatrix * mvPosition; uwp.xz = urbsWarp( uwp.xz ); mvPosition = viewMatrix * uwp; }\n#else\n\tmvPosition = modelViewMatrix * mvPosition;\n#endif');
+  '#ifdef URBS_WARP\n\t{ vec4 uwp = modelMatrix * mvPosition;\n\t#ifdef URBS_RIGID\n\t\tuwp.xz = urbsRigid( uwp.xz, ( modelMatrix * vec4(0.0,0.0,0.0,1.0) ).xz );\n\t#else\n\t\tuwp.xz = urbsWarp( uwp.xz );\n\t#endif\n\tmvPosition = viewMatrix * uwp; }\n#else\n\tmvPosition = modelViewMatrix * mvPosition;\n#endif');
 THREE.ShaderChunk.worldpos_vertex=THREE.ShaderChunk.worldpos_vertex.replace('worldPosition = modelMatrix * worldPosition;',
-  'worldPosition = modelMatrix * worldPosition;\n\t#ifdef URBS_WARP\n\t\tworldPosition.xz = urbsWarp( worldPosition.xz );\n\t#endif');
+  'worldPosition = modelMatrix * worldPosition;\n\t#ifdef URBS_WARP\n\t#ifdef URBS_RIGID\n\t\tworldPosition.xz = urbsRigid( worldPosition.xz, ( modelMatrix * vec4(0.0,0.0,0.0,1.0) ).xz );\n\t#else\n\t\tworldPosition.xz = urbsWarp( worldPosition.xz );\n\t#endif\n\t#endif');
 { const ck=THREE.Material.prototype.customProgramCacheKey; THREE.Material.prototype.customProgramCacheKey=function(){ return ck.call(this)+WARP.key; }; }
 function refreshWarp(sceneRef){ const key=WARP.on?'|w'+N:'|n'; if(key===WARP.key) return; WARP.key=key; WARP.half=N/2;
   THREE.ShaderChunk.common=_baseCommon+(WARP.on?`
 #define URBS_WARP
 vec2 urbsWarp( vec2 p ){ float f=clamp((${(N/2).toFixed(2)}-max(abs(p.x),abs(p.y)))*0.4,0.0,1.0); f=f*f*(3.0-2.0*f);
-  return p+f*vec2(0.17*sin(0.83*p.y+1.3)+0.11*sin(0.55*p.x+0.37*p.y+2.1)+0.07*sin(1.9*p.y-1.4*p.x+0.4),
-                  0.17*sin(0.79*p.x+0.4)+0.11*sin(0.47*p.y-0.61*p.x+0.7)+0.07*sin(1.7*p.x+1.5*p.y+2.6)); }
+  return p+f*vec2(0.17*sin(0.83*p.y+1.3)+0.11*sin(0.55*p.x+0.37*p.y+2.1)+0.04*sin(1.9*p.y-1.4*p.x+0.4),
+                  0.17*sin(0.79*p.x+0.4)+0.11*sin(0.47*p.y-0.61*p.x+0.7)+0.04*sin(1.7*p.x+1.5*p.y+2.6)); }
+// budowla jako bryła sztywna: przesuwa się i obraca razem z siatką w swoim środku, ale się nie wygina
+vec2 urbsRigid( vec2 p, vec2 o ){ vec2 ex=urbsWarp(o+vec2(0.5,0.0))-urbsWarp(o-vec2(0.5,0.0)), ez=urbsWarp(o+vec2(0.0,0.5))-urbsWarp(o-vec2(0.0,0.5));
+  float a=0.5*(atan(ex.y,ex.x)+atan(-ez.x,ez.y)), c=cos(a), s=sin(a); vec2 q=p-o; return urbsWarp(o)+vec2(q.x*c-q.y*s,q.x*s+q.y*c); }
 `:'');
   if(sceneRef) sceneRef.traverse(o=>{ const m=o.material; if(m) (Array.isArray(m)?m:[m]).forEach(x=>x.needsUpdate=true); }); }
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -1835,6 +1838,9 @@ bMat.onBeforeCompile=sh=>{ sh.uniforms.uNight=nightU; sh.uniforms.uLit={value:li
   if(uNight>0.001){ vec3 cn=vColor.rgb/max(max(vColor.r,vColor.g),max(vColor.b,1e-4)); if(distance(cn,uLit)<0.07) totalEmissiveRadiance+=vec3(1.0,0.58,0.22)*1.7*uNight; }
   #endif`); };
 bMat.customProgramCacheKey=()=>'urbs-night-tex'+WARP.key;
+// budowle (bez łuków, które mają się zlewać z sąsiadami) – sztywne na nieregularnej siatce
+const bRigid=bMat.clone(); bRigid.onBeforeCompile=bMat.onBeforeCompile; bRigid.defines={...(bMat.defines||{}),URBS_RIGID:''}; bRigid.customProgramCacheKey=()=>'urbs-night-tex-r'+WARP.key;
+const rigidDepth=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}); rigidDepth.defines={URBS_RIGID:''};
 const ghostMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.8,flatShading:true,side:THREE.DoubleSide,transparent:true,opacity:0.6,depthWrite:false});
 
 /* =========================================================
@@ -1883,7 +1889,7 @@ const slabMats=[new THREE.MeshStandardMaterial({color:'#b48a5e',roughness:1}),ne
   new THREE.MeshStandardMaterial({color:'#b48a5e',roughness:1}),new THREE.MeshStandardMaterial({color:'#b48a5e',roughness:1})];
 function buildBoard(){
   if(slab){ scene.remove(slab); slab.geometry.dispose(); scene.remove(gridLines); gridLines.geometry.dispose(); }
-  refreshWarp(scene); bMat.needsUpdate=true;
+  refreshWarp(scene); bMat.needsUpdate=true; bRigid.needsUpdate=true; rigidDepth.needsUpdate=true; try{ ruinRigid.needsUpdate=true; }catch(_){}
   makeTerrainMeshes();
   slab=new THREE.Mesh(new THREE.BoxGeometry(N,0.8,N),slabMats); slab.position.y=-0.4; slab.receiveShadow=true; scene.add(slab);
   const pts=[]; const h=N/2;
@@ -2237,7 +2243,7 @@ function canPlace(type,x,z,rot){
 function addBuilding(type,x,z,rot,seed,anim=true,lm=null,fl=null){
   const def=DEFS[type]; const [fw,fd]=fpSize(def,rot); const id=nextId++;
   for(let j=z;j<z+fd;j++) for(let i=x;i<x+fw;i++) bld[I(i,j)]=id;
-  const m=new THREE.Mesh(getGeom(type,seed,fl),bMat); m.castShadow=m.receiveShadow=true;
+  const rigid=type!=='arcus', m=new THREE.Mesh(getGeom(type,seed,fl),rigid?bRigid:bMat); m.castShadow=m.receiveShadow=true; m.userData.baseMat=m.material; if(rigid) m.customDepthMaterial=rigidDepth;
   m.position.set(x+fw/2-N/2,hgt[I(x,z)]*LH,z+fd/2-N/2); m.rotation.y=type==='house'?0:rot*Math.PI/2; m.userData.bid=id;
   const constr=anim&&!def.decor&&type!=='house'&&type!=='arcus'&&!todayMode;
   if(anim&&!constr){ m.scale.set(0.01,0.01,0.01); growing.push({m,t:0}); }
@@ -4469,14 +4475,14 @@ function startConstruction(b){
   const hoist=new THREE.Mesh(G.box,bMat.clone()); hoist.material.vertexColors=false; hoist.material.color.set('#d9c8a5'); hoist.scale.set(0.16,0.12,0.16); hoist.visible=big; scene.add(hoist);
   // budowa warstwami: materiał z płaszczyzną cięcia odsłania mury od dołu; wokół kurz, dym i fruwające cegły
   const base=b.mesh.position.y, cut=new THREE.Plane(new THREE.Vector3(0,-1,0),base+0.01);
-  const mat=bMat.clone(); mat.onBeforeCompile=bMat.onBeforeCompile; mat.customProgramCacheKey=bMat.customProgramCacheKey; mat.clippingPlanes=[cut]; b.mesh.material=mat;
+  const bm=b.mesh.userData.baseMat||bMat, mat=bm.clone(); mat.onBeforeCompile=bm.onBeforeCompile; mat.customProgramCacheKey=bm.customProgramCacheKey; mat.clippingPlanes=[cut]; b.mesh.material=mat;
   b.mesh.scale.set(1,1,1);
   builds.push({b,t:0,dur:clamp(1.6+0.6*Math.sqrt(def.w*def.d),2.2,6),sc,hoist,H,big,tick:0,cut,mat,base,dust:0,deb:0,smk:0});
   return true;
 }
 function endConstruction(q,instant){
   scene.remove(q.sc); scene.remove(q.hoist); q.hoist.material.dispose();
-  if(q.mat){ if(q.b.mesh.material===q.mat) q.b.mesh.material=bMat; q.mat.dispose(); }
+  if(q.mat){ if(q.b.mesh.material===q.mat) q.b.mesh.material=q.b.mesh.userData.baseMat||bMat; q.mat.dispose(); }
   const k=builds.indexOf(q); if(k>=0) builds.splice(k,1);
   if(!buildings.has(q.b.id)) return;
   q.b.mesh.scale.set(1,todayMode?q.b.ts:1,1);
@@ -4703,9 +4709,10 @@ function smooth(a,b,x){ const t=clamp((x-a)/(b-a),0,1); return t*t*(3-2*t); }
    ========================================================= */
 let todayMode=false;
 const ruinMat=new THREE.MeshStandardMaterial({color:'#cfc3ad',roughness:0.95,flatShading:true,side:THREE.DoubleSide});
+const ruinRigid=ruinMat.clone(); ruinRigid.defines={URBS_RIGID:''};
 const TYPE_SURV={gardenS:0,topiary:0,vineyard:0,peristyle:0.1,terrace:0.05,park:0.05,colossus:0,quadriga:0,obelisk:1,ara:0.9,pharos:0,castra:0.15,castellum:0.2,port:0.1,watchtower:0.2,house:0,domus:0.03,insula:0.04,taberna:0,garden:0,fountain:0.3,statue:0.4,column:0.9,cypress:1,pine:1,arch:0.8,temple:0.15,forum:0.2,basilica:0.08,curia:0.9,market:0.5,baths:0.1,caracalla:0.45,diocletian:0.4,pantheon:1,colosseum:0.7,circus:0.02,theatre:0.5,barracks:0.1,palace:0.25,mausoleum:0.45,pyramid:1,trajanbaths:0.1};
 function survOf(b){ const d=b.lm&&INFO[b.lm]; if(d&&d.surv!=null) return d.surv; return TYPE_SURV[b.type]??0; }
-function applyTodayTo(b,instant){ const s=survOf(b); b.target=todayMode?s:1; b.mesh.material=(todayMode&&s<0.95)?ruinMat:bMat; if(instant){ b.ts=b.target; b.mesh.scale.y=Math.max(0.001,b.ts); b.mesh.visible=b.ts>0.012; } }
+function applyTodayTo(b,instant){ const s=survOf(b); b.target=todayMode?s:1; { const base=b.mesh.userData.baseMat||bMat; b.mesh.material=(todayMode&&s<0.95)?(base===bRigid?ruinRigid:ruinMat):base; } if(instant){ b.ts=b.target; b.mesh.scale.y=Math.max(0.001,b.ts); b.mesh.visible=b.ts>0.012; } }
 function lineToday(m){ const k=m.userData.key||''; const s=k.startsWith('aq')?0.45:0.3; m.userData.target=todayMode?s:1; if(m.userData.ts==null) m.userData.ts=1; m.material=todayMode?ruinMat:bMat; }
 /* ---- oś czasu Rzymu ---- */
 Object.assign(INFO,{
