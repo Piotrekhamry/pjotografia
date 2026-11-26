@@ -2079,6 +2079,8 @@ const DIRS=[[1,0],[-1,0],[0,1],[0,-1]];
 
 // --- plansza (dioramka)
 let slab=null, plinth=null, gridLines=null;
+// rzeka płynie w korycie poniżej gruntu: lustro wody WL, dno (wierzch płyty) BED
+const WL=-0.14, BED=-0.34;
 // trawa: łagodne plamy jaśniejszej i ciemniejszej zieleni oraz drobne źdźbła (gasną z odległością, by nie migotały)
 function grassify(m){ m.onBeforeCompile=sh=>{ sh.vertexShader='varying vec3 vGP;\n'+sh.vertexShader.replace('#include <project_vertex>',`#include <project_vertex>
   { vec4 gq=vec4(transformed,1.0);
@@ -2093,11 +2095,12 @@ function grassify(m){ m.onBeforeCompile=sh=>{ sh.vertexShader='varying vec3 vGP;
 const slabMats=[new THREE.MeshStandardMaterial({color:'#b48a5e',roughness:1}),new THREE.MeshStandardMaterial({color:'#b48a5e',roughness:1}),
   grassify(new THREE.MeshStandardMaterial({color:'#9ccb68',roughness:0.95})),new THREE.MeshStandardMaterial({color:'#8a6a48'}),
   new THREE.MeshStandardMaterial({color:'#b48a5e',roughness:1}),new THREE.MeshStandardMaterial({color:'#b48a5e',roughness:1})];
+const slabBedMats=slabMats.map((m,k)=>k===2?new THREE.MeshStandardMaterial({color:'#8a7457',roughness:1}):m); // dno koryta
 function buildBoard(){
   if(slab){ scene.remove(slab); slab.geometry.dispose(); scene.remove(gridLines); gridLines.geometry.dispose(); }
   refreshWarp(scene); bMat.needsUpdate=true; bRigid.needsUpdate=true; rigidDepth.needsUpdate=true; try{ ruinRigid.needsUpdate=true; }catch(_){}
   makeTerrainMeshes();
-  slab=new THREE.Mesh(new THREE.BoxGeometry(N,0.8,N),slabMats); slab.position.y=-0.4; slab.receiveShadow=true; scene.add(slab);
+  slab=new THREE.Mesh(new THREE.BoxGeometry(N,0.8,N),slabBedMats); slab.position.y=BED-0.4; slab.receiveShadow=true; scene.add(slab);
   const pts=[]; const h=N/2;
   for(let k=0;k<=N;k++){ const p=k-h; for(let u=-h;u<h-1e-6;u+=0.25){ pts.push(p,0,u, p,0,u+0.25, u,0,p, u+0.25,0,p); } } // gęste odcinki, żeby linie mogły się wyginać
   const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
@@ -2112,25 +2115,34 @@ function tileMesh(color,cap,opt={}){
   const m=new THREE.InstancedMesh(G.box,new THREE.MeshStandardMaterial({color,roughness:opt.rough??0.95,metalness:opt.metal??0}),cap);
   m.count=0; m.frustumCulled=false; m.receiveShadow=true; m.castShadow=!!opt.cast; scene.add(m); return m;
 }
-const TSPEC={plot:['#ead6a6',1],road1:['#cfc2aa',1],road2:['#9c9488',1],water:[WATERC,1,{rough:0.25,metal:0.05}],forest:['#86b85a',1],field:['#e6bf4f',1],
-  bridge:['#ddd0b6',1,{cast:true}],curb:['#efe7d8',4,{cast:true}],bank:['#e5d4a5',4],rows:['#d2ab45',4]};
+const TSPEC={plot:['#ead6a6',1],road1:['#cfc2aa',1],road2:['#9c9488',1],water:[WATERC,1,{rough:0.25,metal:0.05}],still:[WATERC,1,{rough:0.25,metal:0.05}],forest:['#86b85a',1],field:['#e6bf4f',1],
+  bridge:['#ddd0b6',1,{cast:true}],curb:['#efe7d8',4,{cast:true}],rows:['#d2ab45',4]};
 const T={};
+// nurt rzeki: jasne zmarszczki płyną wzdłuż lokalnej osi X kafelka (obróconego zgodnie z kierunkiem wody)
+const waterU={value:0};
+function flowify(m){ m.onBeforeCompile=sh=>{ sh.uniforms.uT=waterU;
+    sh.vertexShader='varying vec2 vFl; varying vec3 vFw;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vFl=position.xz; { vec4 fw=vec4(position,1.0);\n#ifdef USE_INSTANCING\n fw=instanceMatrix*fw;\n#endif\n vFw=(modelMatrix*fw).xyz; }');
+    sh.fragmentShader='uniform float uT; varying vec2 vFl; varying vec3 vFw;\n'+sh.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n { float ph=(vFl.x+0.5)*12.566-uT*2.4+1.6*sin(vFw.x*1.1+vFw.z*0.9)+0.8*sin(vFl.y*9.0+uT*0.7); float s=sin(ph);\n diffuseColor.rgb+=vec3(0.75,0.9,1.0)*smoothstep(0.88,1.0,s)*0.1; diffuseColor.rgb*=0.94+0.06*sin(ph*0.5+vFw.z*2.0); }'); };
+  m.customProgramCacheKey=()=>'urbs-flow'+WARP.key; }
 function treePool(geom,color,cap){ const m=new THREE.InstancedMesh(geom,new THREE.MeshStandardMaterial({color,roughness:0.85,flatShading:true}),cap); m.count=0; m.frustumCulled=false; m.castShadow=true; m.receiveShadow=true; scene.add(m); return m; }
 const TRSPEC={trunk:[new THREE.CylinderGeometry(0.035,0.045,1,5).translate(0,0.5,0),WOOD,3],cyp:[new THREE.ConeGeometry(0.12,1,7).translate(0,0.5,0),CYP,3],
   pine:[new THREE.SphereGeometry(0.3,8,5).scale(1,0.45,1),'#6a9a4a',3],rock:[new THREE.DodecahedronGeometry(0.12,0),'#c2b49c',1],olive:[new THREE.SphereGeometry(0.19,7,5),'#9bb07a',3],bush:[new THREE.SphereGeometry(0.12,6,4),'#86b85e',1]};
-const TR={}; let tCap=0; let softM=null, softMat=null, cliffM=null, capM=null, stairM=null, cliffCell=[], capCell=[];
+const TR={}; let tCap=0; let landM=null, softM=null, softMat=null, cliffM=null, capM=null, stairM=null, cliffCell=[], capCell=[];
 function stairGeo(){ const b=new B(); const n=4; for(let k=0;k<n;k++) b.box(0.9,LH*(k+1)/n,0.5-k*0.125,0,0,0.25+k*0.0625,'#d8ccb4'); b.box(0.06,LH+0.05,0.5,-0.47,0,0.25,'#efe7d8'); b.box(0.06,LH+0.05,0.5,0.47,0,0.25,'#efe7d8'); return b.geom(); }
 function makeHillMeshes(cap){
   for(const m of [cliffM,capM,stairM]) if(m){ scene.remove(m); m.dispose(); }
   const cg=new THREE.BoxGeometry(1,1,1).translate(0,0.5,0); { const pp=cg.attributes.position; for(let v=0;v<pp.count;v++) if(pp.getY(v)<0.5){ pp.setX(v,pp.getX(v)*1.42); pp.setZ(v,pp.getZ(v)*1.42); } cg.computeVertexNormals(); }
   cliffM=new THREE.InstancedMesh(cg,new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1,flatShading:true}),cap*2); cliffM.count=0; cliffM.frustumCulled=false; cliffM.castShadow=cliffM.receiveShadow=true; cliffM.setColorAt(0,new THREE.Color(1,1,1)); scene.add(cliffM);
   capM=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1).translate(0,-0.5,0),grassify(new THREE.MeshStandardMaterial({color:'#9ccb68',roughness:0.95})),cap); capM.count=0; capM.frustumCulled=false; capM.castShadow=capM.receiveShadow=true; scene.add(capM);
+  if(landM){ scene.remove(landM); landM.dispose(); }
+  landM=new THREE.InstancedMesh(G.box,slabMats,cap); landM.count=0; landM.frustumCulled=false; landM.receiveShadow=true; scene.add(landM);
   if(softM){ scene.remove(softM); softM.geometry.dispose(); } else softMat=grassify(new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.95,flatShading:true}));
   softM=new THREE.Mesh(new THREE.BufferGeometry(),softMat); softM.frustumCulled=false; softM.castShadow=softM.receiveShadow=true; scene.add(softM);
   stairM=new THREE.InstancedMesh(stairGeo(),bMat,cap); stairM.count=0; stairM.frustumCulled=false; stairM.castShadow=stairM.receiveShadow=true; scene.add(stairM);
 }
 function makeTerrainMeshes(){ const cap=N*N; if(cap===tCap) return; tCap=cap; makeHillMeshes(cap);
   for(const k in TSPEC){ if(T[k]){ scene.remove(T[k]); T[k].material.dispose(); T[k].dispose(); } const [c,m,o]=TSPEC[k]; T[k]=tileMesh(c,cap*m,o||{}); }
+  flowify(T.water.material);
   for(const k in TRSPEC){ if(TR[k]){ scene.remove(TR[k]); TR[k].material.dispose(); TR[k].dispose(); } const [gq,c,m]=TRSPEC[k]; TR[k]=treePool(gq,c,Math.round(cap*m)); } }
 const _M=new THREE.Matrix4(), _Q=new THREE.Quaternion(), _P=new THREE.Vector3(), _S=new THREE.Vector3();
 function setInst(mesh,idx,x,y,z,sx,sy,sz,ry=0){ _P.set(x,y,z); _S.set(sx,sy,sz); if(ry) _Q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP,ry); else _Q.identity(); _M.compose(_P,_Q,_S); mesh.setMatrixAt(idx,_M); }
@@ -2227,11 +2239,11 @@ function corridorDist(x,z,sp){ const h=N/2; let best=99, kind=null;
   return [best,kind];
 }
 function rimHeight(x,z,sp){
-  const h=N/2, d=Math.max(Math.abs(x),Math.abs(z))-h; if(d<-2.6) return -1.5; if(d<0.5) return -0.012;
+  const h=N/2, d=Math.max(Math.abs(x),Math.abs(z))-h; if(d<-0.4) return -1.5; if(d<0.5){ const [cd,kind]=corridorDist(x,z,sp); return kind==='w'&&cd<0.6?BED:-0.012; }
   const hills=(vnoise(x/9,z/9,77)*0.9+vnoise(x/22,z/22,78)*2.0)*smooth(0.5,7,d)*(0.35+Math.min(1.4,d/N*1.3));
   const mount=smooth(N*0.55,N*1.5,d)*(3+7*vnoise(x/17,z/17,79));
   let y=hills+mount-0.012;
-  const [cd,kind]=corridorDist(x,z,sp); if(kind){ const f=smooth(0.4,2.2,cd); y=(kind==='w'?-0.03:-0.012)*(1-f)+y*f; }
+  const [cd,kind]=corridorDist(x,z,sp); if(kind){ const f=smooth(0.4,2.2,cd); y=(kind==='w'?BED:-0.012)*(1-f)+y*f; }
   return y;
 }
 // Rzym ciągnie się daleko poza planszę: gęsta zabudowa przedmieść (instancje – tanie w rysowaniu)
@@ -2285,7 +2297,7 @@ function buildRim(){
   // rzeki i drogi biegnące dalej
   const L=S/2-h;
   for(const s of sp){ const w=s.b-s.a+1, mid=(wx(s.a)+wx(s.b))/2, isW=s.kind==='w';
-    const mat=isW?rimWaterMat:rimRoadMat[s.kind==='r2'?2:1], hh=isW?0.012:0.03, y0=isW?0.0:0.0;
+    const mat=isW?rimWaterMat:rimRoadMat[s.kind==='r2'?2:1], hh=isW?0.012:0.03, y0=isW?WL-0.012:0.0;
     const len=isW?L:Math.min(L,N*0.9), m=new THREE.Mesh(G.box,mat); m.receiveShadow=true;
     if(s.side==='n'){ m.position.set(mid,y0+hh/2,-h-len/2); m.scale.set(w,hh,len); } else if(s.side==='s'){ m.position.set(mid,y0+hh/2,h+len/2); m.scale.set(w,hh,len); }
     else if(s.side==='w'){ m.position.set(-h-len/2,y0+hh/2,mid); m.scale.set(len,hh,w); } else { m.position.set(h+len/2,y0+hh/2,mid); m.scale.set(len,hh,w); }
@@ -2312,6 +2324,16 @@ function rebuildTerrain(){
   const tile=(k,x,z,y0,h)=>si(T[k],n[k]++,x,y0+h/2,z,1,h,1);
   let nc=0, ncap=0, nst=0; const GRASSY=['#8db75c','#86b057','#93bb61'], ROCKY=['#cfb189','#c2a27a','#d6bb94'];
   const SP=[], SC=[], sCol=new THREE.Color(), _sc=new THREE.Color();
+  // nurt: dla każdej rzeki (spójnej wody dotykającej brzegu mapy) liczymy odległość od źródła – woda płynie w stronę rosnącej odległości
+  const isW=(i,j)=>inb(i,j)&&terrain[I(i,j)]===2, fd=new Int32Array(N*N).fill(-1), comp=new Int32Array(N*N).fill(-1);
+  for(let j0=0;j0<N;j0++) for(let i0=0;i0<N;i0++){ const id0=I(i0,j0); if(!isW(i0,j0)||comp[id0]>=0) continue; const reg=[id0]; comp[id0]=id0; let src=-1;
+    for(let h=0;h<reg.length;h++){ const id=reg[h], i=id%N, j=(id/N)|0; if(src<0&&(i===0||j===0||i===N-1||j===N-1)&&!line[id]) src=id; for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(isW(ni,nj)&&comp[I(ni,nj)]<0){ comp[I(ni,nj)]=id0; reg.push(I(ni,nj)); } } }
+    if(src<0) continue; fd[src]=0; const q=[src]; for(let h=0;h<q.length;h++){ const id=q[h], i=id%N, j=(id/N)|0; for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(isW(ni,nj)&&fd[I(ni,nj)]<0){ fd[I(ni,nj)]=fd[id]+1; q.push(I(ni,nj)); } } } }
+  // grunt na poziomie 0 jako pasy (rzędami) – pod wodą zostaje koryto
+  let nl=0; for(let j=0;j<N;j++){ let a=-1; for(let i=0;i<=N;i++){ const land=i<N&&terrain[I(i,j)]!==2; if(land&&a<0) a=i; if(!land&&a>=0){ const L=i-a; setInst(landM,nl++,wx(a)+(L-1)/2,BED/2,wx(j),L,-BED,1); a=-1; } } }
+  landM.count=nl; landM.instanceMatrix.needsUpdate=true;
+  const bankQ=(a,b,c,d,col)=>{ sv(...a,col); sv(...b,col); sv(...c,col); sv(...a,col); sv(...c,col); sv(...d,col); sv(...a,col); sv(...c,col); sv(...b,col); sv(...a,col); sv(...d,col); sv(...c,col); };
+  const SANDB=new THREE.Color('#cdb88e'), MUD=new THREE.Color('#9b8566'), QUAY=new THREE.Color('#d8caa8'), REED=new THREE.Color('#8aa85a');
   const sv=(x,y,z,c)=>{ SP.push(x,y,z); SC.push(c.r,c.g,c.b); };
   const tri=(a,b,c,col)=>{ const ux=b[0]-a[0], uy=b[1]-a[1], uz=b[2]-a[2], vx=c[0]-a[0], vy=c[1]-a[1], vz=c[2]-a[2]; if(uz*vx-ux*vz<0){ const t=b; b=c; c=t; } sv(...a,col); sv(...b,col); sv(...c,col); };
   for(let j=0;j<N;j++) for(let i=0;i<N;i++){
@@ -2336,11 +2358,26 @@ function rebuildTerrain(){
       capCell[ncap]=id; setInst(capM,ncap++,x,hb+0.001,z,1,lo<h?0.075:0.02,1); }
     if(r) for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(!inb(ni,nj)) continue; const nid=I(ni,nj); if(road[nid]&&hgt[nid]===h+1) setInst(stairM,nst++,x,hb,z,1,1,1,Math.atan2(di,dj)); }
     if(t===1&&!(sm&&h)) tile('plot',x,z,0,0.02);
-    else if(t===2) tile('water',x,z,0,0.012);
+    else if(t===2){ const f=fd[id]; let ry=0, flow=false;
+      if(f>=0){ let dx=0, dz=0; for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(isW(ni,nj)&&fd[I(ni,nj)]===f+1){ dx+=di; dz+=dj; } } if(!dx&&!dz) for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(isW(ni,nj)&&fd[I(ni,nj)]===f-1){ dx-=di; dz-=dj; } } if(dx||dz){ if(Math.abs(dx)>=Math.abs(dz)) dz=0; else dx=0; ry=Math.atan2(-Math.sign(dz),Math.sign(dx)); flow=true; } }
+      if(flow) si(T.water,n.water++,x,WL-0.006,z,1,0.012,1,ry); else tile('still',x,z,WL-0.012,0.012);
+      // brzegi koryta: łagodna skarpa z piaskiem i trzciną albo – w mieście – kamienne nabrzeże
+      const lnd=(di,dj)=>inb(i+di,j+dj)&&terrain[I(i+di,j+dj)]!==2;
+      for(let s=0;s<4;s++){ const [di,dj]=ARC_DIRS[s]; if(!lnd(di,dj)) continue; const nid=I(i+di,j+dj), city=bld[nid]||road[nid]||terrain[nid]===1||line[nid];
+        const px=-dj, pz=di, ins=city?0.03:0.15; // wzdłuż krawędzi i głębokość wcięcia
+        const eA=lnd(di+px,dj+pz)||lnd(px,pz)?1:0, eB=lnd(di-px,dj-pz)||lnd(-px,-pz)?1:0;
+        const P=(u,dIn,y)=>[x+di*(0.5-dIn)+px*u,y,z+dj*(0.5-dIn)+pz*u];
+        const uA=lnd(px,pz)?0.5-ins:0.5, uB=lnd(-px,-pz)?-(0.5-ins):-0.5;
+        const tA=P(0.5,0,0.003), tB=P(-0.5,0,0.003), wA=P(uA,ins,WL), wB=P(uB,ins,WL), bA=P(uA,ins+0.04,BED+0.01), bB=P(uB,ins+0.04,BED+0.01);
+        bankQ(tA,tB,wB,wA,city?QUAY:SANDB); bankQ(wA,wB,bB,bA,city?QUAY:MUD);
+        if(city){ const cA=P(0.5,-0.02,0.04), cB=P(-0.5,-0.02,0.04), cA2=P(0.5,0.04,0.04), cB2=P(-0.5,0.04,0.04); bankQ(cA,cB,cB2,cA2,QUAY); }
+        else if(hash2(i*5+s,j,71)<0.5){ const u=(hash2(i,j*5+s,72)-0.5)*0.6, rp=P(u,ins*0.7,WL-0.01); si(TR.bush,n.bush++,rp[0],rp[1]-hb,rp[2],0.7,0.9,0.7); } }
+      // wewnętrzne narożniki (ląd tylko po skosie) – mały klin, żeby nie było dziury
+      for(const sx of [-1,1]) for(const sz of [-1,1]){ if(lnd(sx,0)||lnd(0,sz)||!lnd(sx,sz)) continue; const c=[x+sx*0.5,0.003,z+sz*0.5], a=[x+sx*0.5,WL,z+sz*0.35], b=[x+sx*0.35,WL,z+sz*0.5], d=[x+sx*0.5,BED,z+sz*0.5];
+        bankQ(c,a,d,d,SANDB); bankQ(c,b,d,d,SANDB); sv(...c,SANDB); sv(...a,SANDB); sv(...b,SANDB); sv(...c,SANDB); sv(...b,SANDB); sv(...a,SANDB); }
+    }
     else if(t===3&&!(sm&&h)) tile('forest',x,z,0,0.008);
     else if(t===4){ tile('field',x,z,0,0.022); if(!occ) for(let k=0;k<4;k++) si(T.rows,n.rows++,x,0.03,z-0.36+k*0.24,0.86,0.025,0.07); }
-    if(t===2) for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(!inb(ni,nj)||terrain[I(ni,nj)]===2) continue;
-      if(di) si(T.bank,n.bank++,x+di*0.46,0.015,z,0.08,0.03,1); else si(T.bank,n.bank++,x,0.015,z+dj*0.46,1,0.03,0.08); }
     if(r&&drawInfo(i,j)){ /* most zwodzony rysowany osobno */ }
     else if(r&&line[id]!==4){
       const br=t===2; const y0=br?-0.06:0, h=br?0.2:(r===2?0.04:0.035);
@@ -2995,7 +3032,7 @@ function updateShips(dt,time){
     const kk=1-Math.exp(-dt*3); a.rx+=(x0+(x1-x0)*t-a.rx)*kk; a.rz+=(z0+(z1-z0)*t-a.rz)*kk;
     let dr=Math.atan2(dx,dz)-a.ry; dr=Math.atan2(Math.sin(dr),Math.cos(dr)); a.ry+=dr*Math.min(1,dt*1.5);
     _AE.set(Math.sin(time*1.3+a.ph)*0.04,a.ry,Math.sin(time*1.1+a.ph)*0.05,'YXZ'); _AQ.setFromEuler(_AE);
-    _AP.set(a.rx,0.0+Math.sin(time*1.7+a.ph)*0.012,a.rz); _AS.set(0.62,0.62,0.62); _PM.compose(_AP,_AQ,_AS); shipMesh.setMatrixAt(n++,_PM); }
+    _AP.set(a.rx,WL+Math.sin(time*1.7+a.ph)*0.012,a.rz); _AS.set(0.62,0.62,0.62); _PM.compose(_AP,_AQ,_AS); shipMesh.setMatrixAt(n++,_PM); }
   shipMesh.count=n; shipMesh.instanceMatrix.needsUpdate=true;
 }
 const wallGuards=[]; let wallCells=[];
@@ -5100,7 +5137,7 @@ function loop(now){
   for(let k=pulses.length-1;k>=0;k--){ const p=pulses[k]; if(p.base==null) p.base=p.m.scale.y; p.t+=dt/0.35; const s=1+0.07*Math.sin(Math.min(1,p.t)*Math.PI); p.m.scale.set(s,p.base*s,s); if(p.t>=1){ p.m.scale.set(1,p.base,1); pulses.splice(k,1); } }
   updateAgents(dt,now/1000);
   todayStep(dt); updateLabels(); updateDrawbridges(dt); updateBarbicans(dt); wallSideStep(now/1000); updateAmbientFx(dt,now/1000); envStep(dt,now/1000); updateWaterFx(now/1000);
-  T.water.material.emissive.setRGB(0.02+Math.sin(now/900)*0.015,0.05+Math.sin(now/900)*0.02,0.07);
+  T.water.material.emissive.setRGB(0.02+Math.sin(now/900)*0.015,0.05+Math.sin(now/900)*0.02,0.07); T.still.material.emissive.copy(T.water.material.emissive); if(waterU) waterU.value=now/1000;
   statT+=dt; if(statT>0.6){ statT=0; updateStats(); }
   saveT+=dt; if(saveT>2.5){ saveT=0; autosave(); }
   ambientStep(now/1000); chopinStep(Math.min(dt,0.1));
