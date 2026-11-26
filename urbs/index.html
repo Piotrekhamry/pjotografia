@@ -41,6 +41,7 @@ button{font-family:inherit;color:inherit}
 #timeline button.on span{opacity:.9}
 .seg.mini{box-shadow:none;background:#f1e8da;padding:2px}.seg.mini button{padding:5px 9px;font-size:15px}
 #rotbar{position:fixed;left:calc(12px + env(safe-area-inset-left));bottom:calc(var(--dockh) + 18px + env(safe-area-inset-bottom) - var(--vfix,0px));display:flex;gap:6px;z-index:5}
+#rotbar button.off{opacity:.45;text-decoration:line-through}
 #rotbar button{width:40px;height:40px;border:0;border-radius:50%;background:var(--panel);box-shadow:var(--shadow);font-size:18px;cursor:pointer}
 #items.closed{display:none}
 #photoBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(22px + env(safe-area-inset-bottom) - var(--vfix,0px));display:none;gap:8px;align-items:center;z-index:9;background:rgba(30,22,16,.45);padding:8px 10px;border-radius:40px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -222,7 +223,7 @@ label.ck{display:flex;gap:8px;align-items:center;font-size:14px;margin:5px 0;cur
     <button class="tbtn" id="bMenu" title="Menu">☰</button>
   </div>
 </div>
-<div id="rotbar"><button id="bRotL" title="Obróć widok (Q)">⟲</button><button id="bRotR" title="Obróć widok (E)">⟳</button><button id="bPhoto" title="Tryb fotograficzny (P)">📷</button></div>
+<div id="rotbar"><button id="bRotL" title="Obróć widok (Q)">⟲</button><button id="bRotR" title="Obróć widok (E)">⟳</button><button id="bPhoto" title="Tryb fotograficzny (P)">📷</button><button id="bGridQ" title="Siatka: włącz / wyłącz (G)">▦</button></div>
 <div id="photoBar"></div><div id="flash"></div>
 <div hidden id="holder">
   <input type="range" id="time" min="0" max="1" step="0.001" value="0.36"><div id="stats"></div><div id="era"></div>
@@ -2166,7 +2167,7 @@ const buildGroup=new THREE.Group(); scene.add(buildGroup);
 const lineGroup=new THREE.Group(); scene.add(lineGroup);
 const growing=[];
 let dirtyTerrain=true, dirtyRoads=true, dirtyLines=new Set(), dirtySave=false;
-let onlyPlots=false, peopleOn=true, gridOn=true, muted=false, brushSize=1, buildRot=0;
+let onlyPlots=false, peopleOn=true, gridOn=(()=>{ try{ return localStorage.getItem('urbs-grid')!=='0'; }catch(_){ return true; } })(), muted=false, brushSize=1, buildRot=0;
 const DIRS=[[1,0],[-1,0],[0,1],[0,-1]];
 
 // --- plansza (dioramka)
@@ -3768,6 +3769,7 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&k==='z'){ e.preventDefault(); undo(); return; }
   if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)){ keys.add(k); e.preventDefault(); }
   if(k==='p'){ if(photo) exitPhoto(); else enterPhoto(); }
+  if(k==='g'&&!photo){ toggleGrid(); }
   if(k==='escape'&&photo){ exitPhoto(); return; }
   if(k==='n'){ ENV.night=!ENV.night; ENV.cycle=false; saveEnv(); }
   if(k==='r') rotateBuilding(); if(k==='q') rotateView(-1); if(k==='e') rotateView(1); if(k==='g') toggleGrid();
@@ -3976,7 +3978,9 @@ document.getElementById('bLegacy').onclick=()=>{ if(infoKey==='legacy') hideInfo
 document.getElementById('bRotL').onclick=()=>rotateView(-1);
 document.getElementById('bRotR').onclick=()=>rotateView(1);
 document.getElementById('bPhoto').onclick=()=>enterPhoto();
-function toggleGrid(){ gridOn=!gridOn; if(gridLines) gridLines.visible=gridOn; document.getElementById('bGrid').classList.toggle('off',!gridOn); }
+function toggleGrid(){ gridOn=!gridOn; applyGrid(); toast(gridOn?'▦ Siatka włączona':'Siatka wyłączona'); }
+function applyGrid(){ if(gridLines) gridLines.visible=gridOn; document.getElementById('bGrid').classList.toggle('off',!gridOn); const q=document.getElementById('bGridQ'); q.classList.toggle('off',!gridOn); q.title=gridOn?'Wyłącz siatkę (G)':'Włącz siatkę (G)'; try{ localStorage.setItem('urbs-grid',gridOn?'1':'0'); }catch(_){} const sg=document.getElementById('sGrid'); if(sg) sg.checked=gridOn; }
+document.getElementById('bGridQ').onclick=toggleGrid; applyGrid();
 document.getElementById('bGrid').onclick=toggleGrid;
 document.getElementById('bPeople').onclick=e=>{ peopleOn=!peopleOn; e.currentTarget.classList.toggle('off',!peopleOn); if(!peopleOn){ agents.length=0; patrols.length=0; } };
 document.getElementById('bSound').onclick=e=>{ muted=!muted; e.currentTarget.textContent=muted?'🔇':'🔊'; if(!muted) ensureAudio(); };
