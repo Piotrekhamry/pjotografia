@@ -2316,6 +2316,41 @@ function buildRim(){
   scene.add(rim);
 }
 
+/* Koryto rzeki jako gładka powierzchnia: odległość od linii brzegu (liczona dla kratek wody i lądu)
+   jest rozmywana na gęstej siatce (4×4 na pole), więc brzeg nie ma schodków – meandruje łagodnie,
+   a narożniki są zaokrąglone. Przy budynkach, drogach i murach brzeg zostaje na ich wysokości (nabrzeże). */
+function riverBed(isW,shoreC,sv,n){
+  const R4=5, inR=(i,j)=>inb(i,j)&&(isW(i,j)||shoreC[I(i,j)]);
+  let i0=N, j0=N, i1=-1, j1=-1; for(let j=0;j<N;j++) for(let i=0;i<N;i++) if(inR(i,j)){ i0=Math.min(i0,i); j0=Math.min(j0,j); i1=Math.max(i1,i); j1=Math.max(j1,j); }
+  if(i1<0) return;
+  const W=(i1-i0+1)*R4+1, Hn=(j1-j0+1)*R4+1, X0=wx(i0)-0.5, Z0=wx(j0)-0.5;
+  const wAt=(i,j)=>{ if(inb(i,j)) return isW(i,j); return isW(clamp(i,0,N-1),clamp(j,0,N-1)); }; // za brzegiem mapy rzeka biegnie dalej
+  let sd=new Float32Array(W*Hn);
+  for(let b=0;b<Hn;b++) for(let a=0;a<W;a++){ const x=X0+a/R4, z=Z0+b/R4, ci=Math.floor(x+N/2), cj=Math.floor(z+N/2); let dW=9, dL=9;
+    for(let dj=-2;dj<=2;dj++) for(let di=-2;di<=2;di++){ const i=ci+di, j=cj+dj, cx=wx(i), cz=wx(j);
+      const ex=Math.max(0,Math.abs(x-cx)-0.5), ez=Math.max(0,Math.abs(z-cz)-0.5), d=Math.hypot(ex,ez); if(wAt(i,j)) dW=Math.min(dW,d); else dL=Math.min(dL,d); }
+    sd[b*W+a]=dW>0?dW:-dL; }
+  for(let pass=0;pass<4;pass++){ const o=new Float32Array(W*Hn); for(let b=0;b<Hn;b++) for(let a=0;a<W;a++){ let s=0,c=0; for(let q=-1;q<=1;q++) for(let p=-1;p<=1;p++){ const aa=a+p, bb=b+q; if(aa<0||bb<0||aa>=W||bb>=Hn) continue; s+=sd[bb*W+aa]; c++; } o[b*W+a]=s/c; } sd=o; }
+  const topOf=(i,j,x,z)=>{ if(!inb(i,j)) return 0; const id=I(i,j); if(isW(i,j)) return 0; return isSmooth(id)||shoreC[id]?softLocal(i,j,x-wx(i),z-wx(j)):hgt[id]*LH; };
+  const Y=new Float32Array(W*Hn), Q=new Uint8Array(W*Hn);
+  for(let b=0;b<Hn;b++) for(let a=0;a<W;a++){ const x=X0+a/R4, z=Z0+b/R4, fx=x+N/2, fz=z+N/2;
+    const cs=[]; for(const ox of [-1e-4,1e-4]) for(const oz of [-1e-4,1e-4]){ const i=Math.floor(fx+ox), j=Math.floor(fz+oz); if(!cs.some(c=>c[0]===i&&c[1]===j)) cs.push([i,j]); }
+    let fixed=-1, tsum=0; for(const [i,j] of cs){ if(!inR(i,j)&&inb(i,j)){ fixed=Math.max(fixed,topOf(i,j,x,z)); Q[b*W+a]=bld[I(i,j)]||road[I(i,j)]||line[I(i,j)]||terrain[I(i,j)]===1?1:0; } tsum+=topOf(i,j,x,z); }
+    if(fixed>=0){ Y[b*W+a]=fixed; continue; }
+    const top=tsum/cs.length, t=smooth(0.12,-0.32,sd[b*W+a]); Y[b*W+a]=top+(BED+0.03-top)*t; }
+  const GR=new THREE.Color('#8db75c'), SA=new THREE.Color('#d6c294'), MU=new THREE.Color('#8c7a5c'), QU=new THREE.Color('#d8caa8'), cc=new THREE.Color();
+  for(let b=0;b<Hn-1;b++) for(let a=0;a<W-1;a++){ const x=X0+(a+0.5)/R4, z=Z0+(b+0.5)/R4, ci=Math.floor(x+N/2), cj=Math.floor(z+N/2); if(!inR(ci,cj)) continue;
+    const k00=b*W+a, k10=k00+1, k01=k00+W, k11=k01+1, ys=[Y[k00],Y[k10],Y[k11],Y[k01]], ym=(ys[0]+ys[1]+ys[2]+ys[3])/4;
+    const q=Q[k00]||Q[k10]||Q[k01]||Q[k11];
+    // kolor liczony w każdym wierzchołku – płynne przejście trawa → piasek → muł
+    const colY=(y,k)=>{ const c=new THREE.Color(); if(q&&y<-0.01) return c.copy(QU); if(y>=-0.01) return c.copy(GR); if(y>=WL+0.01) return c.copy(SA).lerp(GR,clamp((y-WL-0.01)/(-0.01-WL-0.01),0,1)**2); return c.copy(MU).lerp(SA,clamp((y-BED)/(WL+0.01-BED),0,1)**3); };
+    const V=(aa,bb,k)=>{ sv(X0+aa/R4,Y[k]+0.002,Z0+bb/R4,colY(Y[k],k)); };
+    // przekątna wzdłuż mniejszej różnicy wysokości – gładszy brzeg
+    if(Math.abs(ys[0]-ys[2])<=Math.abs(ys[1]-ys[3])){ V(a,b,k00); V(a+1,b+1,k11); V(a+1,b,k10); V(a,b,k00); V(a,b+1,k01); V(a+1,b+1,k11); }
+    else { V(a,b,k00); V(a,b+1,k01); V(a+1,b,k10); V(a+1,b,k10); V(a,b+1,k01); V(a+1,b+1,k11); }
+    // trzcina przy linii wody
+    if(!q&&Math.abs(ym-WL)<0.03&&hash2(a,b,73)<0.07) setInst(TR.bush,n.bush++,x,WL-0.02,z,0.6,0.9,0.6); }
+}
 function rebuildTerrain(){
   if(edgeSig()!==rimSig) buildRim();
   aoDirty=true; dirtyWater=true;
@@ -2329,8 +2364,12 @@ function rebuildTerrain(){
   for(let j0=0;j0<N;j0++) for(let i0=0;i0<N;i0++){ const id0=I(i0,j0); if(!isW(i0,j0)||comp[id0]>=0) continue; const reg=[id0]; comp[id0]=id0; let src=-1;
     for(let h=0;h<reg.length;h++){ const id=reg[h], i=id%N, j=(id/N)|0; if(src<0&&(i===0||j===0||i===N-1||j===N-1)&&!line[id]) src=id; for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(isW(ni,nj)&&comp[I(ni,nj)]<0){ comp[I(ni,nj)]=id0; reg.push(I(ni,nj)); } } }
     if(src<0) continue; fd[src]=0; const q=[src]; for(let h=0;h<q.length;h++){ const id=q[h], i=id%N, j=(id/N)|0; for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(isW(ni,nj)&&fd[I(ni,nj)]<0){ fd[I(ni,nj)]=fd[id]+1; q.push(I(ni,nj)); } } } }
-  // grunt na poziomie 0 jako pasy (rzędami) – pod wodą zostaje koryto
-  let nl=0; for(let j=0;j<N;j++){ let a=-1; for(let i=0;i<=N;i++){ const land=i<N&&terrain[I(i,j)]!==2; if(land&&a<0) a=i; if(!land&&a>=0){ const L=i-a; setInst(landM,nl++,wx(a)+(L-1)/2,BED/2,wx(j),L,-BED,1); a=-1; } } }
+  // pola brzegowe: wolny ląd przy wodzie – razem z wodą rysowane jako jedno gładkie koryto
+  const shoreC=new Uint8Array(N*N);
+  for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const id=I(i,j), t=terrain[id]; if(t===2||bld[id]||road[id]||line[id]||t===1||t===4||sharp[id]) continue;
+    let w=false; for(let dj=-1;dj<=1&&!w;dj++) for(let di=-1;di<=1;di++) if(isW(i+di,j+dj)){ w=true; break; } if(w) shoreC[id]=1; }
+  // grunt na poziomie 0 jako pasy (rzędami) – pod wodą i brzegami zostaje koryto
+  let nl=0; for(let j=0;j<N;j++){ let a=-1; for(let i=0;i<=N;i++){ const land=i<N&&terrain[I(i,j)]!==2&&!shoreC[I(i,j)]; if(land&&a<0) a=i; if(!land&&a>=0){ const L=i-a; setInst(landM,nl++,wx(a)+(L-1)/2,BED/2,wx(j),L,-BED,1); a=-1; } } }
   landM.count=nl; landM.instanceMatrix.needsUpdate=true;
   const bankQ=(a,b,c,d,col)=>{ sv(...a,col); sv(...b,col); sv(...c,col); sv(...a,col); sv(...c,col); sv(...d,col); sv(...a,col); sv(...c,col); sv(...b,col); sv(...a,col); sv(...d,col); sv(...c,col); };
   const SANDB=new THREE.Color('#cdb88e'), MUD=new THREE.Color('#9b8566'), QUAY=new THREE.Color('#d8caa8'), REED=new THREE.Color('#8aa85a');
@@ -2338,7 +2377,7 @@ function rebuildTerrain(){
   const tri=(a,b,c,col)=>{ const ux=b[0]-a[0], uy=b[1]-a[1], uz=b[2]-a[2], vx=c[0]-a[0], vy=c[1]-a[1], vz=c[2]-a[2]; if(uz*vx-ux*vz<0){ const t=b; b=c; c=t; } sv(...a,col); sv(...b,col); sv(...c,col); };
   for(let j=0;j<N;j++) for(let i=0;i<N;i++){
     const id=I(i,j), t=terrain[id], r=road[id], x=wx(i), z=wx(j), occ=bld[id]||line[id]||r; const h=hgt[id]; hb=h*LH;
-    const sm=hillMax&&isSmooth(id);
+    const shore=shoreC[id], sm=hillMax&&isSmooth(id)&&!shore;
     if(sm){ // łagodny płat zbocza (+ ścianka tam, gdzie obok płaski taras leży niżej)
       const L=(di,dj)=>lvAt(i+di,j+dj), mid=(di,dj)=>(h+L(di,dj))/2, cor=(sx,sz)=>(h+L(sx,0)+L(0,sz)+L(sx,sz))/4;
       let any=h>0; for(const [di,dj] of DIRS) if(L(di,dj)>0) any=true; if(!any) for(const sx of [-1,1]) for(const sz of [-1,1]) if(L(sx,sz)>0) any=true;
@@ -2353,7 +2392,7 @@ function rebuildTerrain(){
             fl(a,b,b0); fl(a,b0,a0); fl(a,b0,b); fl(a,a0,b0); } } }
     }
     const tierB=bld[id]&&buildings.get(bld[id])?.type==='tier';
-    let lo=h; if(h&&!sm&&!tierB){ for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; lo=Math.min(lo,inb(ni,nj)?hgt[I(ni,nj)]:0); }
+    let lo=h; if(h&&!sm&&!tierB&&!shore){ for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; lo=Math.min(lo,inb(ni,nj)?hgt[I(ni,nj)]:0); }
       for(let L=lo;L<h-0;L++){ if(nc>=cliffM.instanceMatrix.count) break; cliffCell[nc]=id; setInst(cliffM,nc,x,L*LH,z,1,L===h-1?LH-0.07:LH,1); _C.set((hash2(i,j,91+L)<0.3?ROCKY:GRASSY)[(L+i+j)%3]); cliffM.setColorAt(nc,_C); nc++; }
       capCell[ncap]=id; setInst(capM,ncap++,x,hb+0.001,z,1,lo<h?0.075:0.02,1); }
     if(r) for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(!inb(ni,nj)) continue; const nid=I(ni,nj); if(road[nid]&&hgt[nid]===h+1) setInst(stairM,nst++,x,hb,z,1,1,1,Math.atan2(di,dj)); }
@@ -2361,22 +2400,8 @@ function rebuildTerrain(){
     else if(t===2){ const f=fd[id]; let ry=0, flow=false;
       if(f>=0){ let dx=0, dz=0; for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(isW(ni,nj)&&fd[I(ni,nj)]===f+1){ dx+=di; dz+=dj; } } if(!dx&&!dz) for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(isW(ni,nj)&&fd[I(ni,nj)]===f-1){ dx-=di; dz-=dj; } } if(dx||dz){ if(Math.abs(dx)>=Math.abs(dz)) dz=0; else dx=0; ry=Math.atan2(-Math.sign(dz),Math.sign(dx)); flow=true; } }
       if(flow) si(T.water,n.water++,x,WL-0.006,z,1,0.012,1,ry); else tile('still',x,z,WL-0.012,0.012);
-      // brzegi koryta: łagodna skarpa z piaskiem i trzciną albo – w mieście – kamienne nabrzeże
-      const lnd=(di,dj)=>inb(i+di,j+dj)&&terrain[I(i+di,j+dj)]!==2;
-      for(let s=0;s<4;s++){ const [di,dj]=ARC_DIRS[s]; if(!lnd(di,dj)) continue; const nid=I(i+di,j+dj), city=bld[nid]||road[nid]||terrain[nid]===1||line[nid];
-        const px=-dj, pz=di, ins=city?0.03:0.15; // wzdłuż krawędzi i głębokość wcięcia
-        const eA=lnd(di+px,dj+pz)||lnd(px,pz)?1:0, eB=lnd(di-px,dj-pz)||lnd(-px,-pz)?1:0;
-        const P=(u,dIn,y)=>[x+di*(0.5-dIn)+px*u,y,z+dj*(0.5-dIn)+pz*u];
-        const uA=lnd(px,pz)?0.5-ins:0.5, uB=lnd(-px,-pz)?-(0.5-ins):-0.5;
-        const tA=P(0.5,0,0.003), tB=P(-0.5,0,0.003), wA=P(uA,ins,WL), wB=P(uB,ins,WL), bA=P(uA,ins+0.04,BED+0.01), bB=P(uB,ins+0.04,BED+0.01);
-        bankQ(tA,tB,wB,wA,city?QUAY:SANDB); bankQ(wA,wB,bB,bA,city?QUAY:MUD);
-        if(city){ const cA=P(0.5,-0.02,0.04), cB=P(-0.5,-0.02,0.04), cA2=P(0.5,0.04,0.04), cB2=P(-0.5,0.04,0.04); bankQ(cA,cB,cB2,cA2,QUAY); }
-        else if(hash2(i*5+s,j,71)<0.5){ const u=(hash2(i,j*5+s,72)-0.5)*0.6, rp=P(u,ins*0.7,WL-0.01); si(TR.bush,n.bush++,rp[0],rp[1]-hb,rp[2],0.7,0.9,0.7); } }
-      // wewnętrzne narożniki (ląd tylko po skosie) – mały klin, żeby nie było dziury
-      for(const sx of [-1,1]) for(const sz of [-1,1]){ if(lnd(sx,0)||lnd(0,sz)||!lnd(sx,sz)) continue; const c=[x+sx*0.5,0.003,z+sz*0.5], a=[x+sx*0.5,WL,z+sz*0.35], b=[x+sx*0.35,WL,z+sz*0.5], d=[x+sx*0.5,BED,z+sz*0.5];
-        bankQ(c,a,d,d,SANDB); bankQ(c,b,d,d,SANDB); sv(...c,SANDB); sv(...a,SANDB); sv(...b,SANDB); sv(...c,SANDB); sv(...b,SANDB); sv(...a,SANDB); }
     }
-    else if(t===3&&!(sm&&h)) tile('forest',x,z,0,0.008);
+    else if(t===3&&!(sm&&h)&&!shore) tile('forest',x,z,0,0.008);
     else if(t===4){ tile('field',x,z,0,0.022); if(!occ) for(let k=0;k<4;k++) si(T.rows,n.rows++,x,0.03,z-0.36+k*0.24,0.86,0.025,0.07); }
     if(r&&drawInfo(i,j)){ /* most zwodzony rysowany osobno */ }
     else if(r&&line[id]!==4){
@@ -2386,7 +2411,8 @@ function rebuildTerrain(){
       for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(inb(ni,nj)&&road[I(ni,nj)]) continue;
         if(di) si(T.curb,n.curb++,x+di*0.47,cy+ch/2,z,0.06,ch,1); else si(T.curb,n.curb++,x,cy+ch/2,z+dj*0.47,1,ch,0.06); }
     }
-    if(t===3 && !occ){
+    if(shore) tile('still',x,z,WL-0.012,0.012);
+    if(t===3 && !occ && !shore){
       const cnt=1+Math.floor(hash2(i,j,3)*2.6);
       for(let k=0;k<cnt;k++){ const ox=(hash2(i,j,10+k)-0.5)*0.55, oz=(hash2(i,j,20+k)-0.5)*0.55, ty=hash2(i,j,30+k), sc=0.8+hash2(i,j,40+k)*0.5;
         const gy=sm?softLocal(i,j,ox,oz)-hb-0.03:0;
@@ -2394,11 +2420,12 @@ function rebuildTerrain(){
         else if(ty<0.72){ si(TR.trunk,n.trunk++,x+ox,gy,z+oz,sc,0.55*sc,sc); si(TR.pine,n.pine++,x+ox,gy+0.6*sc,z+oz,sc,sc,sc); }
         else { si(TR.trunk,n.trunk++,x+ox,gy,z+oz,sc*1.2,0.22*sc,sc*1.2); si(TR.olive,n.olive++,x+ox,gy+0.3*sc,z+oz,sc,0.8*sc,sc); } }
     }
-    if(h&&t===0&&!occ){ // zbocza wzgórz: pinie, kamienie i krzaki na krawędziach tarasów
+    if(h&&t===0&&!occ&&!shore){ // zbocza wzgórz: pinie, kamienie i krzaki na krawędziach tarasów
       if(hash2(i,j,55)<0.16){ const sc=0.85+hash2(i,j,56)*0.4, ox=(hash2(i,j,57)-0.5)*0.4, oz=(hash2(i,j,58)-0.5)*0.4, gy=sm?softLocal(i,j,ox,oz)-hb-0.03:0; si(TR.trunk,n.trunk++,x+ox,gy,z+oz,sc,0.6*sc,sc); si(TR.pine,n.pine++,x+ox,gy+0.66*sc,z+oz,sc*1.1,sc,sc*1.1); }
       if(lo<h&&!sm) for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(inb(ni,nj)&&hgt[I(ni,nj)]>=h) continue; const hv=hash2(i*3+di,j*3+dj,61); if(hv<0.22) si(TR.rock,n.rock++,x+di*0.4,0.02,z+dj*0.4,0.8+hv*2,0.6+hv,0.9+hv); else if(hv<0.38) si(TR.bush,n.bush++,x+di*0.38,0.04,z+dj*0.38,1.1,0.9,1.1); } }
-    if(t===0 && !occ && !(sm&&h) && hash2(i,j,77)<0.035) si(TR.bush,n.bush++,x+(hash2(i,j,78)-0.5)*0.6,0.05,z+(hash2(i,j,79)-0.5)*0.6,1,0.8,1);
+    if(t===0 && !occ && !shore && !(sm&&h) && hash2(i,j,77)<0.035) si(TR.bush,n.bush++,x+(hash2(i,j,78)-0.5)*0.6,0.05,z+(hash2(i,j,79)-0.5)*0.6,1,0.8,1);
   }
+  riverBed(isW,shoreC,sv,n);
   { const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(SP,3)); g.setAttribute('color',new THREE.Float32BufferAttribute(SC,3)); g.computeVertexNormals(); softM.geometry.dispose(); softM.geometry=g; }
   cliffM.count=nc; capM.count=ncap; stairM.count=nst; for(const m of [cliffM,capM,stairM]) m.instanceMatrix.needsUpdate=true; if(cliffM.instanceColor) cliffM.instanceColor.needsUpdate=true;
   for(const k in T){ T[k].count=Math.min(n[k],T[k].instanceMatrix.count); T[k].instanceMatrix.needsUpdate=true; }
