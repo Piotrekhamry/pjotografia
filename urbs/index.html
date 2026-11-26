@@ -2444,6 +2444,35 @@ function riverBed(isW,shoreC,sv,n){
     // trzcina przy linii wody
     if(!q&&Math.abs(ym-WL)<0.03&&hash2(a,b,73)<0.07) setInst(TR.bush,n.bush++,x,WL-0.02,z,0.6,0.9,0.6); }
 }
+/* ---- Trawa: kępki źdźbeł na wolnej zielonej ziemi, kołyszące się na wietrze, gdzieniegdzie kwiaty ---- */
+const GRASS_MAX=IS_MOBILE?12000:48000;
+let grassOn=(()=>{ try{ return localStorage.getItem('urbs-grass')!=='0'; }catch(_){ return true; } })(), grassT=0;
+const grassGeo=(()=>{ const P=[], C=[], Nn=[]; const base=new THREE.Color('#5a8c34'), tip=new THREE.Color('#d8ec9c');
+  for(let k=0;k<6;k++){ const a=k/6*Math.PI*2+(k%2)*0.5, ca=Math.cos(a), sa=Math.sin(a), r=0.018+(k%3)*0.008, lean=0.018+(k%2)*0.01, h=0.065+(k%3)*0.022, w=0.011, ox=Math.cos(a)*r, oz=Math.sin(a)*r;
+    const v0=[[ox-sa*w,0,oz+ca*w],[ox+sa*w,0,oz-ca*w],[ox+ca*lean,h,oz+sa*lean]], v=[...v0,v0[1],v0[0],v0[2]]; for(const [x,y,z] of v){ P.push(x,y,z); Nn.push(0,1,0); const c=base.clone().lerp(tip,y/h); C.push(c.r,c.g,c.b); } }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(P,3)); g.setAttribute('normal',new THREE.Float32BufferAttribute(Nn,3)); g.setAttribute('color',new THREE.Float32BufferAttribute(C,3)); return g; })();
+const grassMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.95});
+grassMat.onBeforeCompile=sh=>{ sh.uniforms.uT=waterU; sh.vertexShader='uniform float uT;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+  { vec2 ip=vec2(0.0);
+  #ifdef USE_INSTANCING
+    ip=(instanceMatrix*vec4(0.0,0.0,0.0,1.0)).xz;
+  #endif
+    float f=position.y*position.y*160.0, w=sin(uT*1.6+ip.x*0.9+ip.y*0.6)*0.6+sin(uT*2.7+ip.x*2.1)*0.25;
+    transformed.x+=w*f*0.12; transformed.z+=w*f*0.06; }`); };
+grassMat.customProgramCacheKey=()=>'urbs-grass-blades'+WARP.key;
+const grassM=new THREE.InstancedMesh(grassGeo,grassMat,GRASS_MAX); grassM.count=0; grassM.frustumCulled=false; grassM.receiveShadow=true; grassM.setColorAt(0,new THREE.Color(1,1,1)); scene.add(grassM);
+const flowerM=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.014,0),new THREE.MeshStandardMaterial({roughness:0.7}),Math.floor(GRASS_MAX/10)); flowerM.count=0; flowerM.frustumCulled=false; flowerM.setColorAt(0,new THREE.Color(1,1,1)); scene.add(flowerM);
+function rebuildGrass(){ grassT=12; if(!grassOn){ grassM.count=0; flowerM.count=0; return; }
+  let tw=null; try{ tw=trailWear.length===N*N?trailWear:null; }catch(_){}
+  let k=0, f=0; const C=new THREE.Color(), G=['#ffffff','#e9f2d6','#d9e8b8','#f2eed0'], FL=['#f4f1e6','#f2c14e','#e86a7a','#b57edc','#f08a4b'];
+  const per=IS_MOBILE?4:12, nearW=(i,j)=>{ for(let dj=-1;dj<=1;dj++) for(let di=-1;di<=1;di++){ const ni=i+di, nj=j+dj; if(inb(ni,nj)&&terrain[I(ni,nj)]===2) return true; } return false; };
+  outer: for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const id=I(i,j), t=terrain[id]; if(t===1||t===2||t===4||bld[id]||road[id]||line[id]) continue; if(nearW(i,j)) continue; if(tw&&tw[id]>0.25) continue;
+    const dry=vnoise(i/7,j/7,511); const n=Math.round(per*(t===3?0.6:1)*(0.6+0.8*vnoise(i/3.5,j/3.5,512)));
+    for(let q=0;q<n;q++){ if(k>=GRASS_MAX) break outer; const x=wx(i)+(hash2(i*8+q,j,521)-0.5)*0.96, z=wx(j)+(hash2(i,j*8+q,522)-0.5)*0.96, sc=0.7+hash2(i+q,j,523)*0.75;
+      setInst(grassM,k,x,hY(x,z)-0.004,z,sc,sc*(0.8+hash2(i,j+q,524)*0.6),sc,hash2(q,i+j,525)*6.28); C.set(G[(i+j+q)%4]); if(dry>0.62) C.lerp(new THREE.Color('#e8d08a'),(dry-0.62)*2.2); grassM.setColorAt(k,C); k++;
+      if(hash2(i*3+q,j*5,526)<0.07&&f<flowerM.instanceMatrix.count){ setInst(flowerM,f,x+0.01,hY(x,z)+0.085*sc,z,1,1,1); C.set(FL[(i*7+j*3+q)%FL.length]); flowerM.setColorAt(f,C); f++; } } }
+  grassM.count=k; grassM.instanceMatrix.needsUpdate=true; grassM.instanceColor.needsUpdate=true; flowerM.count=f; flowerM.instanceMatrix.needsUpdate=true; if(flowerM.instanceColor) flowerM.instanceColor.needsUpdate=true; }
+function grassStep(dt){ grassT-=dt; if(grassT<=0) rebuildGrass(); } // co jakiś czas – żeby trawa ustąpiła wydeptanym ścieżkom
 function rebuildTerrain(){
   if(edgeSig()!==rimSig) buildRim();
   aoDirty=true; dirtyWater=true;
@@ -2524,6 +2553,7 @@ function rebuildTerrain(){
   for(const k in T){ T[k].count=Math.min(n[k],T[k].instanceMatrix.count); T[k].instanceMatrix.needsUpdate=true; }
   for(const k in TR){ TR[k].count=Math.min(n[k],TR[k].instanceMatrix.count); TR[k].instanceMatrix.needsUpdate=true; }
   syncDrawbridges();
+  try{ rebuildGrass(); }catch(_){}
 }
 
 /* ---- linie ---- */
@@ -4298,7 +4328,7 @@ function renderMenu(){
       ${swrow('sNight','🌙','Noc',ENV.night)}${swrow('sCycle','⏱️','Upływ czasu (dzień i noc)',ENV.cycle)}
       <div class="ri static"><span class="ic">🌦️</span><span class="tx">Pogoda</span><div class="seg mini" id="sWeather">${[['clear','☀️'],['fog','🌫️'],['rain','🌧️']].map(([v,l])=>`<button data-w="${v}" class="${ENV.weather===v?'on':''}">${l}</button>`).join('')}</div></div>
       ${row('mPhoto','📷','Tryb fotograficzny','efekt makiety i zapis zdjęcia')}
-      ${swrow('sLabels','🏷️','Podpisy budowli',labelsOn)}${swrow('sPeople','🚶','Ludzie na ulicach',peopleOn)}${swrow('sGrid','▦','Siatka',gridOn)}${swrow('sWarp','〰️','Nieregularna siatka (jak w Townscaperze)',WARP.on)}${swrow('sSound','🔊','Dźwięki',!muted)}${swrow('sAmb','🐦','Odgłosy miasta i przyrody',AUD.amb)}${swrow('sMusic','🎹','Muzyka – nokturny Chopina',AUD.music)}<div class="chopinRow"><span id="chNow">${chopinTitle()}</span><button class="chNext" id="chNext" title="Następny utwór">⏭</button></div><div class="chCredit">Wykonanie: Patrizia Prati, nagrania z Wikimedia Commons (CC BY-SA)</div>
+      ${swrow('sLabels','🏷️','Podpisy budowli',labelsOn)}${swrow('sPeople','🚶','Ludzie na ulicach',peopleOn)}${swrow('sGrass','🌾','Trawa i kwiaty na łąkach',grassOn)}${swrow('sGrid','▦','Siatka',gridOn)}${swrow('sWarp','〰️','Nieregularna siatka (jak w Townscaperze)',WARP.on)}${swrow('sSound','🔊','Dźwięki',!muted)}${swrow('sAmb','🐦','Odgłosy miasta i przyrody',AUD.amb)}${swrow('sMusic','🎹','Muzyka – nokturny Chopina',AUD.music)}<div class="chopinRow"><span id="chNow">${chopinTitle()}</span><button class="chNext" id="chNext" title="Następny utwór">⏭</button></div><div class="chCredit">Wykonanie: Patrizia Prati, nagrania z Wikimedia Commons (CC BY-SA)</div>
     </div>
     <div class="st">Cesarz i wydarzenia</div>
     <div class="list">${row('mQuests','🏆','Zadania od cesarza',`zdobyte wieńce: ${laurels.size}/${QUESTS.length}`)}
@@ -4341,6 +4371,7 @@ function renderMenu(){
   on('sCycle','onchange',e=>{ ENV.cycle=e.target.checked; if(ENV.cycle){ ENV.night=false; ENV.phase=clamp(+timeInput.value*0.7,0,0.69); } saveEnv(); renderMenu(); });
   card.querySelectorAll('#sWeather button').forEach(bt=>bt.onclick=()=>{ ENV.weather=bt.dataset.w; saveEnv(); renderMenu(); });
   on('sPeople','onchange',()=>document.getElementById('bPeople').click());
+  on('sGrass','onchange',e=>{ grassOn=e.target.checked; try{ localStorage.setItem('urbs-grass',grassOn?'1':'0'); }catch(_){} rebuildGrass(); });
   on('sGrid','onchange',()=>document.getElementById('bGrid').click());
   on('sWarp','onchange',e=>{ WARP.on=e.target.checked; try{ localStorage.setItem('urbs-warp',WARP.on?'1':'0'); }catch(_){} try{ dirtySave=true; saveCurrent(false); }catch(_){} toast('Przebudowuję widok…'); setTimeout(()=>location.reload(),350); });
   on('sSound','onchange',()=>document.getElementById('bSound').click());
@@ -5522,7 +5553,7 @@ function loop(now){
   if(waterNetDirty) computeWater();
   if(beautyDirty) computeBeauty();
   if(decoDirty) rebuildDeco();
-  updateBuilds(dt,now/1000); debrisStep(Math.min(dt,0.05)); fireStep(Math.min(dt,0.05),now/1000); unitsStep(Math.min(dt,0.05),now/1000); camFlyStep(dt); sceneryStep(dt,now/1000); petalsStep(now/1000); eventsTick();
+  updateBuilds(dt,now/1000); debrisStep(Math.min(dt,0.05)); fireStep(Math.min(dt,0.05),now/1000); grassStep(dt); unitsStep(Math.min(dt,0.05),now/1000); camFlyStep(dt); sceneryStep(dt,now/1000); petalsStep(now/1000); eventsTick();
   questT+=dt; if(questT>1.5){ questT=0; checkQuests(); }
   if(dirtyLines.size||aqLvlDirty||brDirty) processLines();
   if(arcusDirty) rebuildArcus();
