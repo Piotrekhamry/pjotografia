@@ -1255,8 +1255,199 @@ function bridgeGeom(L,y,water){ const k=L+':'+y.toFixed(2); if(arcGeoCache.has('
   else { const rise=Math.max(0.08,(y-0.1)*0.5); b.add(arcRing(span/2-0.02,span/2+0.06,0.4),TRAV,cx,y-0.1-span/2,-0.2,0,0,0,1,rise/(span/2+0.06)*1.0,1); }
   for(const x of [X0+0.15,X0+span-0.15]){ b.cyl(0.015,0.3,x,y,0.24,IRON,5); b.sph(0.035,x,y+0.32,0.24,FLAME,1.3); }
   const g=b.geom(); arcGeoCache.set('br'+k,g); return g; }
+/* =========================================================
+   Budowle modułowe – stawiane pędzlem po jednym polu; sąsiednie moduły tego samego rodzaju
+   zlewają się w jedną budowlę (wspólny dach, kolor, ciągłe fasady), a wolne pole otoczone z trzech
+   lub czterech stron zamienia się w podwórze / dziedziniec / perystyl / plac magazynowy.
+   ========================================================= */
+const MOD={insblock:1,tabrow:1,porticus:1,villa:1,horreum:1,tier:1};
+const isMod=t=>!!MOD[t];
+const DG4=[[1,1],[-1,1],[1,-1],[-1,-1]];
+function modAt(i,j,t){ if(!inb(i,j)) return null; const id=bld[I(i,j)]; if(!id) return null; const b=buildings.get(id); return b&&b.type===t?b:null; }
+// dziedzińce: wolny obszar (do 40 pól) zamknięty ze wszystkich stron modułami jednego rodzaju,
+// albo pojedyncze pole „we wnęce” – otoczone takimi modułami z trzech stron
+let courtOwn=null, courtTy=null;
+function computeCourts(){ courtOwn=new Int32Array(N*N); courtTy=new Array(N*N).fill(null); const seen=new Uint8Array(N*N);
+  const free=id=>!bld[id]&&!road[id]&&!line[id]&&terrain[id]!==2;
+  for(let j0=0;j0<N;j0++) for(let i0=0;i0<N;i0++){ const id0=I(i0,j0); if(seen[id0]||!free(id0)) continue;
+    const reg=[id0]; seen[id0]=1; let ok=true, ty=null, owner=null;
+    for(let h=0;h<reg.length;h++){ const id=reg[h], i=id%N, j=(id/N)|0;
+      for(const [di,dj] of ARC_DIRS){ const ni=i+di, nj=j+dj; if(!inb(ni,nj)){ ok=false; continue; } const nid=I(ni,nj);
+        if(free(nid)){ if(!seen[nid]){ seen[nid]=1; reg.push(nid); } continue; }
+        const b=bld[nid]?buildings.get(bld[nid]):null; if(!b||!isMod(b.type)||(ty&&b.type!==ty)){ ok=false; continue; } ty=b.type; if(!owner||b.id<owner.id) owner=b; } }
+    if(ok&&ty&&reg.length<=40) for(const id of reg){ courtOwn[id]=owner.id; courtTy[id]=ty; } }
+  for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const id=I(i,j); if(courtOwn[id]||!free(id)) continue; for(const t in MOD){ if(courtCell(i,j,t)){ courtOwn[id]=courtOwner(i,j,t).id; courtTy[id]=t; break; } } } }
+function courtCell(i,j,t){ if(!inb(i,j)) return false; const id=I(i,j); if(bld[id]||road[id]||line[id]||terrain[id]===2) return false; let n=0; for(const [di,dj] of ARC_DIRS) if(modAt(i+di,j+dj,t)) n++; return n>=3; }
+function courtOwner(ci,cj,t){ for(const [di,dj] of ARC_DIRS){ const b=modAt(ci+di,cj+dj,t); if(b) return b; } return null; }
+function villaGarden(b){ for(const [di,dj] of ARC_DIRS) if(!modAt(b.x+di,b.z+dj,'villa')) return false; return true; }
+function modCluster(b){ const seen=new Set([b.id]), q=[b]; let rep=b;
+  for(let h=0;h<q.length&&h<300;h++){ const c=q[h]; if(c.id<rep.id) rep=c; for(const [di,dj] of ARC_DIRS){ const n=modAt(c.x+di,c.z+dj,b.type); if(n&&!seen.has(n.id)){ seen.add(n.id); q.push(n); } } }
+  return (((rep.seed>>>0)*2654435761>>>0)%1000)/1000; }
+function modCtx(b){ const t=b.type, h0=hgt[I(b.x,b.z)], o={fam:[],rd:[],ct:[],own:[],gd:[],gn:[0,0,0,0],dg:[],dgn:[0,0,0,0]};
+  ARC_DIRS.forEach(([di,dj],s)=>{ const i=b.x+di, j=b.z+dj, n=modAt(i,j,t); o.fam[s]=n?floorsOf(n):0; o.rd[s]=inb(i,j)&&road[I(i,j)]?1:0;
+    const c=!n&&inb(i,j)&&courtOwn&&courtOwn.length===N*N&&courtTy[I(i,j)]===t; o.ct[s]=c?1:0; o.own[s]=0; o.gd[s]=(inb(i,j)?hgt[I(i,j)]:0)-h0; if(t==='villa'&&n) o.gn[s]=villaGarden(n)?1:0; });
+  DG4.forEach(([di,dj],k)=>{ const n=modAt(b.x+di,b.z+dj,t); o.dg[k]=n?floorsOf(n):0; if(t==='villa'&&n) o.dgn[k]=villaGarden(n)?1:0; });
+  if(t==='villa') o.garden=villaGarden(b);
+  o.courts=[]; if(courtOwn&&courtOwn.length===N*N) for(let j=Math.max(0,b.z-7);j<=Math.min(N-1,b.z+7);j++) for(let i=Math.max(0,b.x-7);i<=Math.min(N-1,b.x+7);i++) if(courtOwn[I(i,j)]===b.id) o.courts.push([i-b.x,j-b.z]);
+  o.cv=modCluster(b); return o; }
+const modCache=new Map();
+function modGeomFor(b){ const c=modCtx(b), fl=floorsOf(b), v=(b.seed>>>0)%DEFS[b.type].v;
+  const key=b.type+':'+v+':'+fl+':'+[c.fam,c.rd,c.ct,c.gd,c.gn,c.dg,c.dgn].map(a=>a.join('')).join('|')+(c.garden?'g':'')+':'+c.cv.toFixed(3)+':'+c.courts.join(';');
+  if(modCache.has(key)) return modCache.get(key);
+  const B0=new B(); D[b.type](B0,mulberry(v*9973+typeHash(b.type)),{fl,...c}); const g=B0.geom(); if(modCache.size>3000) modCache.clear(); modCache.set(key,g); return g; }
+// pomocnicze: sąsiad w siatce 3×3 (piętra) i „członek tej samej bryły” do wspólnego dachu
+function modNear(o,fl){ const fam=o.fam||[0,0,0,0], dg=o.dg||[0,0,0,0];
+  return (di,dj)=>{ if(!di&&!dj) return fl; if(!di||!dj) return fam[dj===1?0:dj===-1?2:di===1?1:3]; return dg[(di===1?0:1)+(dj===1?0:2)]; }; }
+const sideOf=(di,dj)=>dj===1?0:dj===-1?2:di===1?1:3;
+// dziedziniec rysuje jego „właściciel” – przesunięty o jedno pole
+function drawCourts(b,o,fn){ (o.courts||[]).forEach(([dx,dz],k)=>b.at(dx,0,dz,0,()=>fn(k,(o.courts||[]).length))); }
+// wspólny gzyms, wystający tylko na zewnątrz bryły
+function modCap(b,o,fl,y,c,ov=0.04){ const f=o.fam||[0,0,0,0], e=s=>f[s]>=fl?0:ov; b.box(1+e(1)+e(3),0.05,1+e(0)+e(2),(e(1)-e(3))/2,y,(e(0)-e(2))/2,c); }
+
+// --- Kwartał insul: kamienice zlewają się w blok, sklepiki od ulicy, galerie od podwórza ---
+D.insblock=(b,r,o={})=>{
+  const fl=o.fl||3, FH=0.36, H=fl*FH, fam=o.fam||[0,0,0,0], rd=o.rd||[0,0,0,0], ct=o.ct||[0,0,0,0], cv=o.cv??r();
+  const WC=['#e8b48f','#ecc995','#dda67e','#f0d2a0','#d99a72','#e9bd9a'][Math.floor(cv*6)%6], RC=ROOFS[Math.floor(cv*40)%ROOFS.length];
+  b.box(1.0,H,1.0,0,0,0,WC);
+  for(let s=0;s<4;s++){ const f0=fam[s]; if(f0>=fl) continue;
+    b.at(0,0,0,s*Math.PI/2,()=>{
+      if(f0===0){ b.box(1.0,FH*0.92,0.02,0,0,0.5,shade(WC,-0.1));
+        if(rd[s]){ b.box(0.62,0.27,0.03,0,0.02,0.505,DARK); b.box(0.62,0.08,0.08,0,0,0.54,WOOD); const a=pick(['#c44a3a','#3a78a8','#d8a23a','#5c8f4a'],r);
+          for(let k=0;k<4;k++) b.add(G.box,k%2?'#f3ece0':a,-0.24+k*0.16,0.3,0.58,0.5,0,0,0.16,0.015,0.16);
+          const g=r(); if(g<0.33){ for(const x of [-0.18,0,0.18]){ b.cyl(0.035,0.08,x,0.08,0.54,'#c9743f',6); } } else if(g<0.66){ for(const x of [-0.2,-0.07,0.06,0.19]) b.sph(0.03,x,0.1,0.54,pick(['#e8b04a','#c4442e','#7fae4a'],r)); } else { b.box(0.14,0.06,0.06,-0.12,0.08,0.54,'#3a78a8'); b.box(0.14,0.06,0.06,0.08,0.08,0.54,'#c44a3a'); } }
+        else if(ct[s]){ for(const x of [-0.25,0.25]) b.box(0.3,0.26,0.03,x,0.02,0.505,DARK); }
+        else { b.box(0.16,0.26,0.03,(r()-0.5)*0.4,0.02,0.505,DOOR); b.box(0.12,0.1,0.02,0.28,0.14,0.505,WIN); } }
+      for(let f=Math.max(1,f0);f<fl;f++){ const y=f*FH;
+        b.box(1.0,0.025,0.03,0,y-0.012,0.505,shade(WC,-0.12));
+        for(const x of [-0.24,0.24]){ b.box(0.15,0.17,0.02,x,y+0.09,0.505,WINL); if(r()<0.45){ b.box(0.05,0.17,0.015,x-0.1,y+0.09,0.512,'#6d8a5a'); b.box(0.05,0.17,0.015,x+0.1,y+0.09,0.512,'#6d8a5a'); } }
+        if(ct[s]){ b.box(1.0,0.03,0.16,0,y,0.58,WOOD); b.box(1.0,0.1,0.015,0,y+0.03,0.655,WOOD); b.box(0.03,FH,0.03,-0.48,y,0.64,WOOD); }
+        else if(r()<(rd[s]?0.4:0.22)){ b.box(0.66,0.03,0.14,0,y,0.57,WOOD); b.box(0.66,0.09,0.015,0,y+0.03,0.635,WOOD); if(r()<0.6) b.box(0.56,0.04,0.04,0,y+0.12,0.63,FLOWERS[Math.floor(r()*FLOWERS.length)]); } }
+    }); }
+  modCap(b,o,fl,H,shade(WC,-0.06)); b.add(mergedRoof((di,dj)=>modNear(o,fl)(di,dj)>=fl,0.6),RC,0,H+0.05,0);
+  if(r()<0.18&&!fam.some(f=>f>fl)){ b.box(0.08,0.2,0.08,0.28,H+0.1,-0.2,BRICK); } // komin
+  drawCourts(b,o,(k)=>{ b.box(0.98,0.025,0.98,0,0,0,'#d8c7a3'); if(k>0){ b.cyl(0.06,0.08,0.25,0.025,0.25,'#b8673f',8); b.sph(0.08,0.25,0.16,0.25,GREEN); return; } b.cyl(0.13,0.16,0,0.025,0,STONE,10); b.cyl(0.1,0.02,0,0.17,0,WATERC,10);
+    for(const x of [-0.1,0.1]) b.box(0.025,0.3,0.025,x,0.18,0,WOOD); b.box(0.26,0.025,0.04,0,0.48,0,WOOD);
+    b.cyl(0.06,0.08,-0.32,0.025,0.3,'#b8673f',8); b.sph(0.08,-0.32,0.16,0.3,GREEN); b.cyl(0.06,0.08,0.3,0.025,-0.32,'#b8673f',8); b.sph(0.07,0.3,0.15,-0.32,'#e86a7a');
+    b.box(0.9,0.008,0.008,0,0.62,0.25,'#eee'); for(const [x,c] of [[-0.25,'#f3ece0'],[0,'#3a78a8'],[0.22,'#c44a3a']]) b.box(0.12,0.12,0.01,x,0.5,0.25,c); });
+};
+// --- Rząd sklepów: tabernae pod wspólnym dachem, z podcieniami od ulicy ---
+D.tabrow=(b,r,o={})=>{
+  const fam=o.fam||[0,0,0,0], rd=o.rd||[0,0,0,0], cv=o.cv??r(), WC=WALLS[Math.floor(cv*WALLS.length)%WALLS.length], RC=ROOFS[Math.floor(cv*40)%ROOFS.length];
+  const alongX=fam[1]||fam[3], alongZ=fam[0]||fam[2]; let fs;
+  if(alongX&&!alongZ) fs=rd[2]&&!rd[0]?2:0; else if(alongZ&&!alongX) fs=rd[3]&&!rd[1]?3:1; else { fs=rd.findIndex(v=>v); if(fs<0) fs=0; }
+  const has=ls=>fam[(fs+ls)%4]>0; // sąsiad po lokalnej stronie (1=+x, 3=-x)
+  b.at(0,0,0,fs*Math.PI/2,()=>{
+    b.box(1.0,0.55,0.62,0,0,-0.19,WC); b.box(1.0,0.05,1.0,0,0,0,'#d9ccb3');
+    b.box(0.72,0.36,0.03,0,0.05,0.125,DARK); b.box(0.72,0.13,0.12,0,0.05,0.18,shade(WOOD,0.08));
+    const g=Math.floor(r()*5);
+    if(g===0){ for(const x of [-0.24,-0.08,0.08,0.24]){ b.cyl(0.04,0.12,x,0.18,0.2,'#c9743f',6); b.sph(0.025,x,0.31,0.2,'#c9743f'); } }
+    else if(g===1){ for(const x of [-0.25,-0.12,0,0.12,0.25]) b.sph(0.035,x,0.2,0.19,'#d9a35a',0.6); }
+    else if(g===2){ for(const [x,c] of [[-0.22,'#c44a3a'],[-0.07,'#3a78a8'],[0.08,'#d8a23a'],[0.22,'#8a4a7a']]) b.box(0.12,0.07,0.09,x,0.18,0.19,c); }
+    else if(g===3){ for(const x of [-0.22,0,0.22]){ b.cyl(0.06,0.05,x,0.18,0.19,'#a8794a',8); for(let k=0;k<3;k++) b.sph(0.022,x+(k-1)*0.03,0.24,0.19,pick(['#e8b04a','#c4442e','#7fae4a','#7a4f9a'],r)); } }
+    else { b.box(0.5,0.03,0.1,0,0.18,0.19,'#c9a06a'); b.cyl(0.03,0.1,-0.2,0.21,0.19,'#8fa9b8',6); b.cyl(0.03,0.1,0.15,0.21,0.19,'#8fa9b8',6); }
+    b.box(0.34,0.08,0.02,0,0.43,0.12,'#f3e3c3'); b.box(0.24,0.03,0.022,0,0.455,0.122,pick(['#b8382e','#3a78a8','#5c8f4a'],r));
+    // podcienia: filary na wspólnych osiach, belka i dach ciągły wzdłuż rzędu
+    b.box(0.08,0.5,0.08,-0.5,0.05,0.46,TRAV); if(!has(1)) b.box(0.08,0.5,0.08,0.5,0.05,0.46,TRAV);
+    b.box(1.0,0.07,0.1,0,0.55,0.46,TRAV);
+    const eL=has(3)?0:0.05, eR=has(1)?0:0.05;
+    b.roofX(1+eL+eR,0.28,1.08,(eR-eL)/2,0.6,-0.0,RC);
+    const a=pick(['#c44a3a','#3a78a8','#d8a23a','#5c8f4a','#8a4a7a'],r);
+    for(let k=0;k<6;k++) b.add(G.box,k%2?'#f3ece0':a,-0.42+k*0.168,0.47,0.6,0.5,0,0,0.168,0.015,0.2);
+    if(!rd[fs]&&r()<0.5) b.box(0.3,0.04,0.12,0.25,0,0.62,'#9a6b43'); // ławka
+  });
+};
+// --- Portyk: kolumnady łączą się narożnikami; zamknięty plac staje się dziedzińcem z ogrodem ---
+D.porticus=(b,r,o={})=>{
+  const fam=o.fam||[0,0,0,0], rd=o.rd||[0,0,0,0], ct=o.ct||[0,0,0,0], cv=o.cv??r(), M=cv<0.5?MARBLE:TRAV, CH=0.8, Y0=0.07;
+  b.box(1.0,Y0,1.0,0,0,0,STONE); b.box(1.0,0.012,1.0,0,Y0,0,cv<0.5?'#ece4d4':'#e2d6bd');
+  const court=ct.some(v=>v), outer=[0,1,2,3].filter(s=>!fam[s]);
+  for(const s of outer){ const wall=court&&!ct[s]&&!rd[s];
+    b.at(0,0,0,s*Math.PI/2,()=>{ b.box(1.0,0.035,0.1,0,0,0.54,STONE);
+      if(wall){ b.box(1.0,CH,0.1,0,Y0,0.44,shade(M,-0.05)); b.box(0.3,0.5,0.03,0,Y0+0.12,0.38,'#b84a3a'); b.box(0.26,0.46,0.02,0,Y0+0.14,0.37,'#e8d8b0');
+        if(r()<0.5){ b.box(0.14,0.08,0.14,0,Y0,0.32,M); b.cyl(0.04,0.32,0,Y0+0.08,0.32,M,8); b.sph(0.045,0,Y0+0.44,0.32,M); } }
+      else for(const x of [-0.5,0]) b.column(x,0.44,Y0,CH,0.055,M);
+      b.box(1.0,0.1,0.12,0,Y0+CH,0.44,M); b.box(1.0,0.04,0.16,0,Y0+CH+0.1,0.45,shade(M,-0.05)); });
+  }
+  if(!outer.length) b.column(-0.5,-0.5,Y0,CH,0.055,M);
+  b.box(1.0,0.06,1.0,0,Y0+CH+0.08,0,shade(M,-0.08));
+  modCap(b,o,1,Y0+CH+0.14,M,0.06); b.add(mergedRoof((di,dj)=>modNear(o,1)(di,dj)>0,0.42),ROOF,0,Y0+CH+0.19,0);
+  drawCourts(b,o,(k,n)=>{ b.box(0.98,0.03,0.98,0,0,0,'#9cc46a'); b.box(0.98,0.035,0.18,0,0,0,'#e0d2b0'); b.box(0.18,0.035,0.98,0,0,0,'#e0d2b0');
+    for(const [x,z] of [[-0.3,-0.3],[0.3,-0.3],[-0.3,0.3],[0.3,0.3]]){ b.box(0.3,0.1,0.3,x,0.03,z,HEDGE); b.sph(0.05,x,0.15,z,'#e86a7a'); }
+    if(k!==Math.floor(n/2)){ if(k%3===1) b.cypress(0,0,0.55,0.035); return; }
+    if(r()<0.5){ b.cyl(0.2,0.08,0,0.035,0,MARBLE,12); b.cyl(0.17,0.02,0,0.1,0,WATERC,12); b.cyl(0.035,0.25,0,0.1,0,MARBLE,8); b.sph(0.06,0,0.37,0,'#cfeef6'); }
+    else { b.box(0.16,0.22,0.16,0,0.035,0,MARBLE); b.cyl(0.045,0.3,0,0.25,0,BRONZE,8); b.sph(0.05,0,0.6,0,BRONZE); } });
+};
+// --- Willa: moduły łączą się w dom z atrium; pole otoczone skrzydłami staje się perystylem z ogrodem ---
+D.villa=(b,r,o={})=>{
+  const fam=o.fam||[0,0,0,0], rd=o.rd||[0,0,0,0], gn=o.gn||[0,0,0,0], dgn=o.dgn||[0,0,0,0], cv=o.cv??r();
+  const WC=['#f4e8d2','#f2dfbf','#efd6c4','#f3d9a4'][Math.floor(cv*4)%4], H=0.55, near=modNear(o,1);
+  if(o.garden){ // perystyl
+    b.box(1.0,0.04,1.0,0,0,0,'#9cc46a'); b.box(0.12,0.045,1.0,0,0,0,'#e0d2b0'); b.box(1.0,0.045,0.12,0,0,0,'#e0d2b0');
+    for(let s=0;s<4;s++){ if(gn[s]) continue; b.at(0,0,0,s*Math.PI/2,()=>{ b.box(1.0,0.06,0.16,0,0,0.42,STONE); for(const x of [-0.5,-0.17,0.17]) b.column(x,0.4,0.06,0.48,0.035,MARBLE);
+      b.box(1.0,0.06,0.08,0,0.54,0.4,MARBLE); b.add(G.box,ROOF,0,0.62,0.44,-0.35,0,0,1.0,0.03,0.2); }); }
+    const g=r(); if(g<0.4){ b.box(0.36,0.05,0.36,0,0.04,0,MARBLE); b.box(0.3,0.02,0.3,0,0.06,0,WATERC); b.cyl(0.025,0.18,0,0.06,0,MARBLE,6); }
+    else if(g<0.7){ b.box(0.14,0.12,0.14,0,0.04,0,MARBLE); b.cyl(0.04,0.22,0,0.16,0,MARBLE,8); b.sph(0.05,0,0.42,0,MARBLE); }
+    else b.cypress(0,0,0.5,0.04);
+    for(const [x,z] of [[-0.28,-0.28],[0.28,-0.28],[-0.28,0.28],[0.28,0.28]]) b.sph(0.07,x,0.09,z,r()<0.5?'#e86a7a':'#f2c14e');
+    return; }
+  b.box(1.0,H,1.0,0,0,0,WC);
+  for(let s=0;s<4;s++){ if(fam[s]) continue; b.at(0,0,0,s*Math.PI/2,()=>{
+    b.box(1.0,0.12,0.02,0,0,0.5,'#c99a5a');
+    if(rd[s]){ b.box(0.2,0.34,0.03,0,0.04,0.505,DOOR); b.box(0.36,0.04,0.12,0,0,0.56,STONE); for(const x of [-0.14,0.14]) b.box(0.05,0.4,0.05,x,0.02,0.53,MARBLE); b.box(0.36,0.05,0.06,0,0.42,0.53,MARBLE); }
+    else for(const x of [-0.25,0.25]) b.box(0.1,0.07,0.02,x,0.36,0.505,DARK);
+    if(r()<0.2) b.cypress(r()<0.5?-0.38:0.38,0.62,0.55,0); }); }
+  modCap(b,o,1,H,shade(WC,-0.05),0.05);
+  const mem=(di,dj)=>{ if(!near(di,dj)) return false; if(!di||!dj) return !gn[sideOf(di,dj)]; return !dgn[(di===1?0:1)+(dj===1?0:2)]; };
+  b.add(mergedRoof(mem,0.5),ROOF,0,H+0.05,0);
+  // atrium z otworem w dachu w środku dłuższego skrzydła
+  if(((fam[0]&&fam[2])||(fam[1]&&fam[3]))&&!gn.some(v=>v)&&r()<0.35){ b.box(0.36,0.03,0.36,0,H+0.17,0,'#5b4a3d'); b.box(0.3,0.03,0.3,0,0.01,0,WATERC); }
+};
+// --- Horrea: ceglane magazyny łączą się w czworobok wokół placu przeładunkowego ---
+D.horreum=(b,r,o={})=>{
+  const fl=o.fl||2, FH=0.42, H=fl*FH, fam=o.fam||[0,0,0,0], rd=o.rd||[0,0,0,0], ct=o.ct||[0,0,0,0], cv=o.cv??r(), BC=['#c97f5a','#cf8c66','#b9714f'][Math.floor(cv*3)%3];
+  b.box(1.0,H,1.0,0,0,0,BC);
+  for(let s=0;s<4;s++){ const f0=fam[s]; if(f0>=fl) continue; b.at(0,0,0,s*Math.PI/2,()=>{
+    if(f0===0){ if(rd[s]||ct[s]){ b.box(0.38,0.32,0.03,0,0.02,0.505,DARK); b.box(0.06,0.36,0.05,-0.22,0,0.51,TRAV); b.box(0.06,0.36,0.05,0.22,0,0.51,TRAV); b.box(0.5,0.07,0.05,0,0.36,0.51,TRAV); b.box(0.12,0.1,0.06,0,0.36,0.52,'#d9c9a5'); }
+      else for(const x of [-0.28,0,0.28]) b.box(0.05,0.12,0.02,x,0.22,0.505,DARK); }
+    for(let f=Math.max(1,f0);f<fl;f++){ b.box(1.0,0.04,0.025,0,f*FH-0.02,0.505,TRAV); for(const x of [-0.3,0,0.3]) b.box(0.06,0.15,0.02,x,f*FH+0.14,0.505,DARK); }
+    b.box(0.08,H,0.05,-0.46,0,0.5,shade(BC,-0.08)); }); }
+  modCap(b,o,fl,H,TRAV); b.add(mergedRoof((di,dj)=>modNear(o,fl)(di,dj)>=fl,0.5),ROOF,0,H+0.05,0);
+  drawCourts(b,o,(k)=>{ b.box(0.98,0.025,0.98,0,0,0,'#d2c09a'); if(k%2) return;
+    for(const [x,z] of [[-0.3,-0.25],[-0.18,-0.3],[-0.3,-0.1]]) b.box(0.12,0.12,0.12,x,0.025,z,WOOD);
+    for(let k=0;k<5;k++){ const x=0.05+k*0.08, z=0.25; b.cyl(0.03,0.12,x,0.025,z,'#c9743f',6); b.sph(0.02,x,0.16,z,'#c9743f'); }
+    for(const [x,z] of [[0.3,-0.25],[0.24,-0.18]]) b.sph(0.06,x,0.08,z,'#d8c18a',0.8);
+    b.box(0.3,0.06,0.18,-0.15,0.11,0.2,'#9a6b43'); for(const x of [-0.25,-0.05]) b.box(0.08,0.08,0.02,x,0.06,0.3,'#5b4a3d'); });
+};
+// --- Tarasy ogrodowe: płaskie ogrody z murem oporowym, balustradą i schodami do niższego tarasu ---
+D.tier=(b,r,o={})=>{
+  const fam=o.fam||[0,0,0,0], gd=o.gd||[0,0,0,0];
+  b.box(1.0,0.04,1.0,0,0,0,'#9cc46a');
+  for(let s=0;s<4;s++){ const d=gd[s]; b.at(0,0,0,s*Math.PI/2,()=>{
+    if(d<0){ const Hh=-d*LH; b.box(1.0,Hh+0.04,0.12,0,-Hh,0.44,WALLSTONE); b.box(1.04,0.04,0.16,0,0.04,0.45,STONE);
+      b.box(1.0,0.03,0.05,0,0.2,0.45,MARBLE); for(let k=0;k<6;k++) b.cyl(0.018,0.13,-0.42+k*0.168,0.08,0.45,MARBLE,6);
+      if(Hh>0.2&&r()<0.5) b.box(0.5,0.08,0.03,0,-Hh*0.55,0.505,'#5f9a45'); }
+    if(d===1&&fam[s]&&r()<0.34){ for(let k=0;k<5;k++) b.box(0.3,(k+1)*LH/5,0.07,0,0,0.17+k*0.07,STONE); b.box(0.04,LH+0.1,0.36,-0.17,0,0.32,WALLSTONE); b.box(0.04,LH+0.1,0.36,0.17,0,0.32,WALLSTONE); }
+    else if(!fam[s]&&d>=0) b.box(1.0,0.12,0.1,0,0.04,0.45,HEDGE); }); }
+  b.box(0.12,0.045,0.8,0,0,0,'#e0d2b0');
+  const g=Math.floor(r()*5);
+  if(g===0){ for(const [x,z] of [[-0.3,-0.3],[0.3,-0.3],[-0.3,0.3],[0.3,0.3]]) b.box(0.04,0.42,0.04,x,0.04,z,WOOD); b.box(0.7,0.03,0.7,0,0.46,0,WOOD); for(let k=0;k<4;k++) b.box(0.66,0.06,0.08,0,0.49,-0.27+k*0.18,'#5f9a45'); b.box(0.3,0.04,0.1,0.15,0.04,0.1,'#9a6b43'); }
+  else if(g===1){ b.cypress(-0.3,-0.3,0.7,0.04); b.cypress(0.3,-0.3,0.7,0.04); b.box(0.28,0.04,0.1,0,0.04,0.2,MARBLE); }
+  else if(g===2){ b.cyl(0.2,0.06,0.22,0.04,0.1,MARBLE,12); b.cyl(0.17,0.02,0.22,0.08,0.1,WATERC,12); b.sph(0.08,-0.25,0.12,-0.25,'#e86a7a'); }
+  else if(g===3){ for(let k=0;k<3;k++){ const x=-0.3+k*0.3; b.box(0.03,0.2,0.6,x,0.04,0,'#6f9a4a'); for(let q=0;q<3;q++) b.sph(0.025,x,0.2,-0.2+q*0.2,'#7a3f6a'); } }
+  else { b.box(0.16,0.16,0.16,0.2,0.04,-0.2,MARBLE); b.cyl(0.04,0.28,0.2,0.2,-0.2,MARBLE,8); b.sph(0.05,0.2,0.52,-0.2,MARBLE); b.sph(0.07,-0.25,0.1,0.25,'#f2c14e'); b.sph(0.07,-0.1,0.1,0.3,'#e86a7a'); }
+};
+// ikonki w doku: mały zespół modułów
+function modIconMeshes(type,M){ const cells=type==='tabrow'?[[-1,0],[0,0],[1,0]]:type==='villa'?[[-1,-1],[0,-1],[1,-1],[-1,0],[0,0],[1,0],[-1,1],[0,1],[1,1]]:[[0,0],[1,0],[0,1],[1,1]];
+  const has=(x,z)=>cells.some(c=>c[0]===x&&c[1]===z), fl=STACK[type]?.start||1, sc=type==='villa'?0.68:1;
+  return cells.map(([x,z],k)=>{ const fam=ARC_DIRS.map(([di,dj])=>has(x+di,z+dj)?fl:0), dg=DG4.map(([di,dj])=>has(x+di,z+dj)?fl:0);
+    const garden=type==='villa'&&x===0&&z===0, gn=ARC_DIRS.map(([di,dj])=>type==='villa'&&x+di===0&&z+dj===0?1:0);
+    const gd=type==='tier'?ARC_DIRS.map(([di,dj])=>(has(x+di,z+dj)?(z+dj<=0?0:-1):0)-(z<=0?0:-1)):[0,0,0,0];
+    const B0=new B(); D[type](B0,mulberry(k*31+7),{fl,fam,dg,rd:type==='tabrow'?[1,0,0,0]:[0,0,0,0],ct:[0,0,0,0],own:[0,0,0,0],gd,gn,dgn:[0,0,0,0],garden,cv:0.3});
+    const m=M(B0.geom(),(x-(type==='tabrow'?0:0.5))*sc,(z-0.5)*sc); m.scale.setScalar(sc); if(type==='tier') m.position.y=(z<=0?0:-1)*LH; return m; }); }
+
 function rebuildArcus(){
-  arcusDirty=false;
+  arcusDirty=false; computeCourts();
+  for(const b of buildings.values()) if(isMod(b.type)){ const g=modGeomFor(b); if(b.mesh.geometry!==g&&!b.mesh.material.clippingPlanes) b.mesh.geometry=g; }
   for(const b of buildings.values()) if(b.type==='arcus'){ const g=arcusGeomFor(b); if(b.mesh.geometry!==g&&!b.mesh.material.clippingPlanes) b.mesh.geometry=g; }
   if(!arcBridgeGroup.parent) scene.add(arcBridgeGroup); arcBridgeGroup.clear(); arcBridges=[];
   for(const b of buildings.values()){ if(b.type!=='arcus') continue; for(const s of [0,1]){ const q=arcBridgeFrom(b,s); if(!q) continue;
@@ -1600,6 +1791,12 @@ const DEFS={
   forumromanum:{name:'Forum Romanum',cat:'publ',w:6,d:6,v:1},
   trajanmarkets:{name:'Targi Trajana',cat:'publ',w:5,d:4,v:1,pop:120},
   nymphaeum:{name:'Nimfeum',cat:'publ',w:4,d:3,v:1,pop:0},
+  insblock:{name:'Kwartał insul',cat:'domy',w:1,d:1,v:8,pop:8,desc:'Kamienice łączą się w jeden kwartał; otoczone pole staje się podwórzem'},
+  tabrow:{name:'Rząd sklepów',cat:'domy',w:1,d:1,v:10,pop:2,desc:'Sklepiki łączą się w ciąg pod wspólnym dachem z podcieniami'},
+  villa:{name:'Willa (moduły)',cat:'domy',w:1,d:1,v:6,pop:3,desc:'Moduły zlewają się w willę; pole otoczone skrzydłami staje się perystylem'},
+  porticus:{name:'Portyk',cat:'publ',w:1,d:1,v:6,desc:'Kolumnady łączą się narożnikami; zamknięty plac staje się dziedzińcem'},
+  horreum:{name:'Magazyny (horrea)',cat:'drogi',w:1,d:1,v:6,desc:'Magazyny łączą się w czworobok wokół placu przeładunkowego'},
+  tier:{name:'Tarasy ogrodowe',cat:'ogr',w:1,d:1,v:10,decor:true,desc:'Płaskie ogrody na zboczu z murem oporowym, balustradą i schodami'},
   arcus:{name:'Łuki',cat:'domy',w:1,d:1,v:12,onRoad:true,overWater:true,desc:'Puste pole, ulica lub rzeka – arkada; stuknij arkadę – kolejne piętro (do 12)'},
   hut:{name:'Chata',cat:'domy',w:1,d:1,v:4,pop:5,desc:'Chata z plecionki i strzechy – tak mieszkali pierwsi Rzymianie na Palatynie'},
   barbican:{name:'Barbakan z kratą',cat:'woj',w:3,d:2,v:1,onRoad:true,pop:6,desc:'Stawiaj na drodze przed bramą · stuknij, aby podnieść lub opuścić kratę'},
@@ -2133,7 +2330,8 @@ function rebuildTerrain(){
             const fl=(q,w,e)=>{ sv(...q,_sc); sv(...w,_sc); sv(...e,_sc); }; // ścianki pionowe: obie strony, bez liczenia normalnej
             fl(a,b,b0); fl(a,b0,a0); fl(a,b0,b); fl(a,a0,b0); } } }
     }
-    let lo=h; if(h&&!sm){ for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; lo=Math.min(lo,inb(ni,nj)?hgt[I(ni,nj)]:0); }
+    const tierB=bld[id]&&buildings.get(bld[id])?.type==='tier';
+    let lo=h; if(h&&!sm&&!tierB){ for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; lo=Math.min(lo,inb(ni,nj)?hgt[I(ni,nj)]:0); }
       for(let L=lo;L<h-0;L++){ if(nc>=cliffM.instanceMatrix.count) break; cliffCell[nc]=id; setInst(cliffM,nc,x,L*LH,z,1,L===h-1?LH-0.07:LH,1); _C.set((hash2(i,j,91+L)<0.3?ROCKY:GRASSY)[(L+i+j)%3]); cliffM.setColorAt(nc,_C); nc++; }
       capCell[ncap]=id; setInst(capM,ncap++,x,hb+0.001,z,1,lo<h?0.075:0.02,1); }
     if(r) for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(!inb(ni,nj)) continue; const nid=I(ni,nj); if(road[nid]&&hgt[nid]===h+1) setInst(stairM,nst++,x,hb,z,1,1,1,Math.atan2(di,dj)); }
@@ -2273,9 +2471,9 @@ function canPlace(type,x,z,rot){
 function addBuilding(type,x,z,rot,seed,anim=true,lm=null,fl=null){
   const def=DEFS[type]; const [fw,fd]=fpSize(def,rot); const id=nextId++;
   for(let j=z;j<z+fd;j++) for(let i=x;i<x+fw;i++) bld[I(i,j)]=id;
-  const rigid=type!=='arcus', m=new THREE.Mesh(getGeom(type,seed,fl),rigid?bRigid:bMat); m.castShadow=m.receiveShadow=true; m.userData.baseMat=m.material; if(rigid) m.customDepthMaterial=rigidDepth;
+  const rigid=type!=='arcus'&&!isMod(type), m=new THREE.Mesh(getGeom(type,seed,fl),rigid?bRigid:bMat); m.castShadow=m.receiveShadow=true; m.userData.baseMat=m.material; if(rigid) m.customDepthMaterial=rigidDepth;
   m.position.set(x+fw/2-N/2,hgt[I(x,z)]*LH,z+fd/2-N/2); m.rotation.y=type==='house'?0:rot*Math.PI/2; m.userData.bid=id;
-  const constr=anim&&!def.decor&&type!=='house'&&type!=='arcus'&&!todayMode;
+  const constr=anim&&!def.decor&&type!=='house'&&type!=='arcus'&&!isMod(type)&&!todayMode;
   if(anim&&!constr){ m.scale.set(0.01,0.01,0.01); growing.push({m,t:0}); }
   buildGroup.add(m);
   buildings.set(id,{id,type,x,z,rot,seed,mesh:m,lm:lm||null,ts:1,fl:fl||null});
@@ -2306,7 +2504,7 @@ function frontHasRoad(x,z,fw,fd,rot){
 function bestRot(type,x,z){ const def=DEFS[type]; const order=[0,1,2,3].sort(()=>rnd()-0.5);
   for(const r of order){ const [fw,fd]=fpSize(def,r); if(canPlace(type,x,z,r)&&frontHasRoad(x,z,fw,fd,r)) return r; }
   for(const r of order) if(canPlace(type,x,z,r)) return r; return -1; }
-function setRoad(i,j,v){ const id=I(i,j); if(road[id]===v) return false; road[id]=v; waterNetDirty=true; dirtyTerrain=true; dirtyRoads=true; dirtySave=true; if(line[id]) markLine(i,j); markHouses(i,j); return true; }
+function setRoad(i,j,v){ const id=I(i,j); if(road[id]===v) return false; road[id]=v; arcusDirty=true; waterNetDirty=true; dirtyTerrain=true; dirtyRoads=true; dirtySave=true; if(line[id]) markLine(i,j); markHouses(i,j); return true; }
 function canRaise(i,j){ if(!inb(i,j)) return false; const id=I(i,j); return !bld[id]&&!line[id]&&terrain[id]!==2; }
 // łagodne zbocza: sąsiad nigdy nie różni się o więcej niż jeden poziom – na każde wzgórze da się wejść schodami
 function smoothAround(i0,j0){ const q=[[i0,j0]];
@@ -2314,7 +2512,7 @@ function smoothAround(i0,j0){ const q=[[i0,j0]];
     for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(!canRaise(ni,nj)) continue; const nv=hgt[I(ni,nj)];
       if(nv<v-1){ hgt[I(ni,nj)]=v-1; q.push([ni,nj]); } else if(nv>v+1){ hgt[I(ni,nj)]=v+1; q.push([ni,nj]); } } }
   calcHillMax(); aqLvlDirty=true; dirtyTerrain=true; dirtyRoads=true; }
-function setHeight(i,j,v){ if(!canRaise(i,j)) return false; const id=I(i,j); v=clamp(v,0,HMAX); if(hgt[id]===v) return false; hgt[id]=v; calcHillMax(); aqLvlDirty=true;
+function setHeight(i,j,v){ if(!canRaise(i,j)) return false; const id=I(i,j); v=clamp(v,0,HMAX); if(hgt[id]===v) return false; hgt[id]=v; calcHillMax(); aqLvlDirty=true; arcusDirty=true;
   dirtyTerrain=true; dirtyRoads=true; dirtySave=true; aoDirty=true; beautyDirty=true; return true; }
 function setLine(i,j,v){ const id=I(i,j); if(line[id]===v) return false; const was=line[id]; line[id]=v; arcusDirty=true;
   if(v===4||was===4){ brDirty=true; dirtyWater=true; if(v===4&&!road[id]){ road[id]=2; dirtyRoads=true; waterNetDirty=true; } } if(v===2||was===2) aqLvlDirty=true;
@@ -2435,14 +2633,14 @@ const dirtyHouses=new Set();
 function markHouses(i,j){ for(let dj=-2;dj<=2;dj++) for(let di=-2;di<=2;di++){ if(Math.abs(di)+Math.abs(dj)>2) continue; const h=houseAt(i+di,j+dj); if(h) dirtyHouses.add(h.id); } }
 function processHouses(){ for(const id of dirtyHouses){ const b=buildings.get(id); if(!b) continue; const g=houseGeomFor(b); if(b.mesh.geometry!==g) b.mesh.geometry=g; } dirtyHouses.clear(); }
 
-const STACK={house:{min:1,max:6,pop:4},insula:{min:2,max:7,pop:11},arcus:{min:1,max:12,pop:0}};
+const STACK={house:{min:1,max:6,pop:4},insula:{min:2,max:7,pop:11},arcus:{min:1,max:12,pop:0},insblock:{min:2,max:6,pop:7,start:3},horreum:{min:1,max:3,pop:0,start:2}};
 function floorsOf(b){
-  if(b.fl) return b.fl; const v=(b.seed>>>0)%DEFS[b.type].v, r=mulberry(v*9973+typeHash(b.type));
+  if(b.fl) return b.fl; if(isMod(b.type)) return STACK[b.type]?.start||1; const v=(b.seed>>>0)%DEFS[b.type].v, r=mulberry(v*9973+typeHash(b.type));
   if(b.type==='house') return 1+Math.floor(r()*3); if(b.type==='arcus') return 1; r(); r(); return 3+Math.floor(r()*2);
 }
 function setFloors(b,n){
   const old=floorsOf(b); if(n===old) return false;
-  b.fl=n; b.mesh.geometry=b.type==='house'?houseGeomFor(b):(b.type==='arcus'?arcusGeomFor(b):buildGeom(b)); if(b.type==='house') markHouses(b.x,b.z); arcusDirty=true;
+  b.fl=n; b.mesh.geometry=b.type==='house'?houseGeomFor(b):(b.type==='arcus'?arcusGeomFor(b):isMod(b.type)?modGeomFor(b):buildGeom(b)); if(b.type==='house') markHouses(b.x,b.z); arcusDirty=true;
   const gi=growing.findIndex(g=>g.m===b.mesh); if(gi>=0) growing.splice(gi,1);
   b.mesh.scale.set(1,old/n,1); growing.push({m:b.mesh,t:0,from:old/n,keepXZ:true});
   if(n>old&&!todayMode&&window.__fx){ const g=b.mesh.geometry; if(!g.boundingBox) g.computeBoundingBox(); const top=b.mesh.position.y+g.boundingBox.max.y*(old/n); dustBurst(b,5,top); dustBurst(b,4); debrisBurst(b,top,6,false); for(let k=0;k<4;k++) debrisToss(b,b.mesh.position.y,top); }
@@ -3135,7 +3333,7 @@ function paintAt(c){
     const b=bld[id]?buildings.get(bld[id]):null;
     if(b&&STACK[b.type]&&brushStacks(b)){ const f=floorsOf(b); if(f<STACK[b.type].max){ setFloors(b,f+1); stroke.changed=true; sfx('pop'); } else stroke.maxed=true; return; }
     if(b) return;
-    const ty=tool.type, r=ty==='house'?bestRot('house',c.i,c.j):(canPlace(ty,c.i,c.j,0)?0:-1); if(r>=0){ addBuilding(ty,c.i,c.j,r,Math.floor(rnd()*1e6),true,null,1); stroke.changed=true; sfx('pop'); } }
+    const ty=tool.type, r=ty==='house'?bestRot('house',c.i,c.j):(canPlace(ty,c.i,c.j,0)?0:-1); if(r>=0){ addBuilding(ty,c.i,c.j,r,Math.floor(rnd()*1e6),true,null,STACK[ty]?.start||1); stroke.changed=true; sfx('pop'); } }
 }
 function brushStacks(b){ return b.type===tool.type||(tool.type==='house'&&b.type==='insula'); }
 function tick(){ const t=performance.now(); if(t-lastTick>70){ lastTick=t; sfx('tick'); } }
@@ -3413,6 +3611,12 @@ const TOOLS=[
   {id:'b-port',cat:'drogi',kind:'build',type:'port'},
   {id:'b-pharos',cat:'drogi',kind:'build',type:'pharos'},
   {id:'l-aq',cat:'drogi',kind:'line',val:2,name:'Akwedukt',hint:'Przeciągnij, aby poprowadzić akwedukt (może iść nad drogą i wodą)'},
+  {id:'b-insblock',cat:'domy',kind:'brush',type:'insblock',name:'Kwartał insul',hint:'Przeciągaj, by stawiać kamienice – sąsiednie łączą się w jeden kwartał z jednym dachem · od ulicy sklepiki, od podwórza galerie · otocz wolne pole z 3–4 stron, a powstanie podwórze ze studnią · stuknij kamienicę – piętro wyżej (do 6)'},
+  {id:'b-tabrow',cat:'domy',kind:'brush',type:'tabrow',name:'Rząd sklepów',hint:'Przeciągaj wzdłuż ulicy – tabernae łączą się w ciąg pod wspólnym dachem z podcieniami, każda z innym towarem'},
+  {id:'b-villa',cat:'domy',kind:'brush',type:'villa',name:'Willa (moduły)',hint:'Dokładaj moduły – zlewają się w jedną willę z czerwonym dachem · pole otoczone skrzydłami ze wszystkich stron staje się perystylem z ogrodem i fontanną'},
+  {id:'b-porticus',cat:'publ',kind:'brush',type:'porticus',name:'Portyk',hint:'Rysuj kolumnady – łączą się narożnikami we wspólny dach · zamknij nimi plac, a w środku powstanie dziedziniec z ogrodem (porticus)'},
+  {id:'b-horreum',cat:'drogi',kind:'brush',type:'horreum',name:'Magazyny (horrea)',hint:'Ceglane magazyny łączą się w czworobok · otoczone pole staje się placem przeładunkowym ze skrzyniami i amforami · stuknij – piętro wyżej (do 3)'},
+  {id:'b-tier',cat:'ogr',kind:'brush',type:'tier',name:'Tarasy ogrodowe',hint:'Najlepiej na zboczu: każdy moduł to płaski ogród z murem oporowym i balustradą; sąsiedni niższy taras dostaje schody'},
   {id:'b-arcus',cat:'domy',kind:'brush',type:'arcus',name:'Łuki',hint:'Puste pole, ulica lub rzeka – arkada · stuknij arkadę – kolejne piętro (do 12) · przeciągaj, by stawiać mosty i wieże z łuków · ⛏️ Burz zdejmuje piętra'},
   {id:'b-house',cat:'domy',kind:'brush',type:'house',name:'Kamienice',hint:'Puste pole – nowy dom, dom lub insula – kolejne piętro · przeciągnij, by budować całe kwartały · ⛏️ Burz zdejmuje piętra'},
   ...['domus','insula','taberna','hut'].map(t=>({id:'b-'+t,cat:'domy',kind:'build',type:t})),
@@ -3958,6 +4162,7 @@ function renderIcons(){
     try{
       if(t.kind==='terrain'||t.kind==='road') t.icon=swatch(t.kind,t.val);
       else if(t.kind==='height') t.icon=swatch('height',t.sharp?'s':t.val);
+      else if(t.kind==='brush'&&isMod(t.type)) t.icon=shot(modIconMeshes(t.type,M));
       else if(t.kind==='brush'&&t.type==='arcus') t.icon=shot([M(getGeom('arcus',0,2),-0.5,0),M(getGeom('arcus',4,3),0.5,0)]);
       else if(t.kind==='brush') t.icon=shot([M(getGeom('house',3),-0.5,-0.5),M(getGeom('house',7),0.5,-0.5),M(getGeom('house',11),-0.5,0.5),M(getGeom('house',14),0.5,0.5)]);
       else if(t.id==='l-wall') t.icon=shot([M(lineGeom('tower-1'),-1),M(lineGeom('wall-x-pH'),0),M(lineGeom('gate-x-p'),1),M(lineGeom('wall-x-pT'),2),M(lineGeom('tower-2'),3)]);
@@ -4504,7 +4709,7 @@ function scaffoldGeom(w,d,H,crane){
   const g=b.geom(); scafCache.set(key,g); return g;
 }
 function startConstruction(b){
-  const def=DEFS[b.type]; if(def.decor||b.type==='house'||b.type==='arcus'||todayMode) return false;
+  const def=DEFS[b.type]; if(def.decor||b.type==='house'||b.type==='arcus'||isMod(b.type)||todayMode) return false;
   const bb=b.mesh.geometry.boundingBox; const H=Math.max(0.5,(bb?bb.max.y:1)*1.03); const big=def.w*def.d>=6;
   const sc=new THREE.Mesh(scaffoldGeom(def.w,def.d,H,big),bMat); sc.castShadow=true; sc.position.copy(b.mesh.position); sc.rotation.y=b.mesh.rotation.y; scene.add(sc);
   const hoist=new THREE.Mesh(G.box,bMat.clone()); hoist.material.vertexColors=false; hoist.material.color.set('#d9c8a5'); hoist.scale.set(0.16,0.12,0.16); hoist.visible=big; scene.add(hoist);
@@ -4598,7 +4803,7 @@ function spawnPedsNear(b,n){
 const NEED_WATER=new Set(['fountain','baths','caracalla','diocletian','trajanbaths','nymphaeum']);
 let aqWet=new Uint8Array(0), roadWet=new Uint8Array(0), aqDist=new Int16Array(0), waterNetDirty=true, waterInit=true, dryHint=false;
 function buildGeom(b){ return getGeom(b.type,b.seed,b.fl,{dry:NEED_WATER.has(b.type)&&b.wet===false,nice:!!b.nice}); }
-function refreshGeom(b){ b.mesh.geometry=b.type==='house'?houseGeomFor(b):(b.type==='arcus'?arcusGeomFor(b):buildGeom(b)); }
+function refreshGeom(b){ b.mesh.geometry=b.type==='house'?houseGeomFor(b):(b.type==='arcus'?arcusGeomFor(b):isMod(b.type)?modGeomFor(b):buildGeom(b)); }
 function bWet(b){ const [fw,fd]=fpSize(DEFS[b.type],b.rot);
   for(let j=b.z-1;j<=b.z+fd;j++) for(let i=b.x-1;i<=b.x+fw;i++) if(inb(i,j)&&roadWet[I(i,j)]) return true;
   for(let j=b.z-3;j<b.z+fd+3;j++) for(let i=b.x-3;i<b.x+fw+3;i++) if(inb(i,j)&&aqWet[I(i,j)]) return true;
@@ -4796,6 +5001,12 @@ INFO.rome={...INFO.rome,name:'Rzym – makieta z siedmioma wzgórzami',era:'Wybi
   facts:['Stuknij rok w prawym górnym rogu – rozwinie się oś czasu od Romulusa do Konstantyna. Makieta przebuduje się, a nowe budowle powstaną na twoich oczach.',...INFO.rome.facts.slice(0,1),'Wzgórza: Kapitol i Palatyn nad Forum, Awentyn nad Tybrem, Celius, Eskwilin, Wiminał i Kwirynał – a za rzeką Janikulum i Watykan.',...INFO.rome.facts.slice(2)]};
 INFO.forumromanum={...INFO.forumRomanum}; INFO.trajanmarkets={...INFO.trajanMarkets}; INFO.hut={...INFO.casaRomuli,name:'Chata z plecionki'};
 INFO.praetoria={...INFO.castraPraetoria,facts:['Gwardię założył August; liczyła od ok. 4,5 do 10 tys. żołnierzy, lepiej opłacanych niż legioniści.','Z obozu wychodzą patrole pretorianów – poznasz ich po złotych hełmach, białych pióropuszach i purpurowych tarczach.','Konstantyn rozwiązał gwardię w 312 n.e., a mur obozu od strony miasta kazał rozebrać.',...(INFO.castraPraetoria.facts||[])]};
+INFO.insblock={name:'Kwartał insul',era:'od III w. p.n.e.',text:'Insule zwykle nie stały osobno – sąsiednie kamienice tworzyły zwarte kwartały z wewnętrznymi podwórzami. Od ulicy na parterze ciągnęły się sklepy (tabernae), od podwórza drewniane galerie prowadziły do mieszkań, a w środku była studnia lub fontanna.',facts:['August ograniczył wysokość insul do ok. 20 m (70 stóp), bo zawalały się i płonęły.','W Ostii zachowały się całe kwartały insul z podwórzami – dziś można po nich spacerować.']};
+INFO.tabrow={name:'Rząd sklepów (tabernae)',era:'cały okres rzymski',text:'Ulice Rzymu obstawione były ciągami małych sklepów i warsztatów pod wspólnym dachem, często za podcieniami chroniącymi od słońca i deszczu. Każda taberna była otwarta szeroko na ulicę, a na noc zamykana drewnianymi okiennicami.',facts:['Przy Targu Trajana zachowała się ulica via Biberatica z całym rzędem sklepów.','Szyldy często malowano lub rzeźbiono – np. koza nad sklepem mleczarza.']};
+INFO.villa={name:'Willa (domus)',era:'od czasów republiki',text:'Zamożny dom rósł skrzydłami wokół atrium i perystylu – ogrodu otoczonego kolumnadą. Na zewnątrz ściany były skromne, prawie bez okien, a całe piękno – malowidła, mozaiki i fontanny – kryło się w środku.',facts:['Dom Fauna w Pompejach miał dwa atria i dwa perystyle i zajmował cały kwartał.']};
+INFO.porticus={name:'Portyk (porticus)',era:'od II w. p.n.e.',text:'Długie kolumnady dawały cień i schronienie przed deszczem. Gdy zamykały plac, powstawał porticus – dziedziniec z ogrodem, posągami i fontannami, ulubione miejsce spacerów i spotkań.',facts:['Portyk Pompejusza za teatrem miał ogród z platanami i fontannami – i to tam zginął Juliusz Cezar.']};
+INFO.horreum={name:'Magazyny (horrea)',era:'od II w. p.n.e.',text:'Rzym żywił się zbożem, oliwą i winem z całego imperium. Towary trafiały do ogromnych, ceglanych horrea – magazynów zbudowanych wokół dziedzińców, z grubymi murami i wąskimi oknami, by utrzymać chłód i chronić przed złodziejami.',facts:['Horrea Galbana w Rzymie miały ponad 140 pomieszczeń wokół trzech dziedzińców.']};
+INFO.tier={name:'Tarasy ogrodowe',era:'od I w. p.n.e.',text:'Na zboczach Rzymianie budowali tarasy oparte o mury oporowe – ogrody schodziły kaskadami w dół, połączone schodami, z pergolami, fontannami i widokiem na miasto.',facts:['Ogrody Lukullusa na Pincio i willa w Tivoli schodziły tarasami po zboczu.']};
 INFO.arcus={name:'Łuki (arkady)',era:'element fantazyjny – w duchu Townscapera',text:'Łuk był sercem rzymskiej architektury: kamienie klinowe dociśnięte zwornikiem przenoszą ciężar w dół i na boki, więc można nim przekryć szeroki otwór bez jednej długiej belki. Tak wysokich wież z łuków Rzymianie nie budowali – to klocki do zabawy – ale ich piętra wzorowane są na fasadzie Koloseum.',
   facts:['Fasada Koloseum ma piętra w trzech porządkach: na dole dorycki, wyżej joński, a najwyżej koryncki – tak jak tu kolejne piętra arkad.','Arkady Tabularium na Kapitolu (78 p.n.e.) to jeden z najstarszych przykładów łuków obramowanych półkolumnami.','Akwedukt Pont du Gard ma trzy kondygnacje łuków i prawie 50 m wysokości.','Stawiaj łuki na ulicy – ludzie przejdą pod nimi; na rzece – powstanie most.'],
   today:'Rzymskie łuki stoją do dziś w mostach, akweduktach i amfiteatrach od Hiszpanii po Syrię.',legacy:'Arkady, wiadukty kolejowe i mosty z łuków to bezpośredni spadek po rzymskich inżynierach.'};
