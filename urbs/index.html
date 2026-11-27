@@ -1651,16 +1651,19 @@ function computeBridges(){
 function bridgeY(id,fx,fz){ const u=(brAx[id]?fz:fx)+0.5; return brA[id]+(brB[id]-brA[id])*clamp(u,0,1); }
 /* ---- zakończenie akweduktu: castellum z kaskadą do basenu ---- */
 function aqEnd(b,e){
-  const H0=e*LH, TOP=2.08+H0;
-  b.box(1.0,0.16,0.34,-0.25,1.92+H0,0,'#efe3c8'); b.box(0.5,0.02,0.16,-0.25,2.08+H0,0,WATERC); // kanał
-  b.box(0.42,TOP+0.12,0.62,-0.2,0,0,TRAV); b.box(0.48,0.08,0.68,-0.2,TOP+0.12,0,'#efe3c8'); b.roofX(0.5,0.18,0.7,-0.2,TOP+0.2,0,ROOF); // castellum aquae
-  b.add(archPanel(0.62,0.9,0.03,[{c:0,hw:0.12,spring:0.45}]),'#efe3c8',-0.01,TOP-1.0,-0.31,0,Math.PI/2,0);
-  for(const z of [-0.27,0.27]){ b.cyl(0.04,TOP-0.15,0.03,0.05,z,MARBLE,8); b.box(0.1,0.12,0.1,0.03,TOP-0.12,z,'#efe3c8'); b.sph(0.045,0.03,TOP+0.02,z,BRONZE); }
-  b.sph(0.06,0.03,TOP-0.1,0,BRONZE); b.box(0.12,0.03,0.12,0.1,TOP-0.15,0,'#efe3c8'); // wylewka (lwia paszcza)
-  b.box(0.16,TOP-0.55,0.02,0.18,0.5,0,'#cfeef6'); b.box(0.12,TOP-0.6,0.02,0.2,0.5,0.03,'#bfe6f0');           // spadająca woda
-  b.cyl(0.2,0.05,0.16,0.42+H0*0.4,0,MARBLE,12); b.cyl(0.18,0.02,0.16,0.46+H0*0.4,0,WATERC,12);          // misa pośrednia
-  basin(b,0.2,0,0,0.46,0.4,0.24,MARBLE,18);
-  for(const z of [-0.36,0.36]) b.cypress(-0.02,z,0.5,0);
+  const H0=e*LH, CH=1.92+H0, TOP=2.12+H0, TX=-0.08, FX=0.2, SP=TOP-0.42;
+  b.box(0.34,0.16,0.34,-0.33,CH,0,'#efe3c8'); b.box(0.34,0.02,0.16,-0.33,CH+0.16,0,WATERC);          // kanał wchodzący do zbiornika
+  b.box(0.64,0.1,0.7,TX,0,0,'#d8c8a6');                                                             // cokół
+  b.box(0.56,TOP,0.62,TX,0.1,0,TRAV); b.box(0.62,0.07,0.68,TX,TOP+0.1,0,'#efe3c8');                // castellum aquae
+  b.box(0.6,0.04,0.66,TX,TOP*0.55,0,'#efe3c8');                                                      // gzyms w połowie wysokości
+  b.roofX(0.66,0.2,0.72,TX,TOP+0.17,0,ROOF);
+  for(const z of [-0.27,0.27]){ b.box(0.04,TOP-0.1,0.07,FX+0.02,0.1,z,'#efe3c8'); b.box(0.06,0.06,0.09,FX+0.02,TOP-0.02,z,'#efe3c8'); }
+  b.at(FX+0.005,0,0,Math.PI/2,()=>{ archHole(b,0,SP-0.2,0,0.28,0.62,'#4d6f78','#efe3c8'); });      // nisza z wylewką
+  b.sph(0.055,FX+0.04,SP,0,BRONZE); b.box(0.1,0.025,0.05,FX+0.07,SP-0.03,0,BRONZE);                 // lwia paszcza
+  b.box(0.035,SP-0.6,0.07,FX+0.12,0.58,0,'#cfeef6'); b.box(0.02,SP-0.62,0.05,FX+0.13,0.58,0.02,'#e8f8fc');  // strumień
+  b.cyl(0.05,0.45,FX+0.12,0.1,0,MARBLE,10); b.cyl(0.15,0.06,FX+0.12,0.52,0,MARBLE,14); b.cyl(0.13,0.02,FX+0.12,0.57,0,WATERC,14); // misa pośrednia na kolumnie
+  basin(b,FX+0.12,0,0,0.3,0.25,0.22,MARBLE,20);
+  for(const z of [-0.4,0.4]) b.cypress(TX-0.05,z,0.55,0);
 }
 /* ---- Nimfeum: monumentalna fontanna – trzy kondygnacje, wielka absyda z kaskadą po skałach, Okeanos z trytonami i hipokampami,
    kolumnady boczne z posągami, fryz i inskrypcja, złocona kwadryga na szczycie, półkolisty basen z fontannami i trójnogami ---- */
@@ -1827,6 +1830,26 @@ function palaestra(b,x,z,w,d){
   b.box(w,0.06,0.32,x,0.87,z-d/2+0.1,ROOF); b.box(w,0.06,0.32,x,0.87,z+d/2-0.1,ROOF);
   b.box(0.32,0.06,d,x-w/2+0.1,0.87,z,ROOF); b.box(0.32,0.06,d,x+w/2-0.1,0.87,z,ROOF);
 }
+// park term: żwirowe alejki wokół i na osi od bramy, szpalery pinii i cyprysów, fontanny na placykach z ławkami, posągi na rogach
+function thermFountain(b,x,z){ b.cyl(0.62,0.015,x,0.06,z,'#e6d7b5',18); basin(b,x,z,0.06,0.4,0.34,0.16,MARBLE,18);
+  b.cyl(0.05,0.34,x,0.1,z,MARBLE,8); b.cyl(0.16,0.04,x,0.44,z,MARBLE,12); b.cyl(0.13,0.015,x,0.48,z,WATERC,12); b.cyl(0.03,0.12,x,0.48,z,MARBLE,6); b.sph(0.05,x,0.62,z,'#cfeef6');
+  for(let k=0;k<4;k++){ const a=k*Math.PI/2+Math.PI/4, bx=x+Math.cos(a)*0.56, bz=z+Math.sin(a)*0.56; b.add(G.box,'#efe6d2',bx,0.12,bz,0,-a,0,0.06,0.03,0.22); b.add(G.box,'#dccdb0',bx,0.08,bz,0,-a,0,0.05,0.05,0.05); } }
+function thermPark(b,r,W,Dd,skip,fnt){
+  const nearF=(x,z,d)=>fnt.some(([fx,fz])=>Math.hypot(x-fx,z-fz)<d), inB=(x,z)=>Math.abs(x)<W/2-0.3&&Math.abs(z)<Dd/2-0.3, PATH='#e3d3b0';
+  const tile=(x,z)=>{ if(!inB(x,z)||skip(x,z)||nearF(x,z,0.5)) return; b.box(0.32,0.012,0.32,x,0.06,z,PATH); };
+  const ix=W/2-0.6, iz=Dd/2-0.6;
+  for(let x=-ix;x<=ix+0.01;x+=0.3){ tile(x,-iz); tile(x,iz); } for(let z=-iz;z<=iz+0.01;z+=0.3){ tile(-ix,z); tile(ix,z); }
+  for(let z=iz;z>-iz;z-=0.3) tile(0,z);                                                     // oś od bramy
+  for(const [fx,fz] of fnt){ for(let x=Math.min(fx,0);x<=Math.max(fx,0);x+=0.3) tile(x,fz); for(let z=Math.min(fz,iz);z<=Math.max(fz,iz);z+=0.3) tile(fx,z); thermFountain(b,fx,fz); }
+  // szpalery drzew wzdłuż alejek obwodowych
+  const tree=(x,z,k)=>{ if(!inB(x,z)||skip(x,z)||nearF(x,z,0.85)) return; if(k%2) b.cypress(x,z,0.55+r()*0.2,0.06); else { b.cyl(0.03,0.42,x,0.06,z,WOOD,5); b.sph(0.24,x,0.52,z,'#6a9a4a',0.45); } };
+  let k=0; for(let x=-ix+0.3;x<=ix-0.3;x+=0.6){ tree(x,-iz+0.34,k); tree(x,iz-0.34,k+1); k++; } for(let z=-iz+0.6;z<=iz-0.6;z+=0.6){ tree(-ix+0.34,z,k); tree(ix-0.34,z,k+1); k++; }
+  // posągi na rogach i ławki przy osi
+  for(const sx of [-1,1]) for(const sz of [-1,1]){ const x=sx*(ix-0.02), z=sz*(iz-0.02); if(skip(x,z)) continue; b.box(0.14,0.16,0.14,x,0.06,z,'#efe6d2'); b.cyl(0.035,0.2,x,0.22,z,MARBLE,7,0.03); b.sph(0.035,x,0.46,z,MARBLE); }
+  for(const sx of [-1,1]) for(let z=iz-0.6;z>iz-2.2;z-=0.8){ const x=sx*0.32; if(skip(x,z)||!inB(x,z)) continue; b.box(0.06,0.03,0.24,x,0.12,z,'#efe6d2'); b.box(0.05,0.06,0.05,x,0.06,z,'#dccdb0'); }
+  // niskie żywopłoty wokół trawników
+  for(let x=-ix+0.6;x<=ix-0.6;x+=0.3) for(const z of [-iz+0.62,iz-0.62]) if(!skip(x,z)&&inB(x,z)&&!nearF(x,z,0.75)&&Math.abs(x)>0.3) b.box(0.3,0.08,0.08,x,0.06,z,HEDGE);
+}
 function garden(b,r,W,Dd,skip){
   for(let k=0;k<40;k++){ const x=(r()-0.5)*(W-0.6), z=(r()-0.5)*(Dd-0.6); if(skip(x,z)) continue;
     if(r()<0.5) b.cypress(x,z,0.5+r()*0.3,0.06); else { b.cyl(0.03,0.4,x,0.06,z,WOOD,5); b.sph(0.22,x,0.5,z,'#6a9a4a',0.45); } }
@@ -1853,9 +1876,7 @@ D.caracalla=(b,r)=>{
   // ogromne okrągłe caldarium
   b.cyl(1.25,1.9,0,0.12,-2.2,BR,20); b.cyl(1.3,0.09,0,2.02,-2.2,STONE,20); b.hemi(1.2,0,2.08,-2.2,'#cfc6b5',0.6);
   for(let k=0;k<7;k++){ const a=Math.PI*0.6+k*Math.PI*0.3; b.box(0.03,0.75,0.26,Math.cos(a)*1.25,0.9,-2.2+Math.sin(a)*1.25,DARK,-a); }
-  garden(b,r,W,Dd,(x,z)=>Math.abs(x)<3.7&&z>-2.4&&z<2.6 || Math.hypot(x,z+2.2)<1.6 || (Math.abs(x)>2.2&&Math.abs(x)<3.6&&z<-3.4));
-  b.cyl(0.35,0.12,-2.5,0.06,3.4,STONE,12); b.cyl(0.3,0.02,-2.5,0.18,3.4,WATERC,12);
-  b.cyl(0.35,0.12,2.5,0.06,3.4,STONE,12); b.cyl(0.3,0.02,2.5,0.18,3.4,WATERC,12);
+  thermPark(b,r,W,Dd,(x,z)=>Math.abs(x)<3.7&&z>-2.4&&z<2.6 || Math.hypot(x,z+2.2)<1.6 || (Math.abs(x)>2.2&&Math.abs(x)<3.6&&z<-3.4),[[-2.5,3.4],[2.5,3.4]]);
 };
 D.diocletian=(b,r)=>{
   const W=11.9, Dd=9.9, BR='#d9a27a';
@@ -1879,7 +1900,8 @@ D.diocletian=(b,r)=>{
   for(const x of [-1.0,0,1.0]){ b.add(new THREE.CylinderGeometry(0.42,0.42,1.6,12,1,false,Math.PI/2,Math.PI),BR,x,0.92,-3.75); b.hemi(0.42,x,1.72,-3.75,'#cfc6b5',0.6); }
   b.box(2.0,1.4,0.9,0,0.12,-1.9,BR); b.roofX(2.1,0.3,1.0,0,1.52,-1.9,ROOF);
   for(const sx of [-1,1]) for(const sz of [-1,1]){ b.cyl(0.55,0.9,sx*5.1,0.06,sz*3.9,BR,12); b.hemi(0.55,sx*5.1,0.96,sz*3.9,'#cfc6b5',0.6); }
-  garden(b,r,W,Dd,(x,z)=>(Math.abs(x)<4.8&&z>-3.9&&z<1.9) || Math.hypot(x,z-(Dd/2))<2.6 || (Math.abs(x)>4.5&&Math.abs(Math.abs(z)-3.9)<0.7));
+  thermPark(b,r,W,Dd,(x,z)=>(Math.abs(x)<4.8&&z>-3.9&&z<1.9) || Math.hypot(x,z-(Dd/2))<2.6 || (Math.abs(x)>4.5&&Math.abs(Math.abs(z)-3.9)<0.7),[[-3.7,3.1],[3.7,3.1]]);
+  b.add(new THREE.RingGeometry(1.55,1.85,24,1,0,Math.PI).rotateX(-Math.PI/2),'#e3d3b0',0,0.07,Dd/2-0.1); thermFountain(b,0,Dd/2-1.1); for(const sx of [-1,1]) b.cypress(sx*1.2,Dd/2-0.75,0.55,0.06);
 };
 
 /* ---- budowle do makiety Rzymu ---- */
@@ -2038,6 +2060,17 @@ function towerG(b){
   b.box(0.92,0.04,0.92,0,2.23,0,shade(ROOF,-0.2)); b.pyr(1.02,0.44,0,2.27,0,ROOF);
   for(const s of [-1,1]) torch(b,s*0.5,1.02,s*0.5,s);
 }
+// brama wodna (porta fluvialis): łuk nad nurtem z kratą podniesioną, żeby przepłynęły łodzie; po wierzchu chodnik straży
+function waterGateX(b){ const H=WH-BED;
+  b.add(archPanel(1.0,H,0.7,[{c:0,hw:0.36,spring:0.8}]),WALLSTONE,0,BED,-0.35);
+  b.add(arcRing(0.36,0.43,0.72),'#e6d6b4',0,BED+0.8,-0.36);
+  b.box(1.0,0.045,0.74,0,0.96,0,BRICK2);
+  b.box(1.0,0.06,0.74,0,WH-0.06,0,WCAP); b.box(1.0,0.03,0.56,0,WH,0,WWALK);
+  for(const sd of [-1,1]){ b.box(1.0,0.11,0.08,0,WH,sd*0.33,WALLSTONE); for(let k=0;k<4;k++){ const x=-0.375+k*0.25; b.box(0.13,0.17,0.09,x,WH+0.11,sd*0.33,WALLSTONE); b.box(0.15,0.025,0.11,x,WH+0.28,sd*0.33,WCAP); } }
+  for(let k=0;k<7;k++){ const x=-0.3+k*0.1; b.box(0.02,0.3,0.02,x,0.6,0.0,IRON); b.add(G.cone(4),IRON,x,0.575,0,Math.PI,0,0,0.016,0.05,0.016); } // krata podniesiona pod łukiem
+  for(const y of [0.66,0.8]) b.box(0.7,0.022,0.022,0,y,0.0,IRON);
+  for(const sx of [-1,1]) b.box(0.12,0.5,0.76,sx*0.47,BED,0,WSTONE2);                                // filary w nurcie
+}
 function wallStub(b){ wallSeg(b,0.5,0.25,null); }
 function arcRing(r0,r1,t){ const s=new THREE.Shape(); s.moveTo(r1,0); s.absarc(0,0,r1,0,Math.PI,false); s.lineTo(-r0,0); s.absarc(0,0,r0,Math.PI,0,true); s.lineTo(r1,0);
   return new THREE.ExtrudeGeometry(s,{depth:t,bevelEnabled:false,curveSegments:10}); }
@@ -2084,8 +2117,12 @@ function aqTier(b,e,pier){ const H=e*LH;
   if(pier){ b.box(0.5,H,0.42,0,0,0,TRAV); return; }
   b.add(archPanel(1.0,H,0.4,[{c:0,hw:0.34,spring:Math.max(0.1,H-0.4)}]),TRAV,0,0,-0.2); b.box(1.0,0.06,0.44,0,H-0.06,0,'#efe3c8'); }
 function lineGeom(key){
+  { const m=key.match(/^(aq-.*)W([xz])([pm]?)$/); if(m){ if(lineGeoCache.has(key)) return lineGeoCache.get(key); const b=new B(), side=m[3]||null;
+      const fn=()=>{ wallSeg(b,1.0,0,side); b.box(0.74,1.14,0.3,0,0,0,WALLSTONE); };
+      if(m[2]==='x') fn(); else b.at(0,0,0,Math.PI/2,fn);
+      const g=mergeGeometries([lineGeom(m[1]),b.geom()]); g.computeBoundingBox(); g.computeBoundingSphere(); lineGeoCache.set(key,g); return g; } }
   const au=aqUp(key);
-  if(au&&!lineGeoCache.has(key)){ const b=new B(); const H=au.e*LH, pier=au.base.startsWith('aqp'), z=au.base==='aq-z';
+  if(au&&!lineGeoCache.has(key)){ const b=new B(); const H=au.e*LH, pier=au.base.startsWith('aqp'), z=au.base.startsWith('aq-z');
     if(z) b.at(0,0,0,Math.PI/2,()=>aqTier(b,au.e,pier)); else aqTier(b,au.e,pier);
     const g0=lineGeom(au.base+(au.dry?'-d':'')).clone(); g0.translate(0,H,0); const g1=b.geom(); const g=mergeGeometries([g1,g0]); g.computeBoundingBox(); g.computeBoundingSphere(); lineGeoCache.set(key,g); return g; }
   if(key.endsWith('-d')&&!lineGeoCache.has(key)){ const base=key.slice(0,-2); const b=new B();
@@ -2098,6 +2135,7 @@ function lineGeom(key){
   else if(key.startsWith('tower')){ towerG(b); const m=+(wp[1]||0);
     for(const [bit,ry] of [[1,0],[2,Math.PI],[4,Math.PI/2],[8,-Math.PI/2]]) if(m&bit) b.at(0,0,0,ry,()=>wallStub(b)); }
   else if(wp[0]==='gate'){ const side=wp[2]||null; if(wp[1]==='x') gateX(b,side); else rotZ(()=>gateX(b,side)); }
+  else if(wp[0]==='wgate'){ if(wp[1]==='x') waterGateX(b); else rotZ(waterGateX); }
   else if(wp[0]==='moat') moatG(b,+wp[1]);
   else if(wp[0]==='pons'){ const qa=+wp[2], qb=parseInt(wp[3]), w=wp[3].includes('w'), st=wp[3].includes('s'); const fn=()=>ponsX(b,qa/24,qb/24,w,st); if(wp[1]==='x') fn(); else b.at(0,0,0,-Math.PI/2,fn); }
   else if(wp[0]==='aqe'){ const m=key.match(/^aqe-([EWNS])(?:\+(\d+))?$/); const th={W:0,E:Math.PI,N:-Math.PI/2,S:Math.PI/2}[m[1]]; b.at(0,0,0,th,()=>aqEnd(b,+(m[2]||0))); }
@@ -2278,7 +2316,7 @@ function tileMesh(color,cap,opt={}){
   m.count=0; m.frustumCulled=false; m.receiveShadow=true; m.castShadow=!!opt.cast; scene.add(m); return m;
 }
 const TSPEC={plot:['#ead6a6',1],road1:['#c9bfad',3],road2:['#9c9488',1],water:[WATERC,1,{rough:0.25,metal:0.05}],still:[WATERC,1,{rough:0.25,metal:0.05}],forest:['#86b85a',1],field:['#e6bf4f',1],sand:['#e3c891',1],
-  bridge:['#ddd0b6',1,{cast:true}],curb:['#efe7d8',4,{cast:true}],rows:['#d2ab45',4]};
+  bridge:['#ddd0b6',1,{cast:true}],curb:['#efe7d8',4,{cast:true}],hedge:['#5c8c45',1,{cast:true}],rows:['#d2ab45',4]};
 const T={};
 // nurt rzeki: jasne zmarszczki płyną wzdłuż lokalnej osi X kafelka (obróconego zgodnie z kierunkiem wody)
 const waterU={value:0};
@@ -2407,6 +2445,25 @@ const rimWaterMat=new THREE.MeshStandardMaterial({color:WATERC,roughness:0.25,me
 const rimRoadMat={1:new THREE.MeshStandardMaterial({color:'#cfc2aa',roughness:0.95}),2:new THREE.MeshStandardMaterial({color:'#9c9488',roughness:0.95})};
 function edgeKind(i,j){ const id=I(i,j); return terrain[id]===2?'w':(road[id]?'r'+road[id]:(line[id]===2?'a':'.')); }
 function edgeSig(){ let s=''; for(let k=0;k<N;k++) s+=edgeKind(k,0)+edgeKind(k,N-1)+edgeKind(0,k)+edgeKind(N-1,k); return N+':'+s+':'+(typeof romeYear==='undefined'?'':romeYear)+':'+(typeof biome==='undefined'?'':biome); }
+// akwedukt wychodzący za planszę: arkady idą dalej, aż teren podniesie się do poziomu kanału;
+// tam stoi ujęcie wody (caput aquae) z osadnikiem, do którego spływa górski strumień
+function aqueductSources(){ const grp=new THREE.Group(), b=new B(), h=N/2, SP=rimSpans();
+  const edges=[]; for(let k=0;k<N;k++){ for(const [i,j,dx,dz] of [[k,0,0,-1],[k,N-1,0,1],[0,k,-1,0],[N-1,k,1,0]]) if(line[I(i,j)]===2&&lineAt(i-dx,j-dz)===2) edges.push([i,j,dx,dz]); }
+  for(const [i,j,dx,dz] of edges){ const id=I(i,j), ex=aqLvl.length===N*N?Math.max(0,aqLvl[id]-hgt[id]):0, HC=(hgt[id]+ex)*LH+2.08;
+    const px=wx(i), pz=wx(j), ry=dx?0:Math.PI/2; let k=0.5, stop=null;
+    for(;k<70;k+=1){ const x0=px+dx*k, z0=pz+dz*k, x1=px+dx*(k+1), z1=pz+dz*(k+1), cx=(x0+x1)/2, cz=(z0+z1)/2, g0=Math.min(rimHeight(x0,z0,SP),rimHeight(x1,z1,SP));
+      if(g0>=HC-0.45){ stop=[x0,z0,g0]; break; }
+      const H=HC-0.16-g0; b.at(cx,g0,cz,ry,()=>{ if(H>0.5) b.add(archPanel(1.0,H,0.3,[{c:0,hw:Math.min(0.34,H*0.3),spring:Math.max(0.15,H-0.55)}]),TRAV,0,0,-0.15); else b.box(1.0,Math.max(0.05,H),0.3,0,0,0,TRAV); b.box(1.0,0.16,0.34,0,H,0,'#efe3c8'); b.box(1.0,0.02,0.16,0,H+0.16,0,WATERC); }); }
+    if(!stop) continue; const [sx,sz,gy]=stop, cyY=Math.max(gy,HC-0.6);
+    b.at(sx,cyY,sz,ry+(dx>0||dz>0?0:Math.PI),()=>{ // caput aquae: domek ujęcia, osadnik i strumień z gór
+      b.box(1.0,0.5,0.9,0.5,-0.3,0,TRAV); b.box(1.06,0.05,0.96,0.5,0.2,0,'#efe3c8'); b.roofZ(1.1,0.26,1.0,0.5,0.25,0,ROOF);
+      b.at(0.5,0,0.452,0,()=>archHole(b,0,-0.25,0,0.26,0.4,'#4d6f78','#efe3c8'));
+      b.box(1.0,0.12,0.8,1.55,-0.12,0,'#d8c8a6'); b.box(0.86,0.02,0.66,1.55,0,0,WATERC);                 // osadnik (piscina limaria)
+      for(let q=0;q<6;q++) b.box(0.6,0.02,0.18,2.35+q*0.6,0.02+q*0.12,Math.sin(q*1.3)*0.12,'#8fd3e3');      // strumień spływający ze zbocza
+      for(let q=0;q<5;q++) b.sph(0.12+0.05*(q%2),2.2+q*0.7,0.05+q*0.12,(q%2?0.3:-0.28),'#a8987a',0.6);
+      b.cypress(0.2,0.6,0.6,-0.3); b.cypress(0.9,-0.62,0.5,-0.3); });
+  }
+  const m=new THREE.Mesh(b.geom(),bMat); m.castShadow=true; m.receiveShadow=true; grp.add(m); return grp; }
 function rimSpans(){
   const sp=[];
   const scan=(side,get)=>{ let k=0; while(k<N){ const kd=get(k); if(kd==='.'||kd==='a'){ k++; continue; } let e=k; while(e+1<N&&get(e+1)===kd) e++; sp.push({side,a:k,b:e,kind:kd}); k=e+1; } };
@@ -2420,12 +2477,14 @@ function corridorDist(x,z,sp){ const h=N/2; let best=99, kind=null;
     if(out<-0.2) continue; if(lat<best){ best=lat; kind=s.kind; } }
   return [best,kind];
 }
+// dolina rzeki za planszą: dno łagodnie wznosi się ku górom, a zbocza doliny rozchodzą się szerzej im dalej od miasta
+function rimRise(d){ const t=smooth(2.5,N*1.25,d); return 4.6*t*t; }
 function rimHeight(x,z,sp){
   const h=N/2, d=Math.max(Math.abs(x),Math.abs(z))-h; if(d<-0.4) return -1.5; if(d<0.5){ const [cd,kind]=corridorDist(x,z,sp); return kind==='w'&&cd<0.6?BED:-0.012; }
   const hills=(vnoise(x/9,z/9,77)*0.9+vnoise(x/22,z/22,78)*2.0)*smooth(0.5,7,d)*(0.35+Math.min(1.4,d/N*1.3));
   const mount=smooth(N*0.55,N*1.5,d)*(3+7*vnoise(x/17,z/17,79));
   let y=hills+mount-0.012;
-  const [cd,kind]=corridorDist(x,z,sp); if(kind){ const f=smooth(0.4,2.2,cd); y=(kind==='w'?BED:-0.012)*(1-f)+y*f; }
+  const [cd,kind]=corridorDist(x,z,sp); if(kind==='w'){ const fl=BED+rimRise(d), f=smooth(0.4,2.4+d*0.2,cd); y=Math.max(fl,fl*(1-f)+y*f); } else if(kind){ const f=smooth(0.4,2.2,cd); y=-0.012*(1-f)+y*f; }
   return y;
 }
 // Rzym ciągnie się daleko poza planszę: gęsta zabudowa przedmieść (instancje – tanie w rysowaniu)
@@ -2478,7 +2537,14 @@ function buildRim(){
   const ground=new THREE.Mesh(g,rimMat); ground.receiveShadow=true; rim.add(ground);
   // rzeki i drogi biegnące dalej
   const L=S/2-h;
-  for(const s of sp){ const w=s.b-s.a+1, mid=(wx(s.a)+wx(s.b))/2, isW=s.kind==='w';
+  for(const s of sp){ if(s.kind!=='w') continue; const w=s.b-s.a+1, mid=(wx(s.a)+wx(s.b))/2, P=[], IX=[], n=Math.ceil(L/0.8); // rzeka spływająca z gór: pas wody idący za dnem doliny
+    for(let k=0;k<=n;k++){ const d=k*L/n, y=WL-0.012+rimRise(d)+0.004;
+      for(const q of [-w/2,w/2]){ const along=h+d, lat=mid+q; if(s.side==='n') P.push(lat,y,-along); else if(s.side==='s') P.push(lat,y,along); else if(s.side==='w') P.push(-along,y,lat); else P.push(along,y,lat); }
+      if(k<n){ const a=k*2; IX.push(a,a+2,a+1,a+1,a+2,a+3); } }
+    const g2=new THREE.BufferGeometry(); g2.setAttribute('position',new THREE.Float32BufferAttribute(P,3)); g2.setIndex(IX); g2.computeVertexNormals();
+    const rm=new THREE.Mesh(g2,rimWaterMat); rm.material.side=THREE.DoubleSide; rim.add(rm); }
+  try{ rim.add(aqueductSources()); }catch(e){ console.warn(e); }
+  for(const s of sp){ if(s.kind==='w') continue; const w=s.b-s.a+1, mid=(wx(s.a)+wx(s.b))/2, isW=s.kind==='w';
     const mat=isW?rimWaterMat:rimRoadMat[s.kind==='r2'?2:1], hh=isW?0.012:0.03, y0=isW?WL-0.012:0.0;
     const len=isW?L:Math.min(L,N*0.9), m=new THREE.Mesh(G.box,mat); m.receiveShadow=true;
     if(s.side==='n'){ m.position.set(mid,y0+hh/2,-h-len/2); m.scale.set(w,hh,len); } else if(s.side==='s'){ m.position.set(mid,y0+hh/2,h+len/2); m.scale.set(w,hh,len); }
@@ -2757,6 +2823,14 @@ function rebuildTerrain(){
       }
     }
     if(shore) tile('still',x,z,WL-0.012,0.012);
+    if(!r&&t!==2&&!line[id]){ // skośna ulica ścina róg kratki: przy ogrodach żywopłot wzdłuż krawężnika, a ogródek kurczy się do ośmioboku
+      let cuts=null; for(const [sx,sz] of DIAG) if(inb(i+sx,j)&&inb(i,j+sz)&&diagLink(i+sx,j,-sx,sz)) (cuts||(cuts=[])).push([sx,sz,road[I(i+sx,j)]===1?0.42:0.55]);
+      const gb=bld[id]?buildings.get(bld[id]):null, GT=['gardenS','garden','topiary','park','peristyle','fountain','statue'];
+      let near=gb&&GT.includes(gb.type); if(!near&&cuts&&!bld[id]) for(const [di,dj] of DIRS){ const nb2=inb(i+di,j+dj)&&bld[I(i+di,j+dj)]?buildings.get(bld[I(i+di,j+dj)]):null; if(nb2&&GT.includes(nb2.type)){ near=true; break; } }
+      if(cuts&&near) for(const [sx,sz,hd] of cuts){ const cxp=x+sx*0.5, czp=z+sz*0.5, nx=-sx*0.7071, nz=-sz*0.7071, L=hd*2*0.7071*1.414-0.06;
+        si(T.hedge,n.hedge++,cxp+nx*hd,0.06,czp+nz*hd,L,0.12,0.09,Math.atan2(-sz,-sx));
+        if(!bld[id]) for(const q of [-1,1]) si(TR.bush,n.bush++,cxp+nx*(hd+0.13)+(-nz)*q*0.22,0.05,czp+nz*(hd+0.13)+nx*q*0.22,1,0.85,1); }
+      if(gb&&GT.includes(gb.type)&&DEFS[gb.type].w===1&&DEFS[gb.type].d===1&&gb.mesh){ const k=cuts?0.74:1; if(gb.mesh.scale.x!==k&&!growing.some(g=>g.m===gb.mesh)) gb.mesh.scale.set(k,1,k); } }
     if(t===3 && !occ && !shore){
       const cnt=1+Math.floor(hash2(i,j,3)*2.6);
       for(let k=0;k<cnt;k++){ const ox=(hash2(i,j,10+k)-0.5)*0.55, oz=(hash2(i,j,20+k)-0.5)*0.55, ty=hash2(i,j,30+k), sc=0.8+hash2(i,j,40+k)*0.5;
@@ -2779,6 +2853,10 @@ function rebuildTerrain(){
 
 /* ---- linie ---- */
 function lineAt(i,j){ return inb(i,j)?line[I(i,j)]:0; }
+// akwedukt przecinający mur: łuki zamurowane, a mur biegnie dalej bez szczeliny
+function aqWalled(i,j){ if(lineAt(i,j)!==2) return 0; const ex=lineAt(i+1,j)===2||lineAt(i-1,j)===2, ez=lineAt(i,j+1)===2||lineAt(i,j-1)===2;
+  if(ex&&!ez&&lineAt(i,j-1)===1&&lineAt(i,j+1)===1) return 2; if(ez&&!ex&&lineAt(i-1,j)===1&&lineAt(i+1,j)===1) return 1; return 0; }
+const wallish=(i,j)=>lineAt(i,j)===1||aqWalled(i,j)>0;
 function wallCorner(i,j){ if(lineAt(i,j)!==1) return false; return (lineAt(i+1,j)===1||lineAt(i-1,j)===1)&&(lineAt(i,j+1)===1||lineAt(i,j-1)===1); }
 function wallEnd(i,j){ if(lineAt(i,j)!==1||road[I(i,j)]) return false; return (lineAt(i+1,j)===1)+(lineAt(i-1,j)===1)+(lineAt(i,j+1)===1)+(lineAt(i,j-1)===1)<=1; }
 function wallGate(i,j){ return lineAt(i,j)===1&&road[I(i,j)]>0; }
@@ -2795,10 +2873,12 @@ function lineKey(i,j){
   if(k===4){ const hx=lineAt(i+1,j)===4||lineAt(i-1,j)===4; const id4=I(i,j), w=terrain[id4]===2; const qa=brA.length===N*N?Math.round(brA[id4]*24):0, qb=brA.length===N*N?Math.round(brB[id4]*24):0;
     return 'pons-'+(hx?'x':'z')+'-'+qa+'-'+qb+(w?'w':'l')+(w&&(i+j)%2===0?'s':''); }
   if(k===3) return 'moat-'+((isWet(i+1,j)?1:0)+(isWet(i-1,j)?2:0)+(isWet(i,j-1)?4:0)+(isWet(i,j+1)?8:0));
-  const nE=lineAt(i+1,j)===k, nW=lineAt(i-1,j)===k, nN=lineAt(i,j-1)===k, nS=lineAt(i,j+1)===k;
+  const nE=k===1?wallish(i+1,j):lineAt(i+1,j)===k, nW=k===1?wallish(i-1,j):lineAt(i-1,j)===k, nN=k===1?wallish(i,j-1):lineAt(i,j-1)===k, nS=k===1?wallish(i,j+1):lineAt(i,j+1)===k;
   const hx=nE||nW, hz=nN||nS;
   const mask=(nE?1:0)+(nW?2:0)+(nN?4:0)+(nS?8:0);
   if(k===1){
+    if(terrain[I(i,j)]===2&&!(hx&&hz)) return 'wgate-'+(hz?'z':'x');                     // mur nad rzeką: brama wodna
+    if(!(hx&&hz)){ const wa=hz?(terrain[I(i,j-1)]===2&&lineAt(i,j-1)===1)||(inb(i,j+1)&&terrain[I(i,j+1)]===2&&lineAt(i,j+1)===1):(inb(i-1,j)&&terrain[I(i-1,j)]===2&&lineAt(i-1,j)===1)||(inb(i+1,j)&&terrain[I(i+1,j)]===2&&lineAt(i+1,j)===1); if(wa&&terrain[I(i,j)]!==2) return 'tower-'+mask; }
     if(hx&&hz) return 'tower-'+mask;
     const r=road[I(i,j)];
     let ax=hz?'z':'x';
@@ -2821,7 +2901,7 @@ function lineKey(i,j){
   const lid=I(i,j), ex=aqLvl.length===N*N?Math.max(0,aqLvl[lid]-hgt[lid]):0, up=ex?'+'+ex:'';
   if(mask&&(mask&(mask-1))===0&&i>0&&j>0&&i<N-1&&j<N-1) return 'aqe-'+(nE?'E':nW?'W':nN?'N':'S')+up+dry;
   if(hx&&hz) return 'aqp-'+((nE?1:0)+(nW?2:0)+(nN?4:0)+(nS?8:0))+up+dry;
-  return 'aq-'+(hz?'z':'x')+up+dry;
+  const aw=aqWalled(i,j); return 'aq-'+(hz?'z':'x')+up+dry+(aw?'W'+(aw===1?'x':'z')+(wallSide(i,j,aw===1?'x':'z')||''):'');
 }
 function markLine(i,j){ for(let d=-2;d<=2;d++){ if(inb(i+d,j)) dirtyLines.add(I(i+d,j)); if(inb(i,j+d)) dirtyLines.add(I(i,j+d)); } for(const [di,dj] of [[1,1],[1,-1],[-1,1],[-1,-1]]) if(inb(i+di,j+dj)) dirtyLines.add(I(i+di,j+dj)); }
 let sideDirty=false, sideT=0;
@@ -3373,7 +3453,7 @@ function rebuildRoadLists(){
     for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(!inb(ni,nj)) continue; const b=bld[I(ni,nj)]; if(b){ const bb=buildings.get(b); if(bb&&!DEFS[bb.type].decor&&!seenD.has(b+':'+i+':'+j)){ seenD.add(b+':'+i+':'+j); destDoors.push({i,j,b,kind:VISIT_T.has(bb.type)?'visit':'enter'}); } doorList.push(c); const ty=buildings.get(b)?.type; if(ty==='barracks') barracksDoors.push(c); if(ty==='praetoria') praetDoors.push(c); break; } } }
 }
 const isRoad=(i,j)=>inb(i,j)&&road[I(i,j)]>0;
-function groundY(i,j){ if(!inb(i,j)) return 0.035; const id=I(i,j); return road[id]&&terrain[id]===2?0.14:(road[id]===2?0.04:0.035); }
+function groundY(i,j){ if(!inb(i,j)) return 0.035; const id=I(i,j); if(line[id]===4) return 0.01; return road[id]&&terrain[id]===2?0.14:(road[id]===2?0.04:0.035); }
 function adjBuilding(i,j){ for(const [di,dj] of DIRS){ const ni=i+di,nj=j+dj; if(inb(ni,nj)&&bld[I(ni,nj)]) return true; } return false; }
 function nextCell(a){
   const opts=[]; const sx=a.bx-a.ax, sz=a.bz-a.az;
@@ -3408,7 +3488,7 @@ function spawnCart(){
 
 /* ---- statki kupieckie pływające po wodzie (gdy w mieście jest port) ---- */
 let shipMesh=null; const ships=[]; let waterList=[], dirtyWater=true;
-function shipOk(i,j){ if(!inb(i,j)) return false; const id=I(i,j); return terrain[id]===2&&!bld[id]&&(line[id]===4||(!road[id]&&!line[id])); }
+function shipOk(i,j){ if(!inb(i,j)) return false; const id=I(i,j); return terrain[id]===2&&!bld[id]&&(line[id]===4||line[id]===1||(!road[id]&&!line[id])); }
 /* =========================================================
    Flota handlowa: statek składany z modułów (kadłub, żagiel, ładunek) pływa między portami
    albo wypływa za krawędź mapy (do Ostii, Aleksandrii…) i wraca z towarem
@@ -4230,7 +4310,7 @@ const TOOLS=[
   {id:'b-barracks',cat:'woj',kind:'build',type:'barracks'},
   {id:'b-watchtower',cat:'woj',kind:'build',type:'watchtower'},
   {id:'b-praetoria',cat:'woj',kind:'build',type:'praetoria'},
-  {id:'l-wall',cat:'woj',kind:'line',val:1,name:'Mur miejski',hint:'Przeciągnij, aby postawić mur. Mur na drodze zamienia się w bramę, a droga z bramy przez fosę – w most zwodzony'},
+  {id:'l-wall',cat:'woj',kind:'line',val:1,name:'Mur miejski',hint:'Przeciągnij, aby postawić mur. Mur na drodze zamienia się w bramę, a droga z bramy przez fosę – w most zwodzony. Przeciągnij mur przez rzekę, a powstanie brama wodna dla łodzi'},
   {id:'l-moat',cat:'woj',kind:'line',val:3,name:'Fosa',hint:'Przeciągnij wzdłuż muru, aby wykopać fosę z wodą. Droga przez fosę staje się mostem – tuż za bramą mostem zwodzonym'},
   {id:'b-barbican',cat:'woj',kind:'build',type:'barbican'},
   ...['arch','fountain','statue','column','mausoleum','pyramid','colossus','quadriga','obelisk','ara','cypress','pine'].map(t=>({id:'b-'+t,cat:'ozd',kind:'build',type:t})),
@@ -5678,9 +5758,9 @@ function updateWaterFx(time){
     for(let k=0;k<10;k++){ const u=(time*0.8+k/10)%1, a=k/10*Math.PI*2+b.id;
       const r=0.05+u*0.2, y=0.78+0.18*u-0.62*u*u; setInst(dropMesh,d++,p.x+Math.cos(a)*r,Math.max(0.15,y)+p.y,p.z+Math.sin(a)*r,1,1,1); } }
   if(!todayMode) for(const [id,m] of lineMeshes){ if(d>=680) break; const k=m.userData.key||''; if(!k.startsWith('aqe-')||k.endsWith('-d')) continue;
-    const th={W:0,E:Math.PI,N:-Math.PI/2,S:Math.PI/2}[k[4]], c=Math.cos(th), s=Math.sin(th), bx=m.position.x+0.2*c, bz=m.position.z-0.2*s, top=2.0+(+(k.split('+')[1]||0))*LH;
+    const th={W:0,E:Math.PI,N:-Math.PI/2,S:Math.PI/2}[k[4]], c=Math.cos(th), s=Math.sin(th), bx=m.position.x+0.32*c, bz=m.position.z-0.32*s, top=1.7+(+(k.split('+')[1]||0))*LH;
     for(let q=0;q<8;q++){ const u=(time*1.1+q/8)%1, a=q*2.4+id; setInst(dropMesh,d++,bx+Math.cos(a)*u*0.22,m.position.y+0.25+0.12*Math.sin(u*3.14),bz+Math.sin(a)*u*0.22,1,1,1); }
-    for(let q=0;q<5;q++){ const u=(time*0.9+q/5)%1; setInst(dropMesh,d++,m.position.x+0.19*c,m.position.y+top-u*(top-0.3),m.position.z-0.19*s,1,1,1); } }
+    for(let q=0;q<5;q++){ const u=(time*0.9+q/5)%1; setInst(dropMesh,d++,m.position.x+0.32*c,m.position.y+top-u*(top-0.6),m.position.z-0.32*s,1,1,1); } }
   if(!todayMode) for(const b of buildings.values()){ if(d>=690) break; if(b.type!=='nymphaeum'||b.wet===false||b.mesh.scale.y<0.98) continue; const p=b.mesh.position, th=b.rot*Math.PI/2, c=Math.cos(th), s=Math.sin(th);
     const W=(lx,y,lz)=>{ if(d<695) setInst(dropMesh,d++,p.x+lx*c+lz*s,p.y+y,p.z-lx*s+lz*c,1,1,1); };
     for(let q=0;q<14;q++){ const u=(time*0.9+q/14)%1, a=q*2.1; W(Math.cos(a)*u*0.6,0.2+0.12*Math.sin(u*3.14),-0.55+Math.abs(Math.sin(a))*u*0.35); }
