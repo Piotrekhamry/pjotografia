@@ -3033,7 +3033,6 @@ function addBuilding(type,x,z,rot,seed,anim=true,lm=null,fl=null){
   m.position.set(x+fw/2-N/2,hgt[I(x,z)]*LH,z+fd/2-N/2); m.rotation.y=type==='house'?0:rot*Math.PI/2; m.userData.bid=id;
   const constr=anim&&!def.decor&&type!=='house'&&type!=='arcus'&&!isMod(type)&&!todayMode;
   if(anim&&!constr){ m.scale.set(0.01,0.01,0.01); growing.push({m,t:0}); }
-  if(anim&&!constr&&!todayMode) m.userData.drop={t:0,k:['garden','gardenS','topiary','park','peristyle','vineyard','terrace','tier'].includes(type)?'garden':'dust',r:Math.max(fw,fd)*0.6+0.4};
   buildGroup.add(m);
   buildings.set(id,{id,type,x,z,rot,seed,mesh:m,lm:lm||null,ts:1,fl:fl||null}); trailsDirty=true;
   if(todayMode){ applyTodayTo(buildings.get(id),true); }
