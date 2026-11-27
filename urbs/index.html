@@ -2229,8 +2229,8 @@ function makeHillMeshes(cap){
   const cg=new THREE.BoxGeometry(1,1,1).translate(0,0.5,0); { const pp=cg.attributes.position; for(let v=0;v<pp.count;v++) if(pp.getY(v)<0.5){ pp.setX(v,pp.getX(v)*1.42); pp.setZ(v,pp.getZ(v)*1.42); } cg.computeVertexNormals(); }
   cliffM=new THREE.InstancedMesh(cg,new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1,flatShading:true}),cap*2); cliffM.count=0; cliffM.frustumCulled=false; cliffM.castShadow=cliffM.receiveShadow=true; cliffM.setColorAt(0,new THREE.Color(1,1,1)); scene.add(cliffM);
   capM=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1).translate(0,-0.5,0),grassify(new THREE.MeshStandardMaterial({color:'#9ccb68',roughness:0.95})),cap); capM.count=0; capM.frustumCulled=false; capM.castShadow=capM.receiveShadow=true; scene.add(capM);
-  if(landM){ scene.remove(landM); landM.dispose(); }
-  landM=new THREE.InstancedMesh(G.box,slabMats,cap); landM.count=0; landM.frustumCulled=false; landM.receiveShadow=true; scene.add(landM);
+  if(landM){ scene.remove(landM); landM.geometry.dispose(); }
+  landM=new THREE.Mesh(new THREE.BufferGeometry(),[slabMats[2],slabMats[0]]); landM.frustumCulled=false; landM.receiveShadow=true; scene.add(landM);
   if(softM){ scene.remove(softM); softM.geometry.dispose(); } else softMat=grassify(new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.95,flatShading:true}));
   softM=new THREE.Mesh(new THREE.BufferGeometry(),softMat); softM.frustumCulled=false; softM.castShadow=softM.receiveShadow=true; scene.add(softM);
   stairM=new THREE.InstancedMesh(stairGeo(),bMat,cap); stairM.count=0; stairM.frustumCulled=false; stairM.castShadow=stairM.receiveShadow=true; scene.add(stairM);
@@ -2589,8 +2589,15 @@ function rebuildTerrain(){
   for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const id=I(i,j), t=terrain[id]; if(t===2||bld[id]||road[id]||line[id]||t===1||t===4||sharp[id]) continue;
     let w=false; for(let dj=-1;dj<=1&&!w;dj++) for(let di=-1;di<=1;di++) if(isW(i+di,j+dj)){ w=true; break; } if(w) shoreC[id]=1; }
   // grunt na poziomie 0 jako pasy (rzędami) – pod wodą i brzegami zostaje koryto
-  let nl=0; for(let j=0;j<N;j++){ let a=-1; for(let i=0;i<=N;i++){ const land=i<N&&terrain[I(i,j)]!==2&&!shoreC[I(i,j)]; if(land&&a<0) a=i; if(!land&&a>=0){ const L=i-a; setInst(landM,nl++,wx(a)+(L-1)/2,BED/2,wx(j),L,-BED,1); a=-1; } } }
-  landM.count=nl; landM.instanceMatrix.needsUpdate=true;
+  // jedna siatka z kwadratem na każde pole (wspólne wierzchołki), więc nieregularna siatka wygina ją bez szczelin
+  { const isL=(i,j)=>inb(i,j)&&terrain[I(i,j)]!==2&&!shoreC[I(i,j)], TP=[], SD=[];
+    for(let j=0;j<N;j++) for(let i=0;i<N;i++){ if(!isL(i,j)) continue; const x0=wx(i)-0.5, x1=x0+1, z0=wx(j)-0.5, z1=z0+1;
+      TP.push(x0,0,z0, x0,0,z1, x1,0,z1, x0,0,z0, x1,0,z1, x1,0,z0);
+      for(const [di,dj] of DIRS){ if(isL(i+di,j+dj)) continue; const ax=di?(di>0?x1:x0):x0, bx=di?ax:x1, az=dj?(dj>0?z1:z0):z0, bz=dj?az:z1;
+        const q=[[ax,0,az],[bx,0,bz],[bx,BED,bz],[ax,BED,az]]; const f=(di>0||dj<0); // ścianka do koryta / brzegu mapy
+        const o=f?[0,2,1,0,3,2]:[0,1,2,0,2,3]; for(const k of o) SD.push(...q[k]); } }
+    const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(TP.concat(SD),3)); g.computeVertexNormals();
+    g.addGroup(0,TP.length/3,0); g.addGroup(TP.length/3,SD.length/3,1); landM.geometry.dispose(); landM.geometry=g; }
   const bankQ=(a,b,c,d,col)=>{ sv(...a,col); sv(...b,col); sv(...c,col); sv(...a,col); sv(...c,col); sv(...d,col); sv(...a,col); sv(...c,col); sv(...b,col); sv(...a,col); sv(...d,col); sv(...c,col); };
   const SANDB=new THREE.Color('#cdb88e'), MUD=new THREE.Color('#9b8566'), QUAY=new THREE.Color('#d8caa8'), REED=new THREE.Color('#8aa85a');
   const sv=(x,y,z,c)=>{ SP.push(x,y,z); SC.push(c.r,c.g,c.b); };
@@ -3365,7 +3372,7 @@ function trailsStep(dt){ if(trailsDirty) rebuildTrails(); trailDrawT-=dt; if(tra
 function trailPts(t,out){ const pts=t.cells.map(v=>road[v]?[wx(v%N),wx((v/N)|0)]:tPt(v%N,(v/N)|0)); const b=buildings.get(t.b); if(b){ const p=b.mesh.position; pts.unshift([p.x*0.35+pts[0][0]*0.65,p.z*0.35+pts[0][1]*0.65]); } return out?pts:pts.reverse(); }
 function spawnTrailWalker(t,out){ spawnPed({i:t.road%N,j:(t.road/N)|0}); const a=agents[agents.length-1]; a.path=null; a.goal=null; a.mode='trail'; a.tr=t; a.tout=out; a.tpts=trailPts(t,out); a.tk=0;
   a.rx=a.tpts[0][0]; a.rz=a.tpts[0][1]; a.y=0.02; a.init=true; return a; }
-function trailStep(a,dt){ if(a.pause>0){ a.pause-=dt; return true; } const p=a.tpts[a.tk+1]; if(!p){ // koniec ścieżki
+function trailStep(a,dt){ if(!isFinite(a.rx)||!isFinite(a.y)){ const q=a.tpts[a.tk]||a.tpts[0]; a.rx=q[0]; a.rz=q[1]; a.y=0.02; a.ry=a.ry||0; a.init=true; } if(a.pause>0){ a.pause-=dt; return true; } const p=a.tpts[a.tk+1]; if(!p){ // koniec ścieżki
     if(a.tout){ const v=a.tr.road; a.mode=null; a.ax=a.bx=v%N; a.az=a.bz=(v/N)|0; a.t=1; if(!pickGoal(a)) a.path=null; return true; } return false; }
   const dx=p[0]-a.rx, dz=p[1]-a.rz, d=Math.hypot(dx,dz), st=a.speed*0.9*dt;
   if(d<=st){ a.rx=p[0]; a.rz=p[1]; a.tk++; const c=a.tr.cells[a.tout?Math.max(0,a.tk-1):Math.max(0,a.tr.cells.length-a.tk)]; if(c!==undefined&&!road[c]) trailWear[c]=Math.min(1.2,trailWear[c]+0.07); }
@@ -3383,7 +3390,7 @@ function avoidStep(dt){ _AV.clear(); const add=(x,z,t,ref)=>{ const k=Math.floor
       for(const o of c){ if(o.ref===a) continue; const dx=a.rx-o.x, dz=a.rz-o.z, d=Math.hypot(dx,dz), Rr=o.t==='p'?0.13:0.3; if(d>=Rr) continue;
         const lat=dx*nx+dz*nz, ahead=-(dx*a.hx+dz*a.hz), w=(Rr-d)/Rr; push+=(lat>=0?1:-1)*w*(o.t==='p'?0.5:1.7); if(o.t!=='p'&&ahead>-0.04&&ahead<Rr) block=true; } }
     const tgt=clamp(push,-0.45,0.45); a.av+=(tgt-a.av)*Math.min(1,dt*(push?4:1.2)); if(block) a.yld=0.6; } }
-function visitStep(a,dt){ const b=buildings.get(a.vb); if(!b){ a.mode=null; return false; } const [fw,fd]=fpSize(DEFS[b.type],b.rot);
+function visitStep(a,dt){ const b=buildings.get(a.vb); if(!b){ a.mode=null; return false; } if(!a.init||!isFinite(a.rx)||!isFinite(a.y)){ a.rx=wx(a.bx); a.rz=wx(a.bz); a.y=isFinite(a.y)?a.y:0; a.ry=a.ry||0; a.init=true; } const [fw,fd]=fpSize(DEFS[b.type],b.rot);
   const x0=wx(b.x)-0.5+0.3, x1=wx(b.x+fw-1)+0.5-0.3, z0=wx(b.z)-0.5+0.3, z1=wx(b.z+fd-1)+0.5-0.3;
   a.vt-=dt; if(a.vt<=0&&!a.vexit){ a.vexit=true; a.vtgt=[wx(a.goal.i),wx(a.goal.j)]; }
   if(a.pause>0){ a.pause-=dt; return true; }
@@ -3406,7 +3413,7 @@ function stepAgent(a,dt){
         if(a.path){ if(a.pi<a.path.length){ const n=a.path[a.pi++]; if(!isRoad(n.i,n.j)||Math.abs(n.i-a.bx)+Math.abs(n.j-a.bz)!==1){ a.path=null; } else { a.ax=a.bx; a.az=a.bz; a.bx=n.i; a.bz=n.j; a.t=0; if(rnd()<0.012) a.pause=1+rnd()*2; } }
           if(a.path&&a.t>=1){ const g=a.goal; a.path=null;
             if(g.kind==='visit'&&buildings.has(g.b)){ a.mode='visit'; a.vb=g.b; a.vt=10+rnd()*18; a.vtgt=null; a.vexit=false; return true; }
-            if(g.kind==='home'&&trails.includes(g.tr)){ a.mode='trail'; a.tr=g.tr; a.tout=false; a.tpts=trailPts(g.tr,false); a.tk=0; a.tpts[0]=[a.rx,a.rz]; return true; }
+            if(g.kind==='home'&&trails.includes(g.tr)){ a.mode='trail'; a.tr=g.tr; a.tout=false; a.tpts=trailPts(g.tr,false); a.tk=0; if(a.init&&isFinite(a.rx)) a.tpts[0]=[a.rx,a.rz]; else { a.rx=a.tpts[0][0]; a.rz=a.tpts[0][1]; a.y=0.02; a.ry=0; a.init=true; } return true; }
             a.leaving=true; a.pause=0.5; return true; }
           if(a.t<1) return true; }
         if(a.life<0 && (adjBuilding(a.bx,a.bz)||a.life<-25)) return false; if(rnd()<0.035) a.pause=1+rnd()*3; }
@@ -3538,6 +3545,7 @@ function updateAgents(dt,time){
   // render
   for(const k in PP) cnt[k]=0;
   for(const a of agents){
+    if(!a.init||!isFinite(a.rx)||!isFinite(a.y)) continue;
     if(a.kind==='ped'){ const talk=a.pause>0&&!a.carry; person(a.rx,a.y,a.rz,a.ry+(talk?Math.sin(time*1.3+a.lane*9)*0.5:0),a.sc,todayMode?a.mcol:a.col,a.skin,a.ph,todayMode?null:a.carry,false,a.pause>0?0:1,0,talk?(Math.sin(time*3+a.lane*7)*0.5+0.5)*0.6:0); }
     else { parent(a.rx,a.y,a.rz,a.ry,1); if(cnt.cart>=CCAP) continue; put('cart',WOOD); put('cargo',a.col); put('wheel','#5a4030',offW1); put('wheel','#5a4030',offW2); put('ox',a.animal);
       _LM.copy(_PM).multiply(offCh); _AP.setFromMatrixPosition(_LM); person(_AP.x,_AP.y-0.06,_AP.z,a.ry,0.9,a.driver,a.skin,0,null,false,0); }
@@ -5325,6 +5333,7 @@ function renderUnitBar(){ const u=selUnit; if(!u){ unitBar.classList.remove('sho
 function unitsStep(dt,time){ if(destT>0){ destT-=dt; if(destT<=0) destFlag.visible=false; }
   for(const u of units){ u.t+=dt; if(u.aveT>0) u.aveT-=dt;
     const T=u.T, slow=u.order==='testudo'?0.45:1;
+    if(u.path&&u.pi>=u.path.length){ u.path=null; if(u.order==='move') u.order='stand'; if(u.order==='home'){ disband(u); continue; } }
     if(u.path){ const p=u.path[u.pi]; const dx=p[0]-u.cx, dz=p[1]-u.cz, d=Math.hypot(dx,dz), st=T.speed*slow*dt;
       if(d<=st){ u.cx=p[0]; u.cz=p[1]; u.pi++; if(u.pi>=u.path.length){ u.path=null; if(u.order==='patrol'){ setTimeout(()=>{ if(units.includes(u)&&u.order==='patrol') patrolNext(u); },1500+Math.random()*2500); } else if(u.order==='home'){ disband(u); toast('Oddział wrócił do koszar'); continue; } else if(u.order==='move') u.order='stand'; u.form=u.order==='testudo'?'block':(u.form==='line'?'line':'block'); } }
       else { u.cx+=dx/d*st; u.cz+=dz/d*st; u.headT=Math.atan2(dx,dz); }
