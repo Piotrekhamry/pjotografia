@@ -2208,7 +2208,7 @@ function tileMesh(color,cap,opt={}){
   const m=new THREE.InstancedMesh(G.box,new THREE.MeshStandardMaterial({color,roughness:opt.rough??0.95,metalness:opt.metal??0}),cap);
   m.count=0; m.frustumCulled=false; m.receiveShadow=true; m.castShadow=!!opt.cast; scene.add(m); return m;
 }
-const TSPEC={plot:['#ead6a6',1],road1:['#cfc2aa',1],road2:['#9c9488',1],water:[WATERC,1,{rough:0.25,metal:0.05}],still:[WATERC,1,{rough:0.25,metal:0.05}],forest:['#86b85a',1],field:['#e6bf4f',1],sand:['#e3c891',1],
+const TSPEC={plot:['#ead6a6',1],road1:['#c9bfad',3],road2:['#9c9488',1],water:[WATERC,1,{rough:0.25,metal:0.05}],still:[WATERC,1,{rough:0.25,metal:0.05}],forest:['#86b85a',1],field:['#e6bf4f',1],sand:['#e3c891',1],
   bridge:['#ddd0b6',1,{cast:true}],curb:['#efe7d8',4,{cast:true}],rows:['#d2ab45',4]};
 const T={};
 // nurt rzeki: jasne zmarszczki płyną wzdłuż lokalnej osi X kafelka (obróconego zgodnie z kierunkiem wody)
@@ -2217,6 +2217,24 @@ function flowify(m){ m.onBeforeCompile=sh=>{ sh.uniforms.uT=waterU;
     sh.vertexShader='varying vec2 vFl; varying vec3 vFw;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vFl=position.xz; { vec4 fw=vec4(position,1.0);\n#ifdef USE_INSTANCING\n fw=instanceMatrix*fw;\n#endif\n vFw=(modelMatrix*fw).xyz; }');
     sh.fragmentShader='uniform float uT; varying vec2 vFl; varying vec3 vFw;\n'+sh.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n { float ph=(vFl.x+0.5)*12.566-uT*2.4+1.6*sin(vFw.x*1.1+vFw.z*0.9)+0.8*sin(vFl.y*9.0+uT*0.7); float s=sin(ph);\n diffuseColor.rgb+=vec3(0.75,0.9,1.0)*smoothstep(0.88,1.0,s)*0.1; diffuseColor.rgb*=0.94+0.06*sin(ph*0.5+vFw.z*2.0); }'); };
   m.customProgramCacheKey=()=>'urbs-flow'+WARP.key; }
+// bruk: wąskie ulice – kostka w rzędach w poprzek ulicy; via – nieregularne płyty bazaltu (polygonal paving jak na Via Appia)
+function paveify(m,kind){ m.onBeforeCompile=sh=>{
+    sh.vertexShader='varying vec3 vPw; varying vec2 vPx; varying float vPy;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n { vec4 pw=vec4(position,1.0); vec2 ax=vec2(1.0,0.0);\n#ifdef USE_INSTANCING\n pw=instanceMatrix*pw; ax=normalize((instanceMatrix*vec4(1.0,0.0,0.0,0.0)).xz);\n#endif\n vPw=(modelMatrix*pw).xyz; vPx=ax; vPy=position.y; }');
+    sh.fragmentShader='varying vec3 vPw; varying vec2 vPx; varying float vPy;\nfloat pvH(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }\nvec2 pvH2(vec2 p){ return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*43758.5453); }\n'+sh.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n if(vPy>0.49){ '+(kind===0?
+      // kostka: rzędy (kursy) w poprzek osi ulicy, co drugi przesunięty o pół kostki
+      `vec2 p=vec2(dot(vPw.xz,vPx),dot(vPw.xz,vec2(-vPx.y,vPx.x))); float s=1.0/6.0; float row=floor(p.x/s); vec2 q=vec2(p.x/s, p.y/(s*0.95)+pvH(vec2(row,3.1))); vec2 c=floor(q), f=fract(q);
+       float h=pvH(c+row*7.0), h2=pvH(c*1.7+row*3.0); f.y=clamp((f.y-0.5)*(1.0+0.25*(h2-0.5))+0.5,0.0,1.0);
+       vec2 d=min(f,1.0-f); float e=min(d.x,d.y); float r=length(max(0.18-d,0.0)); e=min(e,0.18-r); float w=fwidth(q.x)*1.2+0.05; float g=smoothstep(0.03,w+0.06,e);
+       vec3 tint=mix(vec3(0.84,0.84,0.86),vec3(1.08,1.02,0.94),h); tint=mix(tint,vec3(0.78,0.8,0.82),step(0.82,h2));
+       tint*=1.0-0.18*(1.0-smoothstep(0.0,0.3,e)); tint*=0.97+0.06*pvH(floor(p*40.0));
+       diffuseColor.rgb*=mix(vec3(0.5,0.48,0.44),tint,g);`:
+      // via: płyty wielokątne (Voronoi) z ciemnymi spoinami
+      `vec2 p=vPw.xz/0.3; vec2 ip=floor(p), fp=fract(p); float d1=8.0, d2=8.0; vec2 id=vec2(0.0);
+       for(int y=-1;y<=1;y++) for(int x=-1;x<=1;x++){ vec2 g=vec2(float(x),float(y)); vec2 o=g+0.15+0.7*pvH2(ip+g)-fp; float d=dot(o,o); if(d<d1){ d2=d1; d1=d; id=ip+g; } else if(d<d2) d2=d; }
+       float e=sqrt(d2)-sqrt(d1); float w=fwidth(p.x)*1.5; float g=smoothstep(0.03,0.09+w,e);
+       float h=pvH(id); vec3 tint=mix(vec3(0.86,0.86,0.88),vec3(1.1,1.07,1.02),h); tint*=1.0-0.1*(1.0-smoothstep(0.0,0.3,e));
+       diffuseColor.rgb*=mix(vec3(0.5,0.48,0.45),tint,g);`)+' }'); };
+  m.customProgramCacheKey=()=>'urbs-pave'+kind+WARP.key; }
 function treePool(geom,color,cap){ const m=new THREE.InstancedMesh(geom,new THREE.MeshStandardMaterial({color,roughness:0.85,flatShading:true}),cap); m.count=0; m.frustumCulled=false; m.castShadow=true; m.receiveShadow=true; scene.add(m); return m; }
 const TRSPEC={trunk:[new THREE.CylinderGeometry(0.035,0.045,1,5).translate(0,0.5,0),WOOD,3],cyp:[new THREE.ConeGeometry(0.12,1,7).translate(0,0.5,0),CYP,3],
   pine:[new THREE.SphereGeometry(0.3,8,5).scale(1,0.45,1),'#6a9a4a',3],rock:[new THREE.DodecahedronGeometry(0.12,0),'#c2b49c',1],olive:[new THREE.SphereGeometry(0.19,7,5),'#9bb07a',3],bush:[new THREE.SphereGeometry(0.12,6,4),'#86b85e',1],
@@ -2237,7 +2255,7 @@ function makeHillMeshes(cap){
 }
 function makeTerrainMeshes(){ const cap=N*N; if(cap===tCap) return; tCap=cap; makeHillMeshes(cap);
   for(const k in TSPEC){ if(T[k]){ scene.remove(T[k]); T[k].material.dispose(); T[k].dispose(); } const [c,m,o]=TSPEC[k]; T[k]=tileMesh(c,cap*m,o||{}); }
-  flowify(T.water.material);
+  flowify(T.water.material); paveify(T.road1.material,0); paveify(T.road2.material,1);
   for(const k in TRSPEC){ if(TR[k]){ scene.remove(TR[k]); TR[k].material.dispose(); TR[k].dispose(); } const [gq,c,m]=TRSPEC[k]; TR[k]=treePool(gq,c,Math.round(cap*m)); } }
 const _M=new THREE.Matrix4(), _Q=new THREE.Quaternion(), _P=new THREE.Vector3(), _S=new THREE.Vector3();
 function setInst(mesh,idx,x,y,z,sx,sy,sz,ry=0){ _P.set(x,y,z); _S.set(sx,sy,sz); if(ry) _Q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP,ry); else _Q.identity(); _M.compose(_P,_Q,_S); mesh.setMatrixAt(idx,_M); }
@@ -2634,10 +2652,24 @@ function rebuildTerrain(){
     if(r&&drawInfo(i,j)){ /* most zwodzony rysowany osobno */ }
     else if(r&&line[id]!==4){
       const br=t===2; const y0=br?-0.06:0, h=br?0.2:(r===2?0.04:0.035);
-      tile(br?'bridge':(r===1?'road1':'road2'),x,z,y0,h);
       const ch=br?0.31:0.075, cy=br?-0.06:0;
+      if(r===1&&!br){ // wąska uliczka: węższy pas kostki z ramionami do sąsiednich dróg i krawężnikami
+        const W=0.64, A=(0.5-W/2), nb=(di,dj)=>inb(i+di,j+dj)&&road[I(i+di,j+dj)]>0;
+        const ex=nb(1,0)||nb(-1,0), ez=nb(0,1)||nb(0,-1), rot=(ez&&!ex)?Math.PI/2:0;
+        si(T.road1,n.road1++,x,h/2,z,W,h,W,rot);
+        for(const [di,dj] of DIRS) if(nb(di,dj)) si(T.road1,n.road1++,x+di*(W/2+A/2),h/2,z+dj*(W/2+A/2),A,h,W,di?0:Math.PI/2);
+        for(const sx of [-1,1]) for(const sz of [-1,1]) if(nb(sx,0)&&nb(0,sz)&&nb(sx,sz)) si(T.road1,n.road1++,x+sx*(W/2+A/2),h/2,z+sz*(W/2+A/2),A,h,A,0);
+        const cw=0.05, cpos=W/2+cw/2;
+        for(const [di,dj] of DIRS){ if(nb(di,dj)) continue; // otwarty bok: krawężnik wzdłuż, wydłużony w stronę ramion
+          const px=-dj, pz=di, e1=nb(px,pz)?A:-cw, e2=nb(-px,-pz)?A:-cw, L=W+e1+e2, off=(e1-e2)/2;
+          if(di) si(T.curb,n.curb++,x+di*cpos,cy+ch/2,z+pz*off,cw,ch,L); else si(T.curb,n.curb++,x+px*off,cy+ch/2,z+dj*cpos,L,ch,cw); }
+        for(const sx of [-1,1]) for(const sz of [-1,1]) if(nb(sx,0)&&nb(0,sz)&&!nb(sx,sz)){ // wewnętrzny narożnik skrzyżowania
+          si(T.curb,n.curb++,x+sx*(W/2+A/2),cy+ch/2,z+sz*cpos,A,ch,cw); si(T.curb,n.curb++,x+sx*cpos,cy+ch/2,z+sz*(W/2+A/2),cw,ch,A); }
+      } else {
+      tile(br?'bridge':(r===1?'road1':'road2'),x,z,y0,h);
       for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(inb(ni,nj)&&road[I(ni,nj)]) continue;
         if(di) si(T.curb,n.curb++,x+di*0.47,cy+ch/2,z,0.06,ch,1); else si(T.curb,n.curb++,x,cy+ch/2,z+dj*0.47,1,ch,0.06); }
+      }
     }
     if(shore) tile('still',x,z,WL-0.012,0.012);
     if(t===3 && !occ && !shore){
