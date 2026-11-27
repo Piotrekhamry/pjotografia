@@ -3032,7 +3032,8 @@ function addBuilding(type,x,z,rot,seed,anim=true,lm=null,fl=null){
   const rigid=type!=='arcus'&&!isMod(type), m=new THREE.Mesh(getGeom(type,seed,fl),rigid?bRigid:bMat); m.castShadow=m.receiveShadow=true; m.userData.baseMat=m.material; if(rigid) m.customDepthMaterial=rigidDepth;
   m.position.set(x+fw/2-N/2,hgt[I(x,z)]*LH,z+fd/2-N/2); m.rotation.y=type==='house'?0:rot*Math.PI/2; m.userData.bid=id;
   const constr=anim&&!def.decor&&type!=='house'&&type!=='arcus'&&!isMod(type)&&!todayMode;
-  if(anim&&!constr){ m.scale.set(0.01,0.01,0.01); growing.push({m,t:0}); }
+  const GARD=['garden','gardenS','topiary','park','peristyle','vineyard','terrace','tier'].includes(type); // ogrody pojawiają się od razu, bez animacji
+  if(anim&&!constr&&!GARD){ m.scale.set(0.01,0.01,0.01); growing.push({m,t:0}); }
   buildGroup.add(m);
   buildings.set(id,{id,type,x,z,rot,seed,mesh:m,lm:lm||null,ts:1,fl:fl||null}); trailsDirty=true;
   if(todayMode){ applyTodayTo(buildings.get(id),true); }
