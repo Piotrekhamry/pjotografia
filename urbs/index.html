@@ -2133,7 +2133,7 @@ function lineGeom(key){
   const wp=key.split('-'); // np. wall-x-pT, gate-z-m
   if(wp[0]==='wall'){ const side=(wp[2]||'')[0]||null, feat=(wp[2]||'').slice(1); if(wp[1]==='x') wallX(b,side,feat); else rotZ(()=>wallX(b,side,feat)); }
   else if(key.startsWith('tower')){ towerG(b); const m=+(wp[1]||0);
-    for(const [bit,ry] of [[1,0],[2,Math.PI],[4,Math.PI/2],[8,-Math.PI/2]]) if(m&bit) b.at(0,0,0,ry,()=>wallStub(b)); }
+    for(const [bit,ry] of [[1,0],[2,Math.PI],[4,Math.PI/2],[8,-Math.PI/2]]) if(m&bit){ b.at(0,0,0,ry,()=>wallStub(b)); b.at(0,0,0,ry+Math.PI/2,()=>archHole(b,0,WH,0.447,0.24,0.42,DARK,WCAP)); } }
   else if(wp[0]==='gate'){ const side=wp[2]||null; if(wp[1]==='x') gateX(b,side); else rotZ(()=>gateX(b,side)); }
   else if(wp[0]==='wgate'){ if(wp[1]==='x') waterGateX(b); else rotZ(waterGateX); }
   else if(wp[0]==='moat') moatG(b,+wp[1]);
@@ -2463,7 +2463,8 @@ function aqueductSources(){ const grp=new THREE.Group(), b=new B(), h=N/2, SP=ri
       for(let q=0;q<5;q++) b.sph(0.12+0.05*(q%2),2.2+q*0.7,0.05+q*0.12,(q%2?0.3:-0.28),'#a8987a',0.6);
       b.cypress(0.2,0.6,0.6,-0.3); b.cypress(0.9,-0.62,0.5,-0.3); });
   }
-  const m=new THREE.Mesh(b.geom(),bMat); m.castShadow=true; m.receiveShadow=true; grp.add(m); return grp; }
+  if(!edges.length) return grp; let g; try{ g=b.geom(); }catch(_){ return grp; } if(!g||!g.attributes||!g.attributes.position) return grp;
+  const m=new THREE.Mesh(g,bMat); m.castShadow=true; m.receiveShadow=true; grp.add(m); return grp; }
 function rimSpans(){
   const sp=[];
   const scan=(side,get)=>{ let k=0; while(k<N){ const kd=get(k); if(kd==='.'||kd==='a'){ k++; continue; } let e=k; while(e+1<N&&get(e+1)===kd) e++; sp.push({side,a:k,b:e,kind:kd}); k=e+1; } };
@@ -2862,7 +2863,19 @@ function wallEnd(i,j){ if(lineAt(i,j)!==1||road[I(i,j)]) return false; return (l
 function wallGate(i,j){ return lineAt(i,j)===1&&road[I(i,j)]>0; }
 function cityAt(i,j){ if(!inb(i,j)) return 0; const id=I(i,j); if(terrain[id]===2) return -1; return (bld[id]||road[id]||terrain[id]===1)?1:0; }
 // po której stronie muru leży miasto ('p' – w stronę rosnącej współrzędnej poprzecznej, 'm' – malejącej)
+// strona miasta dla muru: kratki rozdzielone murami dzielimy na obszary; „wnętrze” to obszar z większą zabudową,
+// a obszar zamknięty murem (nie dotyka krawędzi mapy) wygrywa zawsze – blanki stają od zewnątrz
+let wallComp=new Int32Array(0), wallScore=[], wallInDirty=true;
+function computeWallRegions(){ wallInDirty=false; const NN=N*N; wallComp=new Int32Array(NN).fill(-1); wallScore=[]; const bar=id=>line[id]===1||aqWalled(id%N,(id/N)|0)>0;
+  let c=0; for(let s0=0;s0<NN;s0++){ if(wallComp[s0]>=0||bar(s0)) continue; const q=[s0]; wallComp[s0]=c; let sc=0, border=false;
+    for(let h=0;h<q.length;h++){ const id=q[h], i=id%N, j=(id/N)|0; if(i===0||j===0||i===N-1||j===N-1) border=true; if(bld[id]||road[id]||terrain[id]===1) sc++;
+      for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(!inb(ni,nj)) continue; const v=I(ni,nj); if(wallComp[v]<0&&!bar(v)){ wallComp[v]=c; q.push(v); } } }
+    wallScore[c]=sc+(border?0:100000)+(sc?0:-1); c++; } }
 function wallSide(i,j,ax){
+  if(wallInDirty||wallComp.length!==N*N) computeWallRegions();
+  { const a=ax==='x'?[i,j+1]:[i+1,j], b2=ax==='x'?[i,j-1]:[i-1,j]; const ca=inb(...a)?wallComp[I(...a)]:-1, cb=inb(...b2)?wallComp[I(...b2)]:-1;
+    if(ca>=0&&cb>=0&&ca!==cb&&wallScore[ca]!==wallScore[cb]) return wallScore[ca]>wallScore[cb]?'p':'m';
+    if(ca>=0&&cb<0) return 'p'; if(cb>=0&&ca<0) return 'm'; }
   let sc=0; for(let d=1;d<=3;d++) for(let l=-1;l<=1;l++){ sc+=ax==='x'?cityAt(i+l,j+d)-cityAt(i+l,j-d):cityAt(i+d,j+l)-cityAt(i-d,j+l); }
   if(sc) return sc>0?'p':'m';
   const c=(ax==='x'?j:i); return c<N/2?'p':'m';
@@ -3005,7 +3018,7 @@ function setHeight(i,j,v){ if(!canRaise(i,j)) return false; const id=I(i,j); v=c
 function setLine(i,j,v){ const id=I(i,j); if(line[id]===v) return false; const was=line[id]; line[id]=v; arcusDirty=true;
   if(v===4||was===4){ brDirty=true; dirtyWater=true; if(v===4&&!road[id]){ road[id]=2; dirtyRoads=true; waterNetDirty=true; } } if(v===2||was===2) aqLvlDirty=true;
   if(v===3){ terrain[id]=2; dirtyWater=true; } else if(was===3&&v===0&&terrain[id]===2) terrain[id]=0;
-  for(const [di,dj] of DIRS) if(lineAt(i+di,j+dj)===3) dirtyLines.add(I(i+di,j+dj)); waterNetDirty=true; dirtyWalls=true; markHouses(i,j); markLine(i,j); dirtyTerrain=true; dirtySave=true; return true; }
+  for(const [di,dj] of DIRS) if(lineAt(i+di,j+dj)===3) dirtyLines.add(I(i+di,j+dj)); waterNetDirty=true; dirtyWalls=true; wallInDirty=true; markHouses(i,j); markLine(i,j); dirtyTerrain=true; dirtySave=true; return true; }
 function setTerrain(i,j,v){ const id=I(i,j); if(terrain[id]===v) return false; try{ trailsDirty=true; }catch(_){} if(line[id]===4) brDirty=true; if(v===2&&(bld[id]||hgt[id])) return false; if(line[id]===3&&v!==2) return false; terrain[id]=v;
   for(const [di,dj] of DIRS) if(lineAt(i+di,j+dj)===3) dirtyLines.add(I(i+di,j+dj)); dirtyWater=true; dirtyTerrain=true; dirtySave=true; return true; }
 /* =========================================================
@@ -3168,7 +3181,7 @@ function clearWorld(){ try{ units.length=0; selectUnit(null); extraFires.length=
   waterInit=true; waterNetDirty=true;
   if(typeof ships!=='undefined') ships.length=0; try{ clearFleet(); }catch(_){}
   if(typeof drawbridges!=='undefined') for(const id of [...drawbridges.keys()]) removeDraw(id);
-  if(typeof wallGuards!=='undefined') wallGuards.length=0; dirtyWalls=true;
+  if(typeof wallGuards!=='undefined') wallGuards.length=0; dirtyWalls=true; try{ wallInDirty=true; }catch(_){}
   for(const b of buildings.values()) buildGroup.remove(b.mesh); buildings.clear();
   for(const m of lineMeshes.values()) lineGroup.remove(m); lineMeshes.clear();
   growing.length=0; agents.length=0; patrols.length=0; chariots.clear();
@@ -3182,7 +3195,7 @@ function deserialize(str){
   setScenery(o.sc||null); romeYear=o.ry??null; if(typeof updateEraLabel==='function') updateEraLabel();
   if(o.rb){ rebuild={targets:o.rb.map(([type,x,z,rot,lm,done])=>({type,x,z,rot,lm,done:!!done}))}; buildRebuildMarkers(); }
   if(todayMode) for(let id=0;id<N*N;id++) if(line[id]) dirtyLines.add(id);
-  for(let id=0;id<N*N;id++) if(line[id]) dirtyLines.add(id);
+  for(let id=0;id<N*N;id++) if(line[id]) dirtyLines.add(id); wallInDirty=true;
   try{ clearFleet(); for(const [h,s2,c] of (o.fs||[])) fleet.push({h,s:s2,c,cell:0,path:null,pi:0,wait:0,rx:0,rz:0,ry:0,ph:Math.random()*6,gone:1+Math.random()*12}); }catch(_){}
   dirtyTerrain=true; dirtyRoads=true; dirtySave=true;
 }
@@ -3414,7 +3427,7 @@ function romeFinish(Y,opt){
   if(Y>=-44){ // miasto zabudowane: wolne pola to bruk, podwórza i działki, nie łąka
     const k=Y>=60?0.68:0.5; for(let j=0;j<N;j++) for(let i=6;i<N;i++){ const id=I(i,j); if(bld[id]||road[id]||line[id]||terrain[id]!==0) continue; if(vnoise(i/5,j/5,402)<k) terrain[id]=1; } }
   undoStack.length=0; dirtyTerrain=true; dirtyRoads=true; dirtySave=true;
-  for(let id=0;id<N*N;id++) if(line[id]) dirtyLines.add(id);
+  for(let id=0;id<N*N;id++) if(line[id]) dirtyLines.add(id); wallInDirty=true;
   if(!opt.keepCam){ controls.target.set(wx(44),0,wx(44)); camera.position.set(wx(44)+16,21,wx(44)+24); controls.update(); }
 }
 function romeTrajan(){ romeEra(117); }
