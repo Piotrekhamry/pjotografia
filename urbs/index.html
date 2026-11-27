@@ -112,7 +112,10 @@ body.photo #photoBar{display:flex}
 .sep{flex:0 0 1px;background:rgba(74,58,44,.15);margin:8px 3px}
 #ctx{position:fixed;right:max(12px,calc(50% - 500px));bottom:calc(var(--dockh) + 18px + env(safe-area-inset-bottom) - var(--vfix,0px));display:flex;gap:6px;z-index:5}
 #ctx button{border:0;background:var(--panel);box-shadow:var(--shadow);border-radius:14px;padding:9px 13px;font-weight:800;font-size:13px;cursor:pointer}
-#ctx button.hide{display:none}
+#ctx button.hide,#ctx #bBrush.hide{display:none}
+#bBrush{display:flex;align-items:center;background:var(--panel);box-shadow:var(--shadow);border-radius:14px;overflow:hidden}
+#bBrush button{box-shadow:none;border-radius:0;padding:9px 13px;font-size:16px;line-height:1}
+#bBrush span{font-weight:800;font-size:13px;min-width:78px;text-align:center;white-space:nowrap}
 #ctx button.done{background:var(--terra);color:#fff}
 #act{position:fixed;left:50%;transform:translateX(-50%) translateY(10px);bottom:calc(var(--dockh) + 62px + env(safe-area-inset-bottom) - var(--vfix,0px));display:flex;gap:8px;z-index:7;opacity:0;pointer-events:none;transition:all .18s}
 #act.show{opacity:1;transform:translateX(-50%);pointer-events:auto}
@@ -234,7 +237,7 @@ label.ck{display:flex;gap:8px;align-items:center;font-size:14px;margin:5px 0;cur
 <div id="ctx">
   <button id="bDone" class="done">✕ Zakończ</button>
   <button id="bInfo">ℹ️ Historia</button>
-  <button id="bBrush">Pędzel: 1</button>
+  <div id="bBrush"><button id="bBrM" aria-label="Mniejszy pędzel">−</button><span id="bBrL">Pędzel 1</span><button id="bBrP" aria-label="Większy pędzel">+</button></div>
   <button id="bRotate">↻ Obróć (R)</button>
 </div>
 <div id="act"></div>
@@ -2167,7 +2170,7 @@ const buildGroup=new THREE.Group(); scene.add(buildGroup);
 const lineGroup=new THREE.Group(); scene.add(lineGroup);
 const growing=[];
 let dirtyTerrain=true, dirtyRoads=true, dirtyLines=new Set(), dirtySave=false;
-let onlyPlots=false, peopleOn=true, gridOn=(()=>{ try{ return localStorage.getItem('urbs-grid')!=='0'; }catch(_){ return true; } })(), muted=false, brushSize=1, buildRot=0;
+let onlyPlots=false, peopleOn=true, gridOn=(()=>{ try{ return localStorage.getItem('urbs-grid')!=='0'; }catch(_){ return true; } })(), muted=false, brushSize=(()=>{ try{ return clamp(+localStorage.getItem('urbs-brush')||1,1,9)|1; }catch(_){ return 1; } })(), buildRot=0;
 const DIRS=[[1,0],[-1,0],[0,1],[0,-1]];
 
 // --- plansza (dioramka)
@@ -3675,7 +3678,7 @@ function showTiles(cells,colFn){
     setInst(prevTiles,k,wx(i),y,wx(j),1,1,1); _C.set(colFn(i,j)); prevTiles.setColorAt(k,_C); k++; }
   prevTiles.count=k; prevTiles.instanceMatrix.needsUpdate=true; if(prevTiles.instanceColor) prevTiles.instanceColor.needsUpdate=true;
 }
-function brushCells(c){ const out=[]; const r=brushSize===3?1:0; for(let dj=-r;dj<=r;dj++) for(let di=-r;di<=r;di++) out.push([c.i+di,c.j+dj]); return out; }
+function brushCells(c){ const out=[]; const r=(brushSize-1)>>1, rr=(r+0.5)*(r+0.5); for(let dj=-r;dj<=r;dj++) for(let di=-r;di<=r;di++) if(di*di+dj*dj<=rr) out.push([c.i+di,c.j+dj]); return out; }
 function footprint(c,type,rot){ const def=DEFS[type]; const [fw,fd]=fpSize(def,rot); return {x:c.i-Math.floor((fw-1)/2), z:c.j-Math.floor((fd-1)/2), fw, fd}; }
 function autoRotFor(type,c,rot){
   const def=DEFS[type];
@@ -3939,7 +3942,8 @@ window.addEventListener('keydown',e=>{
   if(k==='g'&&!photo){ toggleGrid(); }
   if(k==='escape'&&photo){ exitPhoto(); return; }
   if(k==='n'){ ENV.night=!ENV.night; ENV.cycle=false; saveEnv(); }
-  if(k==='r') rotateBuilding(); if(k==='q') rotateView(-1); if(k==='e') rotateView(1); if(k==='g') toggleGrid();
+  if(k==='r') rotateBuilding(); if(k==='q') rotateView(-1); if(k==='e') rotateView(1);
+  if((k==='['||k==='-')&&isPaint()) setBrush(brushSize-2); if((k===']'||k==='='||k==='+')&&isPaint()) setBrush(brushSize+2);
   if(k==='escape'){ if(!modal.classList.contains('hidden')) closeModal(); else if(pending) cancelPending(); else selectTool('camera'); }
   if(k==='delete') selectTool('bulldoze');
 });
@@ -4126,8 +4130,8 @@ function updateHint(){
     else h='Stuknij, aby malować · przytrzymaj i przeciągnij, aby malować dalej · '+camHint;
   }
   else if(tool.kind==='build') h=(DEFS[tool.type].desc||('Kliknij albo przeciągnij z paska na mapę: '+DEFS[tool.type].name))+' · klik stawia · R obraca · prawy klik lub Esc odkłada'+(DEFS[tool.type].onRoad?' · można stawiać na drodze':'')+' · '+camHint;
-  else if(tool.kind==='bulldoze') h='Kliknij lub przeciągnij, aby burzyć · '+camHint;
-  else h=(tool.hint||'')+' · '+camHint;
+  else if(tool.kind==='bulldoze') h='Kliknij lub przeciągnij, aby burzyć · [ ] wielkość pędzla · '+camHint;
+  else h=(tool.hint||'')+(isPaint()?' · [ ] wielkość pędzla':'')+' · '+camHint;
   hintEl.textContent=h; hintEl.style.opacity=tool.kind==='camera'&&hintShown?0:1; clearTimeout(hintT); hintT=setTimeout(()=>{ hintEl.style.opacity=0; },tool.kind==='camera'?3500:5000); if(tool.kind==='camera') hintShown=true;
   document.getElementById('bRotate').classList.toggle('hide',tool.kind!=='build'||isTouch);
   document.getElementById('bDone').classList.toggle('hide',tool.kind==='camera');
@@ -4138,7 +4142,8 @@ function rotateBuilding(){ buildRot=(buildRot+1)%4; if(tool.kind==='build'){ sfx
 document.getElementById('bRotate').onclick=rotateBuilding;
 document.getElementById('bDone').onclick=()=>{ itemsOpen=false; selectTool('camera'); };
 document.getElementById('bInfo').onclick=()=>{ const k=infoKeyFor(tool); if(infoKey===k) hideInfo(); else showInfo(k); };
-document.getElementById('bBrush').onclick=e=>{ brushSize=brushSize===1?3:1; e.currentTarget.textContent='Pędzel: '+brushSize; };
+function setBrush(v){ brushSize=clamp(v,1,9)|1; try{ localStorage.setItem('urbs-brush',brushSize); }catch(_){} document.getElementById('bBrL').textContent='Pędzel '+brushSize+(brushSize>1?'×'+brushSize:''); try{ updatePreview(isTouch?(pending?.c||null):hoverCell); }catch(_){} }
+document.getElementById('bBrM').onclick=()=>setBrush(brushSize-2); document.getElementById('bBrP').onclick=()=>setBrush(brushSize+2); setBrush(brushSize);
 document.getElementById('bUndo').onclick=undo;
 document.querySelectorAll('#segEra button').forEach(b=>b.onclick=()=>{ const on=b.dataset.v==='1'; if(!on&&!todayMode&&romeYear!==null){ toggleTimeline(); return; } if(on!==todayMode) setToday(on); });
 document.getElementById('bLabels').onclick=e=>{ labelsOn=!labelsOn; e.currentTarget.classList.toggle('off',!labelsOn); };
