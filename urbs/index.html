@@ -268,6 +268,13 @@ function warpXZ(x,z){ let f=Math.min(1,Math.max(0,(WARP.half-Math.max(Math.abs(x
           z+f*(0.17*Math.sin(0.79*x+0.4)+0.11*Math.sin(0.47*z-0.61*x+0.7)+0.04*Math.sin(1.7*x+1.5*z+2.6))]; }
 function unwarpXZ(x,z){ if(!WARP.on) return [x,z]; let qx=x,qz=z; for(let k=0;k<10;k++){ const w=warpXZ(qx,qz); qx+=x-w[0]; qz+=z-w[1]; } return [qx,qz]; }
 const _baseCommon=THREE.ShaderChunk.common;
+// żywe kolory w stylu Tiny Glade: mocniejsze nasycenie i kontrast, ciepłe światła i chłodniejsze cienie (gradacja na końcu każdego materiału)
+const VIVID=(()=>{ try{ return localStorage.getItem('urbs-vivid')!=='0'; }catch(_){ return true; } })();
+if(VIVID) THREE.ShaderChunk.dithering_fragment=THREE.ShaderChunk.dithering_fragment+`
+{ vec3 c=gl_FragColor.rgb; float l=dot(c,vec3(0.2126,0.7152,0.0722));
+  c=mix(vec3(l),c,1.22); c=(c-0.5)*1.08+0.5;
+  c+=(1.0-smoothstep(0.0,0.5,l))*vec3(-0.025,0.0,0.05)+smoothstep(0.55,1.0,l)*vec3(0.03,0.016,-0.022);
+  gl_FragColor.rgb=clamp(c,0.0,1.0); }`;
 THREE.ShaderChunk.project_vertex=THREE.ShaderChunk.project_vertex.replace('mvPosition = modelViewMatrix * mvPosition;',
   '#ifdef URBS_WARP\n\t{ vec4 uwp = modelMatrix * mvPosition;\n\t#ifdef URBS_RIGID\n\t\tuwp.xz = urbsRigid( uwp.xz, ( modelMatrix * vec4(0.0,0.0,0.0,1.0) ).xz );\n\t#else\n\t\tuwp.xz = urbsWarp( uwp.xz );\n\t#endif\n\tmvPosition = viewMatrix * uwp; }\n#else\n\tmvPosition = modelViewMatrix * mvPosition;\n#endif');
 THREE.ShaderChunk.worldpos_vertex=THREE.ShaderChunk.worldpos_vertex.replace('worldPosition = modelMatrix * worldPosition;',
@@ -4790,7 +4797,7 @@ function renderMenu(){
       ${swrow('sNight','🌙','Noc',ENV.night)}${swrow('sCycle','⏱️','Upływ czasu (dzień i noc)',ENV.cycle)}
       <div class="ri static"><span class="ic">🌦️</span><span class="tx">Pogoda</span><div class="seg mini" id="sWeather">${[['clear','☀️'],['fog','🌫️'],['rain','🌧️']].map(([v,l])=>`<button data-w="${v}" class="${ENV.weather===v?'on':''}">${l}</button>`).join('')}</div></div>
       ${row('mPhoto','📷','Tryb fotograficzny','efekt makiety i zapis zdjęcia')}
-      ${swrow('sLabels','🏷️','Podpisy budowli',labelsOn)}${swrow('sPeople','🚶','Ludzie na ulicach',peopleOn)}${swrow('sGrass','🌾','Trawa i kwiaty na łąkach',grassOn)}${swrow('sGrid','▦','Siatka',gridOn)}${swrow('sGrow','🏘️','Miasto rośnie samo (domy awansują)',growOn)}${swrow('sWarp','〰️','Nieregularna siatka (jak w Townscaperze)',WARP.on)}${swrow('sSound','🔊','Dźwięki',!muted)}${swrow('sAmb','🐦','Odgłosy miasta i przyrody',AUD.amb)}${swrow('sMusic','🎹','Muzyka – nokturny Chopina',AUD.music)}<div class="chopinRow"><span id="chNow">${chopinTitle()}</span><button class="chNext" id="chNext" title="Następny utwór">⏭</button></div><div class="chCredit">Wykonanie: Patrizia Prati, nagrania z Wikimedia Commons (CC BY-SA)</div>
+      ${swrow('sLabels','🏷️','Podpisy budowli',labelsOn)}${swrow('sPeople','🚶','Ludzie na ulicach',peopleOn)}${swrow('sGrass','🌾','Trawa i kwiaty na łąkach',grassOn)}${swrow('sGrid','▦','Siatka',gridOn)}${swrow('sGrow','🏘️','Miasto rośnie samo (domy awansują)',growOn)}${swrow('sWarp','〰️','Nieregularna siatka (jak w Townscaperze)',WARP.on)}${swrow('sVivid','🎨','Żywe kolory (jak w Tiny Glade)',VIVID)}${swrow('sSound','🔊','Dźwięki',!muted)}${swrow('sAmb','🐦','Odgłosy miasta i przyrody',AUD.amb)}${swrow('sMusic','🎹','Muzyka – nokturny Chopina',AUD.music)}<div class="chopinRow"><span id="chNow">${chopinTitle()}</span><button class="chNext" id="chNext" title="Następny utwór">⏭</button></div><div class="chCredit">Wykonanie: Patrizia Prati, nagrania z Wikimedia Commons (CC BY-SA)</div>
     </div>
     <div class="st">Cesarz i wydarzenia</div>
     <div class="list">${row('mQuests','🏆','Zadania od cesarza',`zdobyte wieńce: ${laurels.size}/${QUESTS.length}`)}
@@ -4838,6 +4845,7 @@ function renderMenu(){
   on('sGrid','onchange',()=>document.getElementById('bGrid').click());
   on('sGrow','onchange',e=>{ growOn=e.target.checked; try{ localStorage.setItem('urbs-grow',growOn?'1':'0'); }catch(_){} });
   on('sWarp','onchange',e=>{ WARP.on=e.target.checked; try{ localStorage.setItem('urbs-warp',WARP.on?'1':'0'); }catch(_){} try{ dirtySave=true; saveCurrent(false); }catch(_){} toast('Przebudowuję widok…'); setTimeout(()=>location.reload(),350); });
+  on('sVivid','onchange',e=>{ try{ localStorage.setItem('urbs-vivid',e.target.checked?'1':'0'); dirtySave=true; saveCurrent(false); }catch(_){} toast('Przebudowuję widok…'); setTimeout(()=>location.reload(),350); });
   on('sSound','onchange',()=>document.getElementById('bSound').click());
   on('mAbout','onclick',()=>{ closeModal(); showInfo(scenery==='vesuvius'?'pompeii':'rome'); });
   on('mQuests','onclick',()=>{ menuPage='quests'; renderMenu(); card.scrollTop=0; });
