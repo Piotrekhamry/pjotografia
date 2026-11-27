@@ -2392,9 +2392,21 @@ function makeHillMeshes(cap){
   softM=new THREE.Mesh(new THREE.BufferGeometry(),softMat); softM.frustumCulled=false; softM.castShadow=softM.receiveShadow=true; scene.add(softM);
   stairM=new THREE.InstancedMesh(stairGeo(),bMat,cap); stairM.count=0; stairM.frustumCulled=false; stairM.castShadow=stairM.receiveShadow=true; scene.add(stairM);
 }
+// miękkie drogi: zaokrąglone narożniki i łuki krawężników (ćwiartki dla każdego kierunku – bez obracania, żeby bruk się nie przekręcał)
+const QD=[[1,1],[-1,1],[1,-1],[-1,-1]], qIdx=(sx,sz)=>(sx>0?0:1)+(sz>0?0:2);
+function flatShapeGeo(sh){ const g=new THREE.ExtrudeGeometry(sh,{depth:1,bevelEnabled:false,curveSegments:8}); g.rotateX(Math.PI/2); g.translate(0,0.5,0); return g; }
+function quarterDisk(sx,sz){ const s2=new THREE.Shape(); const a0=Math.atan2(sz,sx)-Math.PI/4; s2.moveTo(0,0); s2.absarc(0,0,1,a0,a0+Math.PI/2,false); s2.lineTo(0,0); return flatShapeGeo(s2); }
+function arcBand(sx,sz,r0,r1){ const s2=new THREE.Shape(), a0=Math.atan2(sz,sx)-Math.PI/4, a1=a0+Math.PI/2; s2.moveTo(Math.cos(a0)*r1,Math.sin(a0)*r1); s2.absarc(0,0,r1,a0,a1,false); s2.lineTo(Math.cos(a1)*r0,Math.sin(a1)*r0); s2.absarc(0,0,r0,a1,a0,true); s2.lineTo(Math.cos(a0)*r1,Math.sin(a0)*r1); return flatShapeGeo(s2); }
+function filletGeo(sx,sz,A){ const s2=new THREE.Shape(); // narożnik A×A przy rogu kratki (0,0) bez ćwiartki koła o promieniu A
+  const P=(u,v)=>[u*sx,v*sz]; s2.moveTo(...P(-A,-A)); s2.lineTo(...P(0,-A)); const a0=Math.atan2(-sz,0), a1=Math.atan2(0,-sx); s2.absarc(0,0,A,a0,a1,sx*sz>0); s2.lineTo(...P(-A,-A)); return flatShapeGeo(s2); }
+const SR={rc1:0.22,rc2:0.36,A:0.18,cw:0.05,cw2:0.06};
+function softRoadMeshes(cap){ const mk=(key,geo,mat,c)=>{ if(T[key]){ scene.remove(T[key]); T[key].dispose(); } const m=new THREE.InstancedMesh(geo,mat,c); m.count=0; m.frustumCulled=false; m.receiveShadow=true; m.castShadow=mat===T.curb.material; scene.add(m); T[key]=m; };
+  QD.forEach(([sx,sz],q)=>{ const qd=quarterDisk(sx,sz); mk('q1_'+q,qd,T.road1.material,cap); mk('q2_'+q,qd,T.road2.material,cap);
+    mk('f1_'+q,filletGeo(sx,sz,SR.A),T.road1.material,cap); mk('ac_'+q,arcBand(sx,sz,SR.rc1,SR.rc1+SR.cw),T.curb.material,cap);
+    mk('af_'+q,arcBand(-sx,-sz,SR.A-SR.cw,SR.A),T.curb.material,cap); mk('aw_'+q,arcBand(sx,sz,SR.rc2-SR.cw2,SR.rc2),T.curb.material,cap); }); }
 function makeTerrainMeshes(){ const cap=N*N; if(cap===tCap) return; tCap=cap; makeHillMeshes(cap);
   for(const k in TSPEC){ if(T[k]){ scene.remove(T[k]); T[k].material.dispose(); T[k].dispose(); } const [c,m,o]=TSPEC[k]; T[k]=tileMesh(c,cap*m,o||{}); }
-  flowify(T.water.material); paveify(T.road1.material,0); paveify(T.road2.material,1);
+  flowify(T.water.material); paveify(T.road1.material,0); paveify(T.road2.material,1); softRoadMeshes(Math.ceil(cap/2));
   for(const k in TRSPEC){ if(TR[k]){ scene.remove(TR[k]); TR[k].material.dispose(); TR[k].dispose(); } const [gq,c,m]=TRSPEC[k]; TR[k]=treePool(gq,c,Math.round(cap*m)); } }
 const _M=new THREE.Matrix4(), _Q=new THREE.Quaternion(), _P=new THREE.Vector3(), _S=new THREE.Vector3();
 function setInst(mesh,idx,x,y,z,sx,sy,sz,ry=0){ _P.set(x,y,z); _S.set(sx,sy,sz); if(ry) _Q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP,ry); else _Q.identity(); _M.compose(_P,_Q,_S); mesh.setMatrixAt(idx,_M); }
@@ -2837,18 +2849,31 @@ function rebuildTerrain(){
           if(r===1) for(const [di,dj] of ortho) si(T.road1,n.road1++,x+di*(W/2+A/2),h/2,z+dj*(W/2+A/2),A,h,W,di?0:Math.PI/2);
           for(const [di,dj] of DIRS){ if(nb(di,dj)) continue; const pos=r===1?W/2+cw/2:0.47; if(pd.some(([a,b2])=>a===di||b2===dj)) continue;
             if(di) si(T.curb,n.curb++,x+di*pos,cy+ch/2,z,cw,ch,r===1?W:1); else si(T.curb,n.curb++,x,cy+ch/2,z+dj*pos,r===1?W:1,ch,cw); } }
-      } else if(r===1&&!br){ // wąska uliczka: węższy pas kostki z ramionami do sąsiednich dróg i krawężnikami
-        const W=0.64, A=(0.5-W/2), nb=(di,dj)=>inb(i+di,j+dj)&&road[I(i+di,j+dj)]>0;
-        const ex=nb(1,0)||nb(-1,0), ez=nb(0,1)||nb(0,-1), rot=(ez&&!ex)?Math.PI/2:0;
-        si(T.road1,n.road1++,x,h/2,z,W,h,W,rot);
+      } else if(r===1&&!br){ // wąska uliczka: węższy pas kostki, zaokrąglone narożniki i łagodne łuki na skrzyżowaniach
+        const W=0.64, A=SR.A, rc=SR.rc1, cw=SR.cw, nb=(di,dj)=>inb(i+di,j+dj)&&road[I(i+di,j+dj)]>0;
+        const ex=nb(1,0)||nb(-1,0), ez=nb(0,1)||nb(0,-1), rot=(ez&&!ex)?Math.PI/2:0, H2=W/2;
+        const piece=(cx,cz,sx2,sz2)=>{ if(rot) si(T.road1,n.road1++,cx,h/2,cz,sz2,h,sx2,rot); else si(T.road1,n.road1++,cx,h/2,cz,sx2,h,sz2,0); };
+        for(const [sx,sz] of QD){ const q=qIdx(sx,sz), convex=!nb(sx,0)&&!nb(0,sz);
+          if(!convex) piece(x+sx*H2/2,z+sz*H2/2,H2,H2);
+          else { piece(x+sx*H2/2,z+sz*(H2-rc)/2,H2,H2-rc); piece(x+sx*(H2-rc)/2,z+sz*(H2-rc/2),H2-rc,rc);
+            const k1='q1_'+q; si(T[k1],n[k1]++,x+sx*(H2-rc),h/2,z+sz*(H2-rc),rc,h,rc);
+            const k2='ac_'+q; si(T[k2],n[k2]++,x+sx*(H2-rc),cy+ch/2,z+sz*(H2-rc),1,ch,1); } }
         for(const [di,dj] of DIRS) if(nb(di,dj)) si(T.road1,n.road1++,x+di*(W/2+A/2),h/2,z+dj*(W/2+A/2),A,h,W,di?0:Math.PI/2);
-        for(const sx of [-1,1]) for(const sz of [-1,1]) if(nb(sx,0)&&nb(0,sz)&&nb(sx,sz)) si(T.road1,n.road1++,x+sx*(W/2+A/2),h/2,z+sz*(W/2+A/2),A,h,A,0);
-        const cw=0.05, cpos=W/2+cw/2;
-        for(const [di,dj] of DIRS){ if(nb(di,dj)) continue; // otwarty bok: krawężnik wzdłuż, wydłużony w stronę ramion
-          const px=-dj, pz=di, e1=nb(px,pz)?A:-cw, e2=nb(-px,-pz)?A:-cw, L=W+e1+e2, off=(e1-e2)/2;
+        for(const [sx,sz] of QD) if(nb(sx,0)&&nb(0,sz)){ const q=qIdx(sx,sz);
+          if(nb(sx,sz)) si(T.road1,n.road1++,x+sx*(W/2+A/2),h/2,z+sz*(W/2+A/2),A,h,A,0);
+          else { const k1='f1_'+q, k2='af_'+q; si(T[k1],n[k1]++,x+sx*0.5,h/2,z+sz*0.5,1,h,1); si(T[k2],n[k2]++,x+sx*0.5,cy+ch/2,z+sz*0.5,1,ch,1); } }
+        const cpos=W/2+cw/2;
+        for(const [di,dj] of DIRS){ if(nb(di,dj)) continue; // otwarty bok: krawężnik do ramion albo do początku łuku
+          const px=-dj, pz=di, s1=nb(px,pz)?W/2+A:W/2-rc, s0=nb(-px,-pz)?-(W/2+A):-(W/2-rc), L=s1-s0, off=(s0+s1)/2;
           if(di) si(T.curb,n.curb++,x+di*cpos,cy+ch/2,z+pz*off,cw,ch,L); else si(T.curb,n.curb++,x+px*off,cy+ch/2,z+dj*cpos,L,ch,cw); }
-        for(const sx of [-1,1]) for(const sz of [-1,1]) if(nb(sx,0)&&nb(0,sz)&&!nb(sx,sz)){ // wewnętrzny narożnik skrzyżowania
-          si(T.curb,n.curb++,x+sx*(W/2+A/2),cy+ch/2,z+sz*cpos,A,ch,cw); si(T.curb,n.curb++,x+sx*cpos,cy+ch/2,z+sz*(W/2+A/2),cw,ch,A); }
+      } else if(r===2&&!br){ // szeroka via: zaokrąglone zewnętrzne narożniki na zakrętach i końcach
+        const rc=SR.rc2, nb=(di,dj)=>inb(i+di,j+dj)&&road[I(i+di,j+dj)]>0;
+        for(const [sx,sz] of QD){ const q=qIdx(sx,sz), convex=!nb(sx,0)&&!nb(0,sz);
+          if(!convex) si(T.road2,n.road2++,x+sx*0.25,h/2,z+sz*0.25,0.5,h,0.5);
+          else { si(T.road2,n.road2++,x+sx*0.25,h/2,z+sz*(0.5-rc)/2,0.5,h,0.5-rc); si(T.road2,n.road2++,x+sx*(0.5-rc)/2,h/2,z+sz*(0.5-rc/2),0.5-rc,h,rc);
+            const k1='q2_'+q; si(T[k1],n[k1]++,x+sx*(0.5-rc),h/2,z+sz*(0.5-rc),rc,h,rc); const k2='aw_'+q; si(T[k2],n[k2]++,x+sx*(0.5-rc),cy+ch/2,z+sz*(0.5-rc),1,ch,1); } }
+        for(const [di,dj] of DIRS){ if(nb(di,dj)) continue; const px=-dj, pz=di, s1=nb(px,pz)?0.5:0.5-rc, s0=nb(-px,-pz)?-0.5:-(0.5-rc), L=s1-s0, off=(s0+s1)/2;
+          if(di) si(T.curb,n.curb++,x+di*0.47,cy+ch/2,z+pz*off,0.06,ch,L); else si(T.curb,n.curb++,x+px*off,cy+ch/2,z+dj*0.47,L,ch,0.06); }
       } else {
       tile(br?'bridge':(r===1?'road1':'road2'),x,z,y0,h);
       for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(inb(ni,nj)&&road[I(ni,nj)]) continue;
