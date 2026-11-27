@@ -2208,7 +2208,7 @@ function tileMesh(color,cap,opt={}){
   const m=new THREE.InstancedMesh(G.box,new THREE.MeshStandardMaterial({color,roughness:opt.rough??0.95,metalness:opt.metal??0}),cap);
   m.count=0; m.frustumCulled=false; m.receiveShadow=true; m.castShadow=!!opt.cast; scene.add(m); return m;
 }
-const TSPEC={plot:['#ead6a6',1],road1:['#cfc2aa',1],road2:['#9c9488',1],water:[WATERC,1,{rough:0.25,metal:0.05}],still:[WATERC,1,{rough:0.25,metal:0.05}],forest:['#86b85a',1],field:['#e6bf4f',1],
+const TSPEC={plot:['#ead6a6',1],road1:['#cfc2aa',1],road2:['#9c9488',1],water:[WATERC,1,{rough:0.25,metal:0.05}],still:[WATERC,1,{rough:0.25,metal:0.05}],forest:['#86b85a',1],field:['#e6bf4f',1],sand:['#e3c891',1],
   bridge:['#ddd0b6',1,{cast:true}],curb:['#efe7d8',4,{cast:true}],rows:['#d2ab45',4]};
 const T={};
 // nurt rzeki: jasne zmarszczki płyną wzdłuż lokalnej osi X kafelka (obróconego zgodnie z kierunkiem wody)
@@ -2219,7 +2219,9 @@ function flowify(m){ m.onBeforeCompile=sh=>{ sh.uniforms.uT=waterU;
   m.customProgramCacheKey=()=>'urbs-flow'+WARP.key; }
 function treePool(geom,color,cap){ const m=new THREE.InstancedMesh(geom,new THREE.MeshStandardMaterial({color,roughness:0.85,flatShading:true}),cap); m.count=0; m.frustumCulled=false; m.castShadow=true; m.receiveShadow=true; scene.add(m); return m; }
 const TRSPEC={trunk:[new THREE.CylinderGeometry(0.035,0.045,1,5).translate(0,0.5,0),WOOD,3],cyp:[new THREE.ConeGeometry(0.12,1,7).translate(0,0.5,0),CYP,3],
-  pine:[new THREE.SphereGeometry(0.3,8,5).scale(1,0.45,1),'#6a9a4a',3],rock:[new THREE.DodecahedronGeometry(0.12,0),'#c2b49c',1],olive:[new THREE.SphereGeometry(0.19,7,5),'#9bb07a',3],bush:[new THREE.SphereGeometry(0.12,6,4),'#86b85e',1]};
+  pine:[new THREE.SphereGeometry(0.3,8,5).scale(1,0.45,1),'#6a9a4a',3],rock:[new THREE.DodecahedronGeometry(0.12,0),'#c2b49c',1],olive:[new THREE.SphereGeometry(0.19,7,5),'#9bb07a',3],bush:[new THREE.SphereGeometry(0.12,6,4),'#86b85e',1],
+  oak:[new THREE.IcosahedronGeometry(0.27,1).scale(1,0.82,1),'#557f3a',3],
+  palm:[mergeGeometries([...Array(7)].map((_,k)=>new THREE.BoxGeometry(0.34,0.012,0.07).translate(0.17,0,0).rotateZ(-0.35-(k%2)*0.2).rotateY(k/7*Math.PI*2)).concat([new THREE.SphereGeometry(0.035,5,4)])),'#5f9a3a',2]};
 const TR={}; let tCap=0; let landM=null, softM=null, softMat=null, cliffM=null, capM=null, stairM=null, cliffCell=[], capCell=[];
 function stairGeo(){ const b=new B(); const n=4; for(let k=0;k<n;k++) b.box(0.9,LH*(k+1)/n,0.5-k*0.125,0,0,0.25+k*0.0625,'#d8ccb4'); b.box(0.06,LH+0.05,0.5,-0.47,0,0.25,'#efe7d8'); b.box(0.06,LH+0.05,0.5,0.47,0,0.25,'#efe7d8'); return b.geom(); }
 function makeHillMeshes(cap){
@@ -2317,7 +2319,7 @@ const rimMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,flatS
 const rimWaterMat=new THREE.MeshStandardMaterial({color:WATERC,roughness:0.25,metalness:0.05});
 const rimRoadMat={1:new THREE.MeshStandardMaterial({color:'#cfc2aa',roughness:0.95}),2:new THREE.MeshStandardMaterial({color:'#9c9488',roughness:0.95})};
 function edgeKind(i,j){ const id=I(i,j); return terrain[id]===2?'w':(road[id]?'r'+road[id]:(line[id]===2?'a':'.')); }
-function edgeSig(){ let s=''; for(let k=0;k<N;k++) s+=edgeKind(k,0)+edgeKind(k,N-1)+edgeKind(0,k)+edgeKind(N-1,k); return N+':'+s+':'+(typeof romeYear==='undefined'?'':romeYear); }
+function edgeSig(){ let s=''; for(let k=0;k<N;k++) s+=edgeKind(k,0)+edgeKind(k,N-1)+edgeKind(0,k)+edgeKind(N-1,k); return N+':'+s+':'+(typeof romeYear==='undefined'?'':romeYear)+':'+(typeof biome==='undefined'?'':biome); }
 function rimSpans(){
   const sp=[];
   const scan=(side,get)=>{ let k=0; while(k<N){ const kd=get(k); if(kd==='.'||kd==='a'){ k++; continue; } let e=k; while(e+1<N&&get(e+1)===kd) e++; sp.push({side,a:k,b:e,kind:kd}); k=e+1; } };
@@ -2375,7 +2377,7 @@ function buildRim(){
   if(rim){ scene.remove(rim); rim.traverse(o=>{ if(o.geometry&&o.geometry!==G.box) o.geometry.dispose(); }); }
   rim=new THREE.Group(); const sp=rimSpans(), h=N/2, S=Math.max(220,N*5), seg=Math.min(170,Math.round(S/1.6));
   const g=new THREE.PlaneGeometry(S,S,seg,seg); g.rotateX(-Math.PI/2);
-  const pos=g.attributes.position, col=new Float32Array(pos.count*3), c=new THREE.Color(), haze=new THREE.Color('#e6e0d2'), grass=new THREE.Color('#9ccb68'), dark=new THREE.Color('#6f9f4e'), field=new THREE.Color('#d9bf63'), rock=new THREE.Color('#a8987a'), urbanCol=new THREE.Color('#cdbfa2'), wet=new THREE.Color('#d8c99e');
+  const pos=g.attributes.position, col=new Float32Array(pos.count*3), c=new THREE.Color(), haze=new THREE.Color('#e6e0d2'), grass=new THREE.Color(BIO().rim||BIO().grass), dark=new THREE.Color(BIO().rim||BIO().grass).multiplyScalar(0.72), field=new THREE.Color('#d9bf63'), rock=new THREE.Color('#a8987a'), urbanCol=new THREE.Color('#cdbfa2'), wet=new THREE.Color('#d8c99e');
   for(let v=0;v<pos.count;v++){ const x=pos.getX(v), z=pos.getZ(v), y=rimHeight(x,z,sp); pos.setY(v,y);
     const d=Math.max(Math.abs(x),Math.abs(z))-h, n1=vnoise(x/6,z/6,81), n2=vnoise(x/11,z/11,82);
     c.copy(grass).lerp(dark,clamp((n1-0.45)*2.2,0,1)*0.9);
@@ -2444,6 +2446,102 @@ function riverBed(isW,shoreC,sv,n){
     // trzcina przy linii wody
     if(!q&&Math.abs(ym-WL)<0.03&&hash2(a,b,73)<0.07) setInst(TR.bush,n.bush++,x,WL-0.02,z,0.6,0.9,0.6); }
 }
+/* =========================================================
+   Krainy imperium: kolory ziemi, roślinność i losowy generator map
+   ========================================================= */
+const BIOMES={
+  italia:{n:'Italia',ic:'🏛️',grass:'#9ccb68',sand:'#e3c891',dry:0.15,gd:1,trees:{cyp:3,pine:3,olive:4},d:'Serce imperium: łagodny klimat śródziemnomorski, Apeniny z żyznymi dolinami rzek, wybrzeża pełne gajów oliwnych i winnic.'},
+  galia:{n:'Galia',ic:'🌳',grass:'#93c564',sand:'#e0c88e',dry:0.05,gd:1.15,trees:{oak:5,pine:2,cyp:0.5},d:'Gęste, rozległe puszcze (jak Ardeny) poprzecinane dużymi, spławnymi rzekami – Sekwaną, Loarą i Rodanem – oraz żyzne równiny na południu.'},
+  germania:{n:'Germania',ic:'🌲',grass:'#7fae57',sand:'#d6c08c',dry:0,gd:1.25,trees:{pine:5,oak:4},d:'Dzika kraina za Renem: nieprzebyte, ciemne puszcze (Las Teutoburski, Las Hercyński), rozległe bagna i mokradła, chłodny i wilgotny klimat.'},
+  britannia:{n:'Brytania',ic:'🌧️',grass:'#8cbf63',sand:'#d9c391',dry:0.05,gd:1.2,trees:{oak:6,pine:2},d:'Wilgotna, chłodna wyspa: dębowe lasy, wrzosowiska i torfowiska, łagodne wzgórza na południu i surowe góry Kaledonii na północy.'},
+  hispania:{n:'Hispania',ic:'☀️',grass:'#b3c46e',sand:'#e6c98e',dry:0.45,gd:0.8,trees:{olive:5,pine:3,cyp:2},d:'Zielone, deszczowe góry na północy, suchy i wietrzny płaskowyż Meseta w środku i gorące, żyzne wybrzeża na południu.'},
+  balkany:{n:'Bałkany i Dacja',ic:'⛰️',grass:'#97c463',sand:'#e0c88e',dry:0.1,gd:1.05,trees:{pine:5,oak:3,cyp:1},d:'Kraina gór – Alp Dynarskich i Karpat – z głębokimi dolinami, poprzecinana potężnym Dunajem. Na wybrzeżu słońce, w głębi lądu chłodne lasy.'},
+  anatolia:{n:'Azja Mniejsza i Lewant',ic:'🏺',grass:'#bcc27a',sand:'#e8cd96',dry:0.55,gd:0.65,trees:{olive:4,cyp:3,pine:2,palm:1},d:'Wybrzeża o śródziemnomorskim klimacie przechodzące w suche, stepowe wyżyny Anatolii, a na wschodzie w półpustynie i skaliste pustkowia.'},
+  mezopotamia:{n:'Mezopotamia',ic:'🌾',grass:'#b9c476',sand:'#e9cf98',dry:0.5,gd:0.6,trees:{palm:6,olive:1},d:'Gorąca, płaska równina między Tygrysem a Eufratem – bardzo żyzna dzięki kanałom nawadniającym, otoczona suchymi stepami i pustynią. Rzymska tylko przez chwilę, za Trajana.'},
+  egipt:{n:'Egipt',ic:'🐪',rim:'#e3cb93',grass:'#a8c96c',sand:'#ebd29c',dry:0.3,gd:0.7,trees:{palm:8,olive:1},d:'Wąski, niezwykle żyzny pas zieleni w dolinie i delcie Nilu, a z obu stron bezkresne, jałowe pustynie. Spichlerz Rzymu.'},
+  afryka:{n:'Afryka Północna',ic:'🦁',grass:'#aac56c',sand:'#e8ca8f',dry:0.35,gd:0.8,trees:{olive:5,palm:3,cyp:1},d:'Żyzny, zielony pas wybrzeża – „spichlerz Rzymu” – potem pasmo gór Atlas, a za nimi gorąca, piaszczysta Sahara.'}};
+let biome='italia';
+const BIO=()=>BIOMES[biome]||BIOMES.italia;
+function pickTree(h){ const t=BIO().trees; let sum=0; for(const k in t) sum+=t[k]; let x=h*sum; for(const k in t){ x-=t[k]; if(x<=0) return k; } return 'pine'; }
+// postaw drzewo danego gatunku (pień + korona) w kolejnych slotach instancji
+function plantTree(si,n,k,x,y,z,sc){
+  if(k==='cyp'){ si(TR.trunk,n.trunk++,x,y,z,sc,0.08*sc,sc); si(TR.cyp,n.cyp++,x,y+0.06,z,sc,0.8*sc,sc); }
+  else if(k==='pine'){ si(TR.trunk,n.trunk++,x,y,z,sc,0.55*sc,sc); si(TR.pine,n.pine++,x,y+0.6*sc,z,sc,sc,sc); }
+  else if(k==='olive'){ si(TR.trunk,n.trunk++,x,y,z,sc*1.2,0.22*sc,sc*1.2); si(TR.olive,n.olive++,x,y+0.3*sc,z,sc,0.8*sc,sc); }
+  else if(k==='oak'){ si(TR.trunk,n.trunk++,x,y,z,sc*1.5,0.34*sc,sc*1.5); si(TR.oak,n.oak++,x,y+0.42*sc,z,sc,sc,sc); }
+  else if(k==='palm'){ si(TR.trunk,n.trunk++,x,y,z,sc*0.7,0.8*sc,sc*0.7,0); si(TR.palm,n.palm++,x,y+0.8*sc,z,sc,sc,sc,hash2(x*9,z*9,77)*6.28); } }
+function applyBiome(){ const B=BIO(); slabMats[2].color.set(B.grass); if(capM) capM.material.color.set(B.grass); if(T.forest) T.forest.material.color.set(B.grass).multiplyScalar(0.88); if(T.sand) T.sand.material.color.set(B.sand);
+  dirtyTerrain=true; try{ grassT=0; }catch(_){} }
+// --- generator: wysokości (poziomy 0–5), woda, piasek, lasy, pola i skarpy dla wybranej krainy
+function genRegion(key,seed){
+  const B=BIOMES[key], R=mulberry(seed), S=Math.floor(seed%9973);
+  const fbm=(u,v,s)=>vnoise(u*N/16,v*N/16,S+s)*0.55+vnoise(u*N/7,v*N/7,S+s+1)*0.3+vnoise(u*N/3,v*N/3,S+s+2)*0.15;
+  const ridged=(u,v,s)=>1-Math.abs(2*fbm(u,v,s)-1);
+  const H=new Float32Array(N*N), TT=new Uint8Array(N*N), SH=new Uint8Array(N*N), W=new Uint8Array(N*N);
+  const at=(i,j)=>I(i,j), U=i=>(i+0.5)/N;
+  const sm=(a,b,x)=>{ const t=clamp((x-a)/(b-a),0,1); return t*t*(3-2*t); };
+  // rzeka wzdłuż osi (vert: wzdłuż j); zwraca odległość pola od nurtu
+  const rivers=[];
+  const river=(c,width,amp,vert=true,ph=R()*6)=>{ rivers.push({c,width,amp,vert,ph,f:2+R()*2}); };
+  const rivDist=(i,j)=>{ let best=99; for(const r of rivers){ const a=r.vert?U(j):U(i), b=r.vert?U(i):U(j), cx=r.c+r.amp*Math.sin(a*r.f*Math.PI+r.ph)+0.04*(fbm(a,0.3,40)-0.5); best=Math.min(best,Math.abs(b-cx)*N-r.width/2); } return best; };
+  const sea=(side,base,amp)=>(i,j)=>{ const u=U(i), v=U(j), t=side==='w'?u:side==='e'?1-u:side==='n'?v:1-v, a=side==='w'||side==='e'?v:u; return t<base+amp*(fbm(a,0.5,60)-0.5); };
+  let isSea=()=>false;
+  for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const u=U(i), v=U(j), f=fbm(u,v,0), id=at(i,j); let h=0;
+    if(key==='italia'){ const d=Math.abs((u-0.2)-(1-v)*0.6)/1.17; h=4.6*Math.exp(-Math.pow(d/0.16,2))*(0.55+0.7*f)+0.8*f; }
+    else if(key==='galia') h=1.6*f*f+0.3;
+    else if(key==='germania') h=1.4*f*f;
+    else if(key==='britannia') h=v<0.45?(1.5+3.6*ridged(u,v,5))*sm(0.55,0.25,v)+1.2*f:1.3*f*f;
+    else if(key==='hispania') h=v<0.28?2.5+2.5*ridged(u,v,5):(v<0.78?2+0.6*f:0.9*f);
+    else if(key==='balkany') h=0.8+4.4*ridged(u,v,5)*f;
+    else if(key==='anatolia') h=u<0.3?1.1*f:(u<0.68?2+0.7*f:1.3+2.8*ridged(u,v,5)*f);
+    else if(key==='mezopotamia') h=0.5*f;
+    else if(key==='egipt') h=0.6+1.6*f;
+    else if(key==='afryka') h=v<0.4?0.9*f:(v<0.66?1.5+3.6*ridged(u,v,5):0.8*f);
+    H[id]=h; }
+  // woda: rzeki i morza
+  if(key==='italia'){ river(0.34,2,0.06); isSea=sea('w',0.1,0.12); }
+  else if(key==='galia'){ river(0.3,3,0.09); river(0.62,2,0.12,false); }
+  else if(key==='germania'){ river(0.12,4,0.04); }
+  else if(key==='britannia'){ river(0.62,3,0.08,false); }
+  else if(key==='hispania'){ river(0.55,2,0.1); isSea=sea('s',0.12,0.1); }
+  else if(key==='balkany'){ river(0.55,4,0.08,false); isSea=(i,j)=>U(i)>0.82&&U(j)>0.7+0.15*(fbm(U(i),U(j),61)-0.5); }
+  else if(key==='anatolia'){ river(0.45,2,0.05,false); isSea=sea('w',0.14,0.14); }
+  else if(key==='mezopotamia'){ river(0.36,3,0.07); river(0.66,3,0.07); }
+  else if(key==='egipt'){ river(0.5,4,0.05); }
+  else if(key==='afryka'){ isSea=sea('n',0.12,0.1); river(0.3,1,0.05); }
+  for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const id=at(i,j); let d=rivDist(i,j);
+    // delta Nilu: trzy odnogi rozchodzą się ku północy
+    if(key==='egipt'&&U(j)<0.3){ const s=(0.3-U(j))/0.3; for(const k of [-1,1]){ const cx=0.5+k*s*0.32+0.02*Math.sin(U(j)*18); d=Math.min(d,Math.abs(U(i)-cx)*N-1); } }
+    // kanały Mezopotamii łączące obie rzeki
+    if(key==='mezopotamia'&&(j%Math.max(9,Math.floor(N/5))===4)&&U(i)>0.36&&U(i)<0.66) d=Math.min(d,0);
+    if(d<=0||isSea(i,j)){ W[id]=1; H[id]=0; continue; }
+    // dolina rzeki: teren schodzi ku wodzie
+    H[id]*=sm(0,key==='balkany'?7:4,d);
+    if(key==='mezopotamia'||key==='egipt'){ const green=key==='egipt'?5:4; if(d>green+(key==='egipt'?1.5:3)*fbm(U(i),U(j),70)) TT[id]=5; else if(d>1&&R()<0.5) TT[id]=4; }
+    if(key==='afryka'&&U(j)>0.68) TT[id]=5;
+    if(key==='anatolia'&&U(i)>0.72&&fbm(U(i),U(j),71)>0.45) TT[id]=5;
+    if(key==='hispania'&&U(j)>0.35&&U(j)<0.75&&fbm(U(i),U(j),72)>0.68) TT[id]=5; }
+  // plaże przy morzu
+  for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const id=at(i,j); if(W[id]) continue; let near=false; for(let dj=-2;dj<=2;dj++) for(let di=-2;di<=2;di++){ const ni=i+di, nj=j+dj; if(inb(ni,nj)&&W[at(ni,nj)]&&isSea(ni,nj)) near=true; } if(near){ TT[id]=5; H[id]=Math.min(H[id],0.4); } }
+  // bagna i torfowiska: małe oczka wody
+  if(key==='germania'||key==='britannia'){ for(let j=1;j<N-1;j++) for(let i=1;i<N-1;i++){ const id=at(i,j); if(!W[id]&&H[id]<0.9&&fbm(U(i),U(j),80)>(key==='germania'?0.7:0.76)&&R()<0.55){ W[id]=1; H[id]=0; } } }
+  // poziomy całkowite + łagodność (sąsiedzi różnią się najwyżej o 1)
+  const L=new Uint8Array(N*N); for(let k=0;k<N*N;k++) L[k]=W[k]?0:clamp(Math.round(H[k]),0,5);
+  for(let pass=0;pass<12;pass++){ let ch=false; for(const dir of [1,-1]) for(let a=0;a<N*N;a++){ const id=dir>0?a:N*N-1-a, i=id%N, j=(id/N)|0; let m=99; for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(inb(ni,nj)) m=Math.min(m,L[at(ni,nj)]); } if(L[id]>m+1){ L[id]=m+1; ch=true; } } if(!ch) break; }
+  // skarpy: surowe góry (Kaledonia, Atlas, wschód Anatolii, krawędzie Mesety)
+  for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const id=at(i,j), u=U(i), v=U(j); if(W[id]||!L[id]) continue; const f2=fbm(u,v,90);
+    if((key==='britannia'&&v<0.35&&L[id]>=2&&f2>0.45)||(key==='afryka'&&v>0.42&&v<0.64&&L[id]>=2)||(key==='anatolia'&&u>0.7&&L[id]>=2)||(key==='hispania'&&v>0.28&&v<0.8&&L[id]===2&&f2>0.55)||(key==='egipt'&&TT[id]===5&&L[id]>=2)||(key==='balkany'&&L[id]>=4&&f2>0.5)) SH[id]=1; }
+  // lasy, gaje i pola
+  const forestT={italia:0.66,galia:0.5,germania:0.4,britannia:0.55,hispania:0.68,balkany:0.52,anatolia:0.74,mezopotamia:0.86,egipt:0.8,afryka:0.68}[key];
+  for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const id=at(i,j); if(W[id]||TT[id]) continue; const u=U(i), v=U(j), f3=fbm(u,v,100), d=rivDist(i,j);
+    if(f3>forestT&&!(key==='egipt'&&d>6)) TT[id]=3;
+    else if(L[id]===0&&d<6&&d>0.5&&fbm(u,v,110)>(key==='galia'&&v>0.6?0.4:0.55)) TT[id]=4;
+    else if(key==='italia'&&L[id]<=1&&fbm(u,v,120)>0.7) TT[id]=4;
+    if((key==='egipt'||key==='mezopotamia')&&d>0.5&&d<3&&R()<0.18) TT[id]=3; } // palmy nad wodą
+  for(let k=0;k<N*N;k++){ terrain[k]=W[k]?2:TT[k]; hgt[k]=W[k]?0:L[k]; sharp[k]=SH[k]; }
+  biome=key; applyBiome(); calcHillMax(); aqLvlDirty=true; arcusDirty=true; dirtyTerrain=true; dirtyRoads=true; dirtyWater=true; dirtySave=true; aoDirty=true; beautyDirty=true; try{ trailsDirty=true; }catch(_){}
+}
+
 /* ---- Trawa: kępki źdźbeł na wolnej zielonej ziemi, kołyszące się na wietrze, gdzieniegdzie kwiaty ---- */
 const GRASS_MAX=IS_MOBILE?12000:48000;
 let grassOn=(()=>{ try{ return localStorage.getItem('urbs-grass')!=='0'; }catch(_){ return true; } })(), grassT=0;
@@ -2466,10 +2564,10 @@ function rebuildGrass(){ grassT=12; if(!grassOn){ grassM.count=0; flowerM.count=
   let tw=null; try{ tw=trailWear.length===N*N?trailWear:null; }catch(_){}
   let k=0, f=0; const C=new THREE.Color(), G=['#ffffff','#e9f2d6','#d9e8b8','#f2eed0'], FL=['#f4f1e6','#f2c14e','#e86a7a','#b57edc','#f08a4b'];
   const per=IS_MOBILE?4:12, nearW=(i,j)=>{ for(let dj=-1;dj<=1;dj++) for(let di=-1;di<=1;di++){ const ni=i+di, nj=j+dj; if(inb(ni,nj)&&terrain[I(ni,nj)]===2) return true; } return false; };
-  outer: for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const id=I(i,j), t=terrain[id]; if(t===1||t===2||t===4||bld[id]||road[id]||line[id]) continue; if(nearW(i,j)) continue; if(tw&&tw[id]>0.25) continue;
-    const dry=vnoise(i/7,j/7,511); const n=Math.round(per*(t===3?0.6:1)*(0.6+0.8*vnoise(i/3.5,j/3.5,512)));
+  outer: for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const id=I(i,j), t=terrain[id]; if(t===1||t===2||t===4||t===5||bld[id]||road[id]||line[id]) continue; if(nearW(i,j)) continue; if(tw&&tw[id]>0.25) continue;
+    const B=BIO(), dry=Math.min(1,vnoise(i/7,j/7,511)+B.dry*0.6); const n=Math.round(per*B.gd*(t===3?0.6:1)*(0.6+0.8*vnoise(i/3.5,j/3.5,512)));
     for(let q=0;q<n;q++){ if(k>=GRASS_MAX) break outer; const x=wx(i)+(hash2(i*8+q,j,521)-0.5)*0.96, z=wx(j)+(hash2(i,j*8+q,522)-0.5)*0.96, sc=0.7+hash2(i+q,j,523)*0.75;
-      setInst(grassM,k,x,hY(x,z)-0.004,z,sc,sc*(0.8+hash2(i,j+q,524)*0.6),sc,hash2(q,i+j,525)*6.28); C.set(G[(i+j+q)%4]); if(dry>0.62) C.lerp(new THREE.Color('#e8d08a'),(dry-0.62)*2.2); grassM.setColorAt(k,C); k++;
+      setInst(grassM,k,x,hY(x,z)-0.004,z,sc,sc*(0.8+hash2(i,j+q,524)*0.6),sc,hash2(q,i+j,525)*6.28); C.set(G[(i+j+q)%4]); if(dry>0.62) C.lerp(new THREE.Color('#e8d08a'),Math.min(1,(dry-0.62)*2.2)); if(B.grass!=='#9ccb68') C.multiply(new THREE.Color(B.grass).multiplyScalar(1/0.8)); grassM.setColorAt(k,C); k++;
       if(hash2(i*3+q,j*5,526)<0.07&&f<flowerM.instanceMatrix.count){ setInst(flowerM,f,x+0.01,hY(x,z)+0.085*sc,z,1,1,1); C.set(FL[(i*7+j*3+q)%FL.length]); flowerM.setColorAt(f,C); f++; } } }
   grassM.count=k; grassM.instanceMatrix.needsUpdate=true; grassM.instanceColor.needsUpdate=true; flowerM.count=f; flowerM.instanceMatrix.needsUpdate=true; if(flowerM.instanceColor) flowerM.instanceColor.needsUpdate=true; }
 function grassStep(dt){ grassT-=dt; if(grassT<=0) rebuildGrass(); } // co jakiś czas – żeby trawa ustąpiła wydeptanym ścieżkom
@@ -2479,13 +2577,13 @@ function rebuildTerrain(){
   const n={}; for(const k in T) n[k]=0; for(const k in TR) n[k]=0;
   let hb=0; const si=(m,k,x,y,z,a1,a2,a3,r)=>setInst(m,k,x,y+hb,z,a1,a2,a3,r);
   const tile=(k,x,z,y0,h)=>si(T[k],n[k]++,x,y0+h/2,z,1,h,1);
-  let nc=0, ncap=0, nst=0; const GRASSY=['#8db75c','#86b057','#93bb61'], ROCKY=['#cfb189','#c2a27a','#d6bb94'];
+  let nc=0, ncap=0, nst=0; const GRASSY=[0.9,0.86,0.94].map(f=>'#'+new THREE.Color(BIO().grass).multiplyScalar(f).getHexString()), ROCKY=['#cfb189','#c2a27a','#d6bb94'];
   const SP=[], SC=[], sCol=new THREE.Color(), _sc=new THREE.Color();
   // nurt: dla każdej rzeki (spójnej wody dotykającej brzegu mapy) liczymy odległość od źródła – woda płynie w stronę rosnącej odległości
   const isW=(i,j)=>inb(i,j)&&terrain[I(i,j)]===2, fd=new Int32Array(N*N).fill(-1), comp=new Int32Array(N*N).fill(-1);
   for(let j0=0;j0<N;j0++) for(let i0=0;i0<N;i0++){ const id0=I(i0,j0); if(!isW(i0,j0)||comp[id0]>=0) continue; const reg=[id0]; comp[id0]=id0; let src=-1;
     for(let h=0;h<reg.length;h++){ const id=reg[h], i=id%N, j=(id/N)|0; if(src<0&&(i===0||j===0||i===N-1||j===N-1)&&!line[id]) src=id; for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(isW(ni,nj)&&comp[I(ni,nj)]<0){ comp[I(ni,nj)]=id0; reg.push(I(ni,nj)); } } }
-    if(src<0) continue; fd[src]=0; const q=[src]; for(let h=0;h<q.length;h++){ const id=q[h], i=id%N, j=(id/N)|0; for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(isW(ni,nj)&&fd[I(ni,nj)]<0){ fd[I(ni,nj)]=fd[id]+1; q.push(I(ni,nj)); } } } }
+    if(src<0||reg.length>N*N*0.06) continue; fd[src]=0; const q=[src]; for(let h=0;h<q.length;h++){ const id=q[h], i=id%N, j=(id/N)|0; for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(isW(ni,nj)&&fd[I(ni,nj)]<0){ fd[I(ni,nj)]=fd[id]+1; q.push(I(ni,nj)); } } } }
   // pola brzegowe: wolny ląd przy wodzie – razem z wodą rysowane jako jedno gładkie koryto
   const shoreC=new Uint8Array(N*N);
   for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const id=I(i,j), t=terrain[id]; if(t===2||bld[id]||road[id]||line[id]||t===1||t===4||sharp[id]) continue;
@@ -2503,9 +2601,9 @@ function rebuildTerrain(){
     if(sm){ // łagodny płat zbocza (+ ścianka tam, gdzie obok płaski taras leży niżej)
       const L=(di,dj)=>lvAt(i+di,j+dj), mid=(di,dj)=>(h+L(di,dj))/2, cor=(sx,sz)=>(h+L(sx,0)+L(0,sz)+L(sx,sz))/4;
       let any=h>0; for(const [di,dj] of DIRS) if(L(di,dj)>0) any=true; if(!any) for(const sx of [-1,1]) for(const sz of [-1,1]) if(L(sx,sz)>0) any=true;
-      if(any){ sCol.set(t===1?'#e3cf9f':GRASSY[(i*7+j*3)%3]); const C=[x,hb+0.002,z];
+      if(any){ sCol.set(t===1?'#e3cf9f':t===5?BIO().sand:GRASSY[(i*7+j*3)%3]); const C=[x,hb+0.002,z];
         for(const sx of [-1,1]) for(const sz of [-1,1]){ const X=[x+sx*0.5,mid(sx,0)*LH+0.002,z], Z=[x,mid(0,sz)*LH+0.002,z+sz*0.5], K=[x+sx*0.5,cor(sx,sz)*LH+0.002,z+sz*0.5];
-          const steep=Math.abs(K[1]-C[1])>0.2; _sc.copy(sCol); if(steep&&t!==1&&hash2(i*2+sx,j*2+sz,93)<0.35) _sc.set(ROCKY[(i+j)%3]); tri(C,X,K,_sc); tri(C,K,Z,_sc); }
+          const steep=Math.abs(K[1]-C[1])>0.2; _sc.copy(sCol); if(steep&&t!==1&&t!==5&&hash2(i*2+sx,j*2+sz,93)<0.15) _sc.set(ROCKY[(i+j)%3]); tri(C,X,K,_sc); tri(C,K,Z,_sc); }
         for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj, nIn=inb(ni,nj); if(nIn&&isSmooth(I(ni,nj))) continue; const yb=(nIn?hgt[I(ni,nj)]:0)*LH;
           const px=-dj, pz=di; // kierunek wzdłuż krawędzi
           const P=[[x+di*0.5+px*0.5,cor(di||px,dj||pz)],[x+di*0.5,mid(di,dj)],[x+di*0.5-px*0.5,cor(di||-px,dj||-pz)]].map(([xx,hh],k)=>[xx,hh*LH+0.002,z+dj*0.5+(k===0?pz*0.5:k===2?-pz*0.5:0)]);
@@ -2524,6 +2622,7 @@ function rebuildTerrain(){
       if(flow) si(T.water,n.water++,x,WL-0.006,z,1,0.012,1,ry); else tile('still',x,z,WL-0.012,0.012);
     }
     else if(t===3&&!(sm&&h)&&!shore) tile('forest',x,z,0,0.008);
+    else if(t===5&&!(sm&&h)&&!shore) tile('sand',x,z,0,0.012);
     else if(t===4){ tile('field',x,z,0,0.022); if(!occ) for(let k=0;k<4;k++) si(T.rows,n.rows++,x,0.03,z-0.36+k*0.24,0.86,0.025,0.07); }
     if(r&&drawInfo(i,j)){ /* most zwodzony rysowany osobno */ }
     else if(r&&line[id]!==4){
@@ -2538,12 +2637,10 @@ function rebuildTerrain(){
       const cnt=1+Math.floor(hash2(i,j,3)*2.6);
       for(let k=0;k<cnt;k++){ const ox=(hash2(i,j,10+k)-0.5)*0.55, oz=(hash2(i,j,20+k)-0.5)*0.55, ty=hash2(i,j,30+k), sc=0.8+hash2(i,j,40+k)*0.5;
         const gy=sm?softLocal(i,j,ox,oz)-hb-0.03:0;
-        if(ty<0.45){ si(TR.trunk,n.trunk++,x+ox,gy,z+oz,sc,0.08*sc,sc); si(TR.cyp,n.cyp++,x+ox,gy+0.06,z+oz,sc,0.8*sc,sc); }
-        else if(ty<0.72){ si(TR.trunk,n.trunk++,x+ox,gy,z+oz,sc,0.55*sc,sc); si(TR.pine,n.pine++,x+ox,gy+0.6*sc,z+oz,sc,sc,sc); }
-        else { si(TR.trunk,n.trunk++,x+ox,gy,z+oz,sc*1.2,0.22*sc,sc*1.2); si(TR.olive,n.olive++,x+ox,gy+0.3*sc,z+oz,sc,0.8*sc,sc); } }
+        plantTree(si,n,pickTree(ty),x+ox,gy,z+oz,sc); }
     }
     if(h&&t===0&&!occ&&!shore){ // zbocza wzgórz: pinie, kamienie i krzaki na krawędziach tarasów
-      if(hash2(i,j,55)<0.16){ const sc=0.85+hash2(i,j,56)*0.4, ox=(hash2(i,j,57)-0.5)*0.4, oz=(hash2(i,j,58)-0.5)*0.4, gy=sm?softLocal(i,j,ox,oz)-hb-0.03:0; si(TR.trunk,n.trunk++,x+ox,gy,z+oz,sc,0.6*sc,sc); si(TR.pine,n.pine++,x+ox,gy+0.66*sc,z+oz,sc*1.1,sc,sc*1.1); }
+      if(hash2(i,j,55)<0.16){ const sc=0.85+hash2(i,j,56)*0.4, ox=(hash2(i,j,57)-0.5)*0.4, oz=(hash2(i,j,58)-0.5)*0.4, gy=sm?softLocal(i,j,ox,oz)-hb-0.03:0; plantTree(si,n,pickTree(hash2(i,j,59)),x+ox,gy,z+oz,sc); }
       if(lo<h&&!sm) for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(inb(ni,nj)&&hgt[I(ni,nj)]>=h) continue; const hv=hash2(i*3+di,j*3+dj,61); if(hv<0.22) si(TR.rock,n.rock++,x+di*0.4,0.02,z+dj*0.4,0.8+hv*2,0.6+hv,0.9+hv); else if(hv<0.38) si(TR.bush,n.bush++,x+di*0.38,0.04,z+dj*0.38,1.1,0.9,1.1); } }
     if(t===0 && !occ && !shore && !(sm&&h) && hash2(i,j,77)<0.035) si(TR.bush,n.bush++,x+(hash2(i,j,78)-0.5)*0.6,0.05,z+(hash2(i,j,79)-0.5)*0.6,1,0.8,1);
   }
@@ -2850,7 +2947,7 @@ function clearCell(i,j){ const id=I(i,j); if(bld[id]) removeBuilding(bld[id]); s
    ========================================================= */
 function rle(a){ const out=[]; let prev=a[0],c=0; for(let k=0;k<a.length;k++){ if(a[k]===prev) c++; else { out.push(prev+'*'+c); prev=a[k]; c=1; } } out.push(prev+'*'+c); return out.join(','); }
 function unrle(s,n){ const a=new Uint8Array(n); let p=0; for(const part of s.split(',')){ const [v,c]=part.split('*').map(Number); a.fill(v,p,p+c); p+=c; } return a; }
-function serialize(){ const bl=[]; for(const b of buildings.values()) bl.push(b.u||b.fl?[b.type,b.x,b.z,b.rot,b.seed,b.lm||0,b.fl||0,b.u?1:0]:b.lm?[b.type,b.x,b.z,b.rot,b.seed,b.lm]:[b.type,b.x,b.z,b.rot,b.seed]); const o={v:2,N,t:rle(terrain),r:rle(road),l:rle(line),b:bl}; if(hillMax) o.h=rle(hgt); if(sharp.some(v=>v)) o.sh=rle(sharp); if(romeYear!==null) o.ry=romeYear; if(rebuild) o.rb=rebuild.targets.map(t=>[t.type,t.x,t.z,t.rot,t.lm,t.done?1:0]); if(scenery) o.sc=scenery; return JSON.stringify(o); }
+function serialize(){ const bl=[]; for(const b of buildings.values()) bl.push(b.u||b.fl?[b.type,b.x,b.z,b.rot,b.seed,b.lm||0,b.fl||0,b.u?1:0]:b.lm?[b.type,b.x,b.z,b.rot,b.seed,b.lm]:[b.type,b.x,b.z,b.rot,b.seed]); const o={v:2,N,t:rle(terrain),r:rle(road),l:rle(line),b:bl}; if(biome!=='italia') o.bm=biome; if(hillMax) o.h=rle(hgt); if(sharp.some(v=>v)) o.sh=rle(sharp); if(romeYear!==null) o.ry=romeYear; if(rebuild) o.rb=rebuild.targets.map(t=>[t.type,t.x,t.z,t.rot,t.lm,t.done?1:0]); if(scenery) o.sc=scenery; return JSON.stringify(o); }
 function clearWorld(){ try{ units.length=0; selectUnit(null); extraFires.length=0; }catch(_){} romeYear=null; aqLvlDirty=true; arcusDirty=true; brDirty=true; if(typeof arcBridgeGroup!=='undefined') arcBridgeGroup.clear();
   if(typeof setScenery!=='undefined') setScenery(null);
   if(typeof clearRebuildMarkers!=='undefined'){ clearRebuildMarkers(); rebuild=null; triumph=null; race=null; games=null; follow=null; cortege=null; }
@@ -2865,7 +2962,7 @@ function clearWorld(){ try{ units.length=0; selectUnit(null); extraFires.length=
 }
 function resizeWorld(n){ clearWorld(); alloc(n); buildBoard(); resetCamera(); dirtyTerrain=true; dirtyRoads=true; }
 function deserialize(str){
-  const o=JSON.parse(str); if(!o||!o.N) throw new Error('zły zapis');
+  const o=JSON.parse(str); if(!o||!o.N) throw new Error('zły zapis'); biome=BIOMES[o.bm]?o.bm:'italia'; try{ applyBiome(); }catch(_){}
   if(o.N!==N) resizeWorld(o.N); else { clearWorld(); alloc(o.N); }
   terrain.set(unrle(o.t,N*N)); road.set(unrle(o.r,N*N)); line.set(unrle(o.l,N*N)); if(o.h) hgt.set(unrle(o.h,N*N)); else hgt.fill(0); if(o.sh) sharp.set(unrle(o.sh,N*N)); else sharp.fill(0); calcHillMax();
   for(const [type,x,z,rot,seed,lm,fl,u] of o.b){ if(!DEFS[type]) continue; const id=addBuilding(type,x,z,rot,seed,false,lm||null,fl||null); if(u) buildings.get(id).u=1; }
@@ -3569,7 +3666,7 @@ function updatePreview(c){
     showTiles(cells,(i,j)=>pathValid(i,j)?(tool.kind==='road'?'#ffffff':'#ffe08a'):'#ff6a5a'); return;
   }
   if(tool.kind==='brush'){ showTiles([[c.i,c.j]],(i,j)=>{ if(!inb(i,j)) return '#ff6a5a'; const b=bld[I(i,j)]?buildings.get(bld[I(i,j)]):null; if(b&&STACK[b.type]&&brushStacks(b)) return floorsOf(b)<STACK[b.type].max?'#ffd36a':'#ff6a5a'; return canPlace(tool.type,i,j,0)?'#7fd36a':'#ff6a5a'; }); return; }
-  if(tool.kind==='terrain'){ const col=['#a9d17b','#ecdcb4',WATERC,'#4e7d40','#e8c867'][tool.val]; showTiles(brushCells(c),()=>col); return; }
+  if(tool.kind==='terrain'){ const col=['#a9d17b','#ecdcb4',WATERC,'#4e7d40','#e8c867','#e3c891'][tool.val]; showTiles(brushCells(c),()=>col); return; }
   if(tool.kind==='bulldoze'){ showTiles(brushCells(c),()=>'#ff6a5a'); return; }
   if(tool.kind==='height'){ showTiles(brushCells(c),(i,j)=>canRaise(i,j)?(tool.val>0?'#ffe08a':'#9fd0ff'):'#ff6a5a'); return; }
 }
@@ -3885,7 +3982,7 @@ timeInput.addEventListener('input',applyTime);
    ========================================================= */
 const CATS=[{id:'teren',ic:'🌿',n:'Teren',l:'🌿 Teren'},{id:'drogi',ic:'🛣️',n:'Drogi i port',l:'🛣️ Drogi i port'},{id:'domy',ic:'🏠',n:'Domy',l:'🏠 Domy'},{id:'ogr',ic:'🌸',n:'Ogrody',l:'🌸 Ogrody'},{id:'publ',ic:'🏛️',n:'Forum i władza',l:'🏛️ Forum i świątynie'},{id:'rozr',ic:'🏟️',n:'Rozrywka',l:'🏟️ Rozrywka'},{id:'woj',ic:'🛡️',n:'Wojsko i mury',l:'🛡️ Wojsko i mury'},{id:'ozd',ic:'🌲',n:'Ozdoby',l:'🌲 Ozdoby'}];
 // podkategorie (jak w SimCity): kategoria → [id, nazwa, lista narzędzi]
-const SUBS={teren:[['paint','🎨 Pokrycie',['t-grass','t-plot','t-water','t-forest','t-field']],['hgt','⛰️ Ukształtowanie',['t-up','t-cliff','t-down']]],
+const SUBS={teren:[['paint','🎨 Pokrycie',['t-grass','t-plot','t-water','t-forest','t-field','t-sand']],['hgt','⛰️ Ukształtowanie',['t-up','t-cliff','t-down']]],
   drogi:[['road','🛤️ Ulice',['r-narrow','r-wide']],['water','🌉 Mosty i akwedukty',['l-pons','l-aq']],['port','⚓ Port i handel',['b-port','b-pharos','b-horreum']]],
   domy:[['plebs','🏘️ Domy ludu',['b-house','b-insula','b-taberna','b-hut']],['mod','🧱 Modułowe',['b-insblock','b-tabrow','b-villa','b-arcus']],['rich','🏡 Domy zamożnych',['b-domus']]],
   ogr:[['small','🌷 Ogródki',['b-gardenS','b-garden','b-topiary']],['big','🌳 Parki i tarasy',['b-vineyard','b-peristyle','b-terrace','b-park','b-tier']]],
@@ -3901,6 +3998,7 @@ const TOOLS=[
   {id:'t-water',cat:'teren',kind:'terrain',val:2,name:'Woda',hint:'Rzeka lub staw — droga przez wodę staje się mostem'},
   {id:'t-forest',cat:'teren',kind:'terrain',val:3,name:'Gaj',hint:'Cyprysy, pinie i oliwki'},
   {id:'t-field',cat:'teren',kind:'terrain',val:4,name:'Pole',hint:'Złote pola zboża'},
+  {id:'t-sand',cat:'teren',kind:'terrain',val:5,name:'Piasek',hint:'Pustynia, wydmy i plaże'},
   {id:'t-up',cat:'teren',kind:'height',val:1,name:'Pagórek',hint:'Przeciągnij, aby usypać łagodny pagórek o poziom wyżej – zbocza same się wygładzą. Drogi między poziomami dostają schody'},
   {id:'t-cliff',cat:'teren',kind:'height',val:1,sharp:1,name:'Skarpa',hint:'Przeciągnij, aby podnieść teren ostrą skarpą – płaski taras z kamiennym zboczem'},
   {id:'t-down',cat:'teren',kind:'height',val:-1,name:'Obniż',hint:'Przeciągnij, aby obniżyć teren o poziom'},
@@ -4231,8 +4329,9 @@ function deleteSlot(id){ setSlots(getSlots().filter(x=>x.id!==id)); lsDel('urbs-
 function uniqueName(base){ const names=new Set(getSlots().map(s=>s.name)); if(!names.has(base)) return base; let k=2; while(names.has(base+' '+k)) k++; return base+' '+k; }
 function newGame(kind,opt={}){
   saveCurrent(false); if(todayMode) setToday(false); hideInfo();
-  let name='Nowe miasto';
-  if(kind==='rome'){ romeTrajan(); name='Rzym · 117 n.e.'; }
+  let name='Nowe miasto'; biome='italia'; applyBiome();
+  if(kind==='region'){ const keys=Object.keys(BIOMES), key=opt.region==='any'||!BIOMES[opt.region]?keys[Math.floor(Math.random()*keys.length)]:opt.region; biome=key; resizeWorld(opt.n||64); genRegion(key,Math.floor(Math.random()*1e9)); name=BIOMES[key].n; setTimeout(()=>showInfo('reg_'+key),400); }
+  else if(kind==='rome'){ romeTrajan(); name='Rzym · 117 n.e.'; }
   else if(kind==='rebuild'){ startRebuildGame(); name='Odbudowa Rzymu'; setTimeout(()=>showInfo('rebuildIntro'),500); }
   else if(kind==='pompeii'){ pompeii(); name='Pompeje'; }
   else if(kind==='vindobona'){ vindobona(); name='Vindobona'; }
@@ -4310,7 +4409,10 @@ function renderMenu(){
       <select id="nSize"><option value="32">mała 32×32</option><option value="48" selected>średnia 48×48</option><option value="64">duża 64×64</option><option value="96">bardzo duża 96×96</option><option value="128">ogromna 128×128</option></select></div>
       ${swrow('nLand','🏞️','Rzeka, gaje i pola',true)}
       ${row('nEmpty','✨','Zacznij od pustej mapy','','<span class="chev">›</span>')}
-    </div></div>`;
+    </div>
+    <div class="st">🎲 Losowa kraina imperium</div>
+    <p class="note">Generator tworzy za każdym razem inną mapę: góry, rzeki, morze, lasy, pola i pustynie – w charakterze wybranej prowincji. Rozmiar jak wyżej.</p>
+    <div class="list">${row('nReg_any','🎲','Zaskocz mnie','losowa prowincja i losowa mapa')}${Object.entries(BIOMES).map(([k,B])=>row('nReg_'+k,B.ic,B.n,B.d.split(/[:–.]/)[0])).join('')}</div></div>`;
   } else {
     const slots=getSlots().filter(s=>!curSlot||s.id!==curSlot.id).sort((a,b)=>b.date-a.date);
     const sizes=[20,28,36,44,52].filter(x=>x<=N-6);
@@ -4356,6 +4458,7 @@ function renderMenu(){
   on('nVindo','onclick',()=>{ closeModal(); newGame('vindobona'); });
   on('nLondon','onclick',()=>{ closeModal(); newGame('londinium'); });
   on('nEmpty','onclick',()=>{ const n=+$('nSize').value, land=$('nLand').checked; closeModal(); newGame('empty',{n,land}); });
+  for(const k of ['any',...Object.keys(BIOMES)]) on('nReg_'+k,'onclick',()=>{ const n=Math.max(48,+$('nSize').value); closeModal(); newGame('region',{n,region:k}); });
   // bieżące miasto
   on('mName','onchange',e=>{ const v=e.target.value.trim()||'Miasto'; if(curSlot){ curSlot.name=v; saveCurrent(false); } });
   on('mSave','onclick',()=>{ const v=$('mName').value.trim(); if(curSlot&&v) curSlot.name=v; saveCurrent(true); renderMenu(); });
@@ -4437,6 +4540,7 @@ function swatch(kind,val){
     if(val===2){ fill(WATERC); g.strokeStyle='#bfe8f2'; g.lineWidth=4; for(let y=22;y<90;y+=22){ g.beginPath(); for(let x=0;x<=96;x+=4) g.lineTo(x,y+Math.sin(x/9)*4); g.stroke(); } }
     if(val===3){ fill('#95c16a'); for(const [x,y,col] of [[30,62,CYP],[64,56,'#6a9a4a'],[48,34,'#9bb07a']]){ g.fillStyle=col; g.beginPath(); g.moveTo(x-12,y+10); g.lineTo(x,y-26); g.lineTo(x+12,y+10); g.fill(); } }
     if(val===4){ fill('#e8c867'); g.fillStyle='#d2ab45'; for(let y=10;y<96;y+=18) g.fillRect(6,y,84,7); }
+    if(val===5){ fill('#e8cf98'); g.strokeStyle='#cfae6e'; g.lineWidth=4; for(let y=24;y<96;y+=24){ g.beginPath(); for(let x=0;x<=96;x+=4) g.lineTo(x,y+Math.sin(x/14+y)*6); g.stroke(); } }
   } else if(kind==='height'){
     fill('#bfe3f5');
     if(val===1){ g.fillStyle='#8fbf5c'; g.beginPath(); g.moveTo(0,96); g.lineTo(0,74); g.bezierCurveTo(26,74,30,26,48,26); g.bezierCurveTo(66,26,70,74,96,74); g.lineTo(96,96); g.fill();
@@ -5467,6 +5571,7 @@ INFO.rome={...INFO.rome,name:'Rzym – makieta z siedmioma wzgórzami',era:'Wybi
   facts:['Stuknij rok w prawym górnym rogu – rozwinie się oś czasu od Romulusa do Konstantyna. Makieta przebuduje się, a nowe budowle powstaną na twoich oczach.',...INFO.rome.facts.slice(0,1),'Wzgórza: Kapitol i Palatyn nad Forum, Awentyn nad Tybrem, Celius, Eskwilin, Wiminał i Kwirynał – a za rzeką Janikulum i Watykan.',...INFO.rome.facts.slice(2)]};
 INFO.forumromanum={...INFO.forumRomanum}; INFO.trajanmarkets={...INFO.trajanMarkets}; INFO.hut={...INFO.casaRomuli,name:'Chata z plecionki'};
 INFO.praetoria={...INFO.castraPraetoria,facts:['Gwardię założył August; liczyła od ok. 4,5 do 10 tys. żołnierzy, lepiej opłacanych niż legioniści.','Z obozu wychodzą patrole pretorianów – poznasz ich po złotych hełmach, białych pióropuszach i purpurowych tarczach.','Konstantyn rozwiązał gwardię w 312 n.e., a mur obozu od strony miasta kazał rozebrać.',...(INFO.castraPraetoria.facts||[])]};
+for(const k in BIOMES){ const B=BIOMES[k]; INFO['reg_'+k]={name:B.ic+' '+B.n,era:'prowincja Imperium Rzymskiego',text:B.d+' Mapa została wygenerowana losowo – zbuduj tu swoje miasto: osadę, obóz legionowy albo port.'}; }
 INFO.insblock={name:'Kwartał insul',era:'od III w. p.n.e.',text:'Insule zwykle nie stały osobno – sąsiednie kamienice tworzyły zwarte kwartały z wewnętrznymi podwórzami. Od ulicy na parterze ciągnęły się sklepy (tabernae), od podwórza drewniane galerie prowadziły do mieszkań, a w środku była studnia lub fontanna.',facts:['August ograniczył wysokość insul do ok. 20 m (70 stóp), bo zawalały się i płonęły.','W Ostii zachowały się całe kwartały insul z podwórzami – dziś można po nich spacerować.']};
 INFO.tabrow={name:'Rząd sklepów (tabernae)',era:'cały okres rzymski',text:'Ulice Rzymu obstawione były ciągami małych sklepów i warsztatów pod wspólnym dachem, często za podcieniami chroniącymi od słońca i deszczu. Każda taberna była otwarta szeroko na ulicę, a na noc zamykana drewnianymi okiennicami.',facts:['Przy Targu Trajana zachowała się ulica via Biberatica z całym rzędem sklepów.','Szyldy często malowano lub rzeźbiono – np. koza nad sklepem mleczarza.']};
 INFO.villa={name:'Willa (domus)',era:'od czasów republiki',text:'Zamożny dom rósł skrzydłami wokół atrium i perystylu – ogrodu otoczonego kolumnadą. Na zewnątrz ściany były skromne, prawie bez okien, a całe piękno – malowidła, mozaiki i fontanny – kryło się w środku.',facts:['Dom Fauna w Pompejach miał dwa atria i dwa perystyle i zajmował cały kwartał.']};
