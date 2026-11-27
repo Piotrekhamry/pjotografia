@@ -544,20 +544,65 @@ D.circus=(b,r)=>{
   for(const z of [-2.5,2.9]){ b.box(0.24,0.3,0.24,0,0.27,z,MARBLE); b.sph(0.08,0,0.66,z,BRONZE); }
   for(let k=0;k<7;k++) b.sph(0.035,0,0.32,-1.2-k*0.13,GOLD);
 };
+// łukowy otwór (lokalnie, przodem do +z): ciemna wnęka z półkolistym nadprożem i obramieniem
+function archHole(b,x,y,z,w,h,c=DARK,frame=null){ b.add(G.box,c,x,y+(h-w/2)/2,z,0,0,0,w,h-w/2,0.03); b.add(G.cyl(12),c,x,y+h-w/2,z,Math.PI/2,0,0,w/2,0.03,w/2);
+  if(frame){ b.add(G.box,frame,x-w/2-0.02,y+(h-w/2)/2,z-0.005,0,0,0,0.035,h-w/2,0.035); b.add(G.box,frame,x+w/2+0.02,y+(h-w/2)/2,z-0.005,0,0,0,0.035,h-w/2,0.035); b.add(G.box,frame,x,y+h+0.015,z-0.005,0,0,0,0.06,0.05,0.04); } }
 D.theatre=(b,r)=>{
-  const pts=[[1.1,0],[1.1,0.15],[1.4,0.15],[1.4,0.35],[1.7,0.35],[1.7,0.55],[2.0,0.55],[2.0,0.75],[2.3,0.75],[2.3,0.95],[2.6,0.95],[2.6,1.15],[2.9,1.15],[2.9,1.35],[3.2,1.35],[3.2,1.6],[3.42,1.6],[3.42,0]];
-  b.add(lathe(pts,28,Math.PI/2,Math.PI),STONE,0,0,0.9);
+  const Z0=0.9, RI=1.1, RO=3.42, TOP=1.62, BAND='#efe6d2', ROW='#d6c9ae';
+  b.box(6.96,0.04,5.96,0,0,0,'#ddd0b4');
+  // widownia (cavea): ima cavea, przejście (praecinctio) z balustradą, media cavea, a na szczycie portyk
+  const pts=[[RI,0],[RI,0.12]]; let y=0.12, rr=RI;
+  for(let k=0;k<5;k++){ rr+=0.2; pts.push([rr,y]); y+=0.13; pts.push([rr,y]); }
+  rr+=0.22; pts.push([rr,y]); const Y1=y; y+=0.12; pts.push([rr,y]); // praecinctio + balteus
+  for(let k=0;k<5;k++){ rr+=0.19; pts.push([rr,y]); y+=0.14; pts.push([rr,y]); }
+  pts.push([RO,y]); pts.push([RO,0]); const TOPY=y;
+  b.add(lathe(pts,36,Math.PI/2,Math.PI),STONE,0,0,Z0);
   const sh=new THREE.Shape(); sh.moveTo(pts[0][0],pts[0][1]); for(let k=1;k<pts.length;k++) sh.lineTo(pts[k][0],pts[k][1]);
-  const cap=new THREE.ShapeGeometry(sh);
-  b.add(cap,STONE2,0,0,0.9); b.add(cap,STONE2,0,0,0.9,0,0,0,-1,1,1);
-  b.add(new THREE.CylinderGeometry(1.1,1.1,0.04,20,1,false,Math.PI/2,Math.PI),MARBLE,0,0.02,0.9);
-  b.box(6.2,0.3,0.8,0,0,1.55,WOOD);
-  b.box(6.6,1.7,0.35,0,0,2.15,MARBLE);
-  for(const x of [-1.6,0,1.6]) b.box(0.42,0.62,0.03,x,0.3,1.97,DARK);
-  for(let k=0;k<12;k++){ const x=-2.75+k*0.5; b.column(x,1.92,0.3,0.68,0.045,'#e9dcc0'); b.column(x,1.92,0.98,0.6,0.04,'#e9dcc0'); }
-  b.box(6.6,0.06,0.5,0,1.58,1.92,STONE);
-  b.add(G.box,ROOF,0,1.82,1.7,-0.25,0,0,6.6,0.06,0.9);
-  for(const sx of [-1,1]) b.box(0.5,1.25,1.0,sx*3.1,0,2.0,TRAV);
+  const cap=new THREE.ShapeGeometry(sh); b.add(cap,STONE2,0,0,Z0); b.add(cap,STONE2,0,0,Z0,0,0,0,-1,1,1);
+  // podstopnie ciemniejsze – rzędy siedzeń czytelne z daleka
+  for(let k=2;k<pts.length-3;k+=2){ const [r0,y0]=pts[k], y1=pts[k+1][1]; if(y1>y0) b.add(lathe([[r0+0.002,y0],[r0+0.002,y1]],36,Math.PI/2,Math.PI),ROW,0,0,Z0); }
+  b.add(lathe([[RI+1.21,Y1],[RI+1.21,Y1+0.2],[RI+1.24,Y1+0.2],[RI+1.24,Y1]],36,Math.PI/2,Math.PI),MARBLE,0,0,Z0);
+  // schody promieniste dzielące widownię na kliny (cunei)
+  const stair=(phi,r0,r1,y0,y1)=>{ const L=Math.hypot(r1-r0,y1-y0), a=Math.atan2(y1-y0,r1-r0); b.at(0,0,Z0,phi,()=>b.add(G.box,BAND,0,(y0+y1)/2+0.02,(r0+r1)/2,-a,0,0,0.11,0.03,L)); };
+  for(let k=1;k<6;k++) stair(Math.PI/2+Math.PI*k/6,RI+0.05,RI+1.15,0.14,Y1+0.02);
+  for(let k=0;k<6;k++) stair(Math.PI/2+Math.PI*(k+0.5)/6,RI+1.45,RO-0.4,Y1+0.14,TOPY);
+  // orkiestra z marmuru i dwa szerokie stopnie dla senatorów
+  b.add(new THREE.CylinderGeometry(RI,RI,0.04,28,1,false,Math.PI/2,Math.PI),'#efe2cf',0,0.02,Z0);
+  for(let k=0;k<2;k++) b.add(new THREE.CylinderGeometry(RI-0.02-k*0.12,RI-0.02-k*0.12,0.05+k*0.04,28,1,false,Math.PI/2,Math.PI),k?MARBLE:'#e7dcc8',0,0.04,Z0);
+  b.add(new THREE.CylinderGeometry(0.78,0.78,0.045,24,1,false,Math.PI/2,Math.PI),'#d9cbb0',0,0.03,Z0);
+  // fasada zewnętrzna: trzy kondygnacje – dwie arkad z półkolumnami i attyka z okienkami
+  const NA=15;
+  for(let k=0;k<NA;k++){ const phi=Math.PI/2+Math.PI*(k+0.5)/NA, seg=Math.PI*RO/NA;
+    b.at(RO*Math.sin(phi),0,Z0+RO*Math.cos(phi),phi,()=>{
+      archHole(b,0,0.06,0.01,0.26,0.5,DARK); archHole(b,0,0.68,0.01,0.24,0.44,DARK);
+      b.add(G.box,WIN,0,1.36,0.01,0,0,0,0.12,0.12,0.02);
+      for(const yy of [0.04,0.66]) b.cyl(0.035,0.55,seg/2,yy,0.03,TRAV,8);
+      b.add(G.box,TRAV,seg/2,1.4,0.015,0,0,0,0.06,0.42,0.03); }); }
+  for(const [yy,h] of [[0.6,0.06],[1.19,0.06],[TOPY-0.03,0.06]]) b.add(lathe([[RO-0.01,yy],[RO+0.07,yy],[RO+0.07,yy+h],[RO-0.01,yy+h]],36,Math.PI/2,Math.PI),BAND,0,0,Z0);
+  // portyk na szczycie widowni i maszty do rozpinania velarium (płóciennego dachu)
+  for(let k=0;k<=16;k++){ const phi=Math.PI/2+Math.PI*k/16, R2=RO-0.16; b.column(R2*Math.sin(phi),Z0+R2*Math.cos(phi),TOPY,0.36,0.03,MARBLE); }
+  b.add(lathe([[RO-0.24,TOPY+0.36],[RO+0.04,TOPY+0.36],[RO+0.04,TOPY+0.4],[RO-0.24,TOPY+0.4]],36,Math.PI/2,Math.PI),BAND,0,0,Z0);
+  b.add(lathe([[RO+0.04,TOPY+0.4],[RO-0.1,TOPY+0.48],[RO-0.24,TOPY+0.4]],36,Math.PI/2,Math.PI),ROOF,0,0,Z0);
+  for(let k=0;k<=8;k++){ const phi=Math.PI/2+Math.PI*k/8, R3=RO+0.06; b.cyl(0.018,0.95,R3*Math.sin(phi),TOPY-0.15,Z0+R3*Math.cos(phi),WOOD,6); }
+  // wejścia boczne (aditus) pod końcami widowni
+  for(const sx of [-1,1]) b.at(sx*(RI+0.55),0,Z0+0.012,0,()=>archHole(b,0,0.04,0,0.32,0.42,DARK,TRAV));
+  // scena (pulpitum) z frontem z nisz na przemian prostokątnych i półkolistych
+  b.box(6.2,0.32,0.8,0,0,1.55,STONE2); b.box(6.24,0.04,0.84,0,0.3,1.55,WOOD);
+  for(let k=0;k<9;k++){ const x=-2.6+k*0.65; b.at(x,0,1.15,Math.PI,()=>{ if(k%2) archHole(b,0,0.06,0.005,0.2,0.2,'#bcae94'); else b.add(G.box,'#bcae94',0,0.15,0.005,0,0,0,0.26,0.16,0.02); }); }
+  // scaenae frons: trzy kondygnacje kolumn, środkowa półkolista nisza z porta regia i dwie bramy boczne, posągi w drugim piętrze
+  b.box(6.6,2.15,0.35,0,0,2.15,MARBLE);
+  b.at(0,0,1.97,Math.PI,()=>{
+    archHole(b,0,0.32,0.005,0.42,0.72,DARK,'#d9b9a0'); for(const sx of [-1,1]) archHole(b,sx*1.65,0.32,0.005,0.3,0.56,DARK,'#d9b9a0');
+    for(const sx of [-1,1]) for(const xx of [0.95,2.35]) archHole(b,sx*xx,1.2,0.005,0.16,0.3,'#cdbfa5'); });
+  const SH=['#d9b9a0','#c9c3b8','#e9dcc0'];
+  for(let k=0;k<12;k++){ const x=-2.75+k*0.5, cz=Math.abs(x)<0.6||Math.abs(Math.abs(x)-1.65)<0.4?1.72:1.86; b.column(x,cz,0.32,0.82,0.045,SH[k%3]); b.column(x,cz+0.04,1.14,0.62,0.04,SH[(k+1)%3]); b.column(x,1.92,1.76,0.36,0.03,MARBLE); }
+  for(const [yy,zz,dd] of [[1.12,1.85,0.36],[1.74,1.88,0.3],[2.1,1.93,0.2]]) b.box(6.6,0.05,dd,0,yy,zz,BAND);
+  for(const xx of [-1.65,0,1.65]){ b.at(xx,1.15,1.68,0,()=>b.add(G.prism,BAND,0,0,0,0,Math.PI/2,0,0.32,0.18,xx?0.62:0.9)); }
+  for(const sx of [-1,1]) for(const xx of [0.95,2.35]){ const x=sx*xx; b.cyl(0.028,0.03,x,1.22,1.94,MARBLE,8); b.cyl(0.018,0.16,x,1.25,1.94,MARBLE,7,0.015); b.sph(0.022,x,1.44,1.94,MARBLE); }
+  b.add(G.box,ROOF,0,2.32,1.75,-0.28,0,0,6.7,0.06,1.05);
+  // tył budynku scenicznego: pilastry i okna łukowe; boczne skrzydła (versurae) z dachem i bramą
+  b.at(0,0,2.33,0,()=>{ for(let k=0;k<11;k++){ const x=-2.85+k*0.57; b.add(G.box,TRAV,x,1.05,0,0,0,0,0.07,2.0,0.03); if(k<10) archHole(b,x+0.285,k%3===1?0.06:1.2,0.005,0.2,k%3===1?0.6:0.36,k%3===1?DARK:WIN); } b.add(G.box,BAND,0,2.12,0.02,0,0,0,6.62,0.06,0.06); });
+  for(const sx of [-1,1]){ b.box(0.62,1.45,1.05,sx*3.1,0,1.95,TRAV); b.roofZ(0.7,0.22,1.12,sx*3.1,1.45,1.95,ROOF); b.at(sx*3.1,0,1.42,Math.PI,()=>archHole(b,0,0.04,0.002,0.28,0.56,DARK,BAND)); }
 };
 // barak centurii (contubernia): długi budynek z podcieniem od ulicy, drzwi do każdej izby
 // i większą kwaterą centuriona na końcu; face = strona podcienia (+1/-1 po osi X), end = koniec z kwaterą (+1/-1 po Z)
@@ -1106,30 +1151,47 @@ D.forumromanum=(b,r)=>{
 };
 // Targi Trajana: półkole sklepów wcięte w zbocze Kwirynału, piętra cofnięte tarasowo, z tyłu Wielka Hala
 D.trajanmarkets=(b,r)=>{
-  const BR='#c98a63', BR2='#b97a55', CZ=1.75;
+  const BR='#c98a63', BR2='#b7774f', BR3='#d39a72', CZ=1.7, PH=Math.PI/2, PL=Math.PI; // półkole otwarte na +z (ku Forum Trajana)
   b.box(4.96,0.05,3.96,0,0,0,'#d8cbb2');
-  const arc=(R,y0,h,dep,n,c=BR)=>{ for(let k=0;k<n;k++){ const a=Math.PI*(k+0.5)/n, x=Math.cos(a)*R, z=CZ-Math.sin(a)*R, seg=Math.PI*R/n+0.03;
-    b.add(G.box,c,x,y0+h/2,z,0,a-Math.PI/2,0,seg,h,dep); } };
-  // parter: tabernae z łukowymi wejściami w obramieniach z trawertynu
-  arc(1.7,0.05,0.62,0.5,11);
-  for(let k=0;k<11;k++){ const a=Math.PI*(k+0.5)/11, R=1.45, x=Math.cos(a)*R, z=CZ-Math.sin(a)*R, ry=a-Math.PI/2;
-    b.add(G.box,TRAV,x,0.36,z,0,ry,0,0.3,0.42,0.02); b.add(G.box,DARK,x,0.33,z+0.004,0,ry,0,0.2,0.36,0.025); b.add(G.cyl(8),DARK,x,0.51,z+0.004,Math.PI/2,ry,0,0.1,0.025,0.1); }
-  arc(1.72,0.67,0.04,0.56,11,'#e3d6bd');
-  // piętro: okna w pilastrach z naprzemiennymi naczółkami
-  arc(2.02,0.67,0.6,0.45,13);
-  for(let k=0;k<13;k++){ const a=Math.PI*(k+0.5)/13, R=1.79, x=Math.cos(a)*R, z=CZ-Math.sin(a)*R, ry=a-Math.PI/2;
-    b.add(G.box,WIN,x,1.0,z,0,ry,0,0.17,0.28,0.02); b.add(G.box,TRAV,x,1.17,z,0,ry,0,0.25,0.04,0.03);
-    if(k%2) b.add(G.prism,TRAV,x,1.21,z,0,ry,0,0.26,0.07,0.03); else b.add(G.cyl(8),TRAV,x,1.2,z,Math.PI/2,ry,0,0.12,0.03,0.06); }
-  // trzecie piętro i taras
-  arc(2.04,1.27,0.04,0.5,13,'#e3d6bd'); arc(2.3,1.27,0.45,0.35,15); arc(2.31,1.72,0.04,0.4,15,'#e3d6bd');
-  for(let k=0;k<15;k++){ const a=Math.PI*(k+0.5)/15, R=2.12, x=Math.cos(a)*R, z=CZ-Math.sin(a)*R, ry=a-Math.PI/2; b.add(G.box,WIN,x,1.48,z,0,ry,0,0.11,0.13,0.02); }
-  // zakończenia półkola: sale z półkopułami
-  for(const s of [-1,1]){ b.box(0.55,1.05,0.55,s*2.0,0.05,CZ-0.1,BR); b.hemi(0.27,s*2.0,1.1,CZ-0.1,ROOF,0.8); }
-  // ulica Via Biberatica i Wielka Hala z tyłu
-  b.box(4.6,0.06,0.42,0,1.27,-0.85,'#a39b8e');
-  b.box(3.4,1.9,1.05,0,0.05,-1.45,BR); for(let k=0;k<5;k++){ const x=-1.3+k*0.65; b.box(0.18,0.32,0.02,x,1.35,-0.92,WIN); b.add(G.cyl(8),WIN,x,1.67,-0.92,Math.PI/2,0,0,0.09,0.02,0.09); }
-  for(let k=0;k<3;k++) b.roofZ(1.1,0.28,1.1,-1.1+k*1.1,1.95,-1.45,ROOF);
-  for(const x of [-1.9,1.9]) b.cypress(x,-1.95+0.4,0.55,1.27);
+  b.add(new THREE.CylinderGeometry(1.25,1.25,0.02,28,1,false,PH,PL),'#e6dcc8',0,0.06,CZ); // dziedziniec przed hemicyklem
+  const band=(r0,r1,y0,y1,c)=>{ b.add(lathe([[r0,y0],[r1,y0],[r1,y1],[r0,y1]],40,PH,PL),c,0,0,CZ); b.add(new THREE.RingGeometry(r0,r1,40,1,0,PL).rotateX(-PH),'#e3d3b8',0,y1+0.003,CZ); for(const sx of [-1,1]) b.box(r1-r0,y1-y0,0.03,sx*(r0+r1)/2,y0,CZ-0.015,c); };
+  const outside=(R,n,fn)=>{ for(let k=0;k<n;k++){ const phi=PH+PL*(k+0.5)/n; b.at(R*Math.sin(phi),0,CZ+R*Math.cos(phi),phi,()=>fn(k)); } };
+  const around=(R,n,fn)=>{ for(let k=0;k<n;k++){ const phi=PH+PL*(k+0.5)/n; b.at(R*Math.sin(phi),0,CZ+R*Math.cos(phi),phi+Math.PI,()=>fn(k,PL*R/n)); } };
+  // parter: 11 sklepów (tabernae) w obramieniach z trawertynu, nad drzwiami okienka antresoli
+  band(1.3,1.75,0.05,0.72,BR);
+  around(1.3,11,(k,seg)=>{ b.add(G.box,TRAV,0,0.33,0.01,0,0,0,0.34,0.5,0.03); b.add(G.box,DARK,0,0.3,0.02,0,0,0,0.24,0.42,0.03); b.add(G.box,WOOD,0,0.12,0.03,0,0,0,0.24,0.06,0.03); b.add(G.box,WIN,0,0.6,0.02,0,0,0,0.14,0.08,0.02); b.add(G.box,BR2,seg/2,0.39,0.02,0,0,0,0.04,0.68,0.03); });
+  band(1.28,1.78,0.72,0.77,'#ead8bd');
+  // I piętro: korytarz z oknami w pilastrach, naczółki na przemian trójkątne i łukowe
+  band(1.55,1.95,0.77,1.32,BR3);
+  around(1.55,13,(k,seg)=>{ archHole(b,0,0.86,0.01,0.16,0.32,WIN); b.add(G.box,TRAV,seg/2,1.04,0.01,0,0,0,0.05,0.54,0.03); b.add(G.box,TRAV,0,1.2,0.015,0,0,0,0.24,0.03,0.03);
+    if(k%2) b.add(G.prism,TRAV,0,1.215,0.015,0,Math.PI/2,0,0.04,0.07,0.26); else b.add(new THREE.CylinderGeometry(0.13,0.13,0.04,10,1,false,-PH,PL),TRAV,0,1.215,0.015,PH,0,0); });
+  band(1.53,1.98,1.32,1.37,'#ead8bd');
+  // II piętro cofnięte – taras z balustradą i małe okienka
+  band(1.8,2.15,1.37,1.75,BR);
+  around(1.8,15,(k,seg)=>{ b.add(G.box,WIN,0,1.55,0.01,0,0,0,0.1,0.13,0.02); });
+  for(let k=0;k<=15;k++){ const phi=PH+PL*k/15, R=1.6; b.box(0.035,0.12,0.035,R*Math.sin(phi),1.37,CZ+R*Math.cos(phi),TRAV); }
+  band(1.58,1.62,1.49,1.52,TRAV); band(1.78,2.18,1.75,1.8,'#ead8bd');
+  b.add(lathe([[2.18,1.8],[2.0,1.95],[1.8,1.8]],40,PH,PL),ROOF,0,0,CZ);
+  outside(1.95,13,k=>archHole(b,0,0.9,0.01,0.14,0.3,WIN)); outside(2.15,15,k=>b.add(G.box,WIN,0,1.55,0.01,0,0,0,0.1,0.12,0.02)); outside(1.75,11,k=>b.add(G.box,WIN,0,0.45,0.01,0,0,0,0.12,0.16,0.02));
+  // sale na końcach półkola nakryte półkopułami
+  for(const s of [-1,1]){ b.box(0.6,1.25,0.6,s*2.05,0.05,CZ-0.15,BR2); b.at(s*2.05,0,CZ+0.16,0,()=>archHole(b,0,0.06,0,0.3,0.6,DARK,TRAV));
+    b.add(new THREE.SphereGeometry(0.3,14,7,0,Math.PI*2,0,Math.PI/2),'#d8a07a',s*2.05,1.3,CZ-0.15); b.box(0.64,0.06,0.64,s*2.05,1.27,CZ-0.15,'#ead8bd'); }
+  // Via Biberatica: uliczka ze sklepami na zboczu za hemicyklem
+  b.box(4.7,0.04,0.42,0,0.95,-0.62,'#a39b8e'); b.box(4.7,0.95,0.42,0,0,-0.62,BR2);
+  for(let k=0;k<7;k++){ const x=-2.0+k*0.66; b.at(x,0.99,-0.83,0,()=>{ b.add(G.box,TRAV,0,0.2,0,0,0,0,0.26,0.36,0.03); b.add(G.box,DARK,0,0.18,0.01,0,0,0,0.18,0.3,0.03); }); }
+  b.box(4.7,0.55,0.3,0,0.95,-0.98,BR3); b.roofX(4.7,0.15,0.36,0,1.5,-0.98,ROOF);
+  // Wielka Hala (Aula): wysoka sala z rzędem sklepień krzyżowych i oknami nad dachami bocznych sklepów
+  b.box(3.2,1.25,0.95,0,0.95,-1.55,BR); b.box(3.6,0.7,1.25,0,0.95,-1.55,BR2);
+  for(let k=0;k<6;k++){ const x=-1.25+k*0.5; b.at(x,1.65,-0.92,0,()=>{ archHole(b,0,0.02,0,0.2,0.4,WIN); }); b.at(x,0.95,-0.92,0,()=>archHole(b,0,0.06,0,0.16,0.38,DARK,TRAV));
+    b.pyr(0.5,0.16,x,2.2,-1.55,ROOF); }
+  b.roofX(3.6,0.14,0.18,0,1.65,-0.93,ROOF); b.roofX(3.6,0.14,0.18,0,1.65,-2.17,ROOF);
+  for(let k=0;k<6;k++){ const x=-1.25+k*0.5; b.at(x,1.65,-2.18,Math.PI,()=>archHole(b,0,0.02,0,0.2,0.4,WIN)); b.at(x,0.95,-2.18,Math.PI,()=>archHole(b,0,0.15,0,0.16,0.34,WIN,TRAV)); }
+  for(const sx of [-1,1]) for(const zz of [-1.25,-1.85]) b.at(sx*1.8,0.95,zz,sx*PH,()=>archHole(b,0,0.15,0.005,0.16,0.34,WIN,TRAV));
+  for(let k=0;k<7;k++) b.at(-2.0+k*0.66,0.3,-0.41,0,()=>b.add(G.box,WIN,0,0.2,0,0,0,0,0.12,0.16,0.02));
+  // schody na zbocze i zieleń na tarasach
+  for(let k=0;k<5;k++) b.box(0.4,0.19*(k+1),0.12,2.25,0.05,-0.15-k*0.12,'#d8cbb2');
+  for(const x of [-2.25,2.3]) b.cypress(x,-1.9,0.6,0.95);
+  b.sph(0.12,-2.15,1.0,-1.1,GREEN); b.sph(0.1,2.0,1.05,-1.25,GREEN);
 };
 // Macellum: dziedziniec z tolosem pośrodku, wokół sklepy pod dachówką, wejście z inskrypcją
 D.market=(b,r)=>{
@@ -2158,11 +2220,12 @@ function softLocal(i,j,fx,fz){ const h=hgt[I(i,j)], sx=fx>=0?1:-1, sz=fz>=0?1:-1
   const hx=(h+lvAt(i+sx,j))/2, hz=(h+lvAt(i,j+sz))/2, hk=(h+lvAt(i+sx,j)+lvAt(i,j+sz)+lvAt(i+sx,j+sz))/4;
   return LH*(u>=v? h+u*(hx-h)+v*(hk-hx) : h+v*(hz-h)+u*(hk-hz)); }
 function groundAt(i,j,fx,fz){ const id=I(i,j); return isSmooth(id)?softLocal(i,j,fx,fz):hgt[id]*LH; }
+function stairAt(i,j){ if(!hillMax||!inb(i,j)) return false; const h=hgt[I(i,j)]; for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(inb(ni,nj)&&road[I(ni,nj)]&&road[I(i,j)]&&Math.abs(hgt[I(ni,nj)]-h)===1) return true; } return false; }
 function hY(x,z){ if(!hillMax&&!bridgeCnt) return 0; const i=Math.floor(x+N/2), j=Math.floor(z+N/2); if(!inb(i,j)) return 0; const id=j*N+i, h=hgt[id]; let y=h*LH;
   if(bridgeCnt&&line[id]===4&&brA.length===N*N) return y+bridgeY(id,x-wx(i),z-wx(j));
   if(hillMax&&isSmooth(id)) return softLocal(i,j,x-wx(i),z-wx(j));
   if(road[id]){ const fx=x-wx(i), fz=z-wx(j); for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(!inb(ni,nj)) continue; const nid=nj*N+ni;
-    if(road[nid]&&hgt[nid]===h+1){ const d=di?fx*di:fz*dj; if(d>0) y=Math.max(y,h*LH+LH*Math.min(1,d/0.5)); } } }
+    if(road[nid]&&hgt[nid]===h+1){ const d=di?fx*di:fz*dj; if(d>0){ const st=Math.min(4,d/0.125), f=st-Math.floor(st); y=Math.max(y,h*LH+LH*Math.min(1,(Math.floor(st)+(f>0.55?(f-0.55)/0.45:0))/4)); } } } }
   return y; }
 const buildings=new Map(); let nextId=1;
 const lineMeshes=new Map();
@@ -2171,7 +2234,10 @@ const lineGroup=new THREE.Group(); scene.add(lineGroup);
 const growing=[];
 let dirtyTerrain=true, dirtyRoads=true, dirtyLines=new Set(), dirtySave=false;
 let onlyPlots=false, peopleOn=true, gridOn=(()=>{ try{ return localStorage.getItem('urbs-grid')!=='0'; }catch(_){ return true; } })(), muted=false, brushSize=(()=>{ try{ return clamp(+localStorage.getItem('urbs-brush')||1,1,9)|1; }catch(_){ return 1; } })(), buildRot=0;
-const DIRS=[[1,0],[-1,0],[0,1],[0,-1]];
+const DIRS=[[1,0],[-1,0],[0,1],[0,-1]], DIAG=[[1,1],[1,-1],[-1,1],[-1,-1]], DIRS8=DIRS.concat(DIAG);
+// skośne połączenie drogi: sąsiad po przekątnej, a obie kratki „pomiędzy” nie są drogą (inaczej to zwykły zakręt) i ten sam poziom terenu
+function diagLink(i,j,di,dj){ const ni=i+di, nj=j+dj; if(!inb(ni,nj)||!inb(i,j)||!road[I(i,j)]||!road[I(ni,nj)]) return false; if(road[I(i+di,j)]||road[I(i,j+dj)]) return false; if(terrain[I(i,j)]===2||terrain[I(ni,nj)]===2) return false; return hgt[I(i,j)]===hgt[I(ni,nj)]; }
+const roadLink=(i,j,di,dj)=>di&&dj?diagLink(i,j,di,dj):true;
 
 // --- plansza (dioramka)
 let slab=null, plinth=null, gridLines=null;
@@ -2222,7 +2288,7 @@ function flowify(m){ m.onBeforeCompile=sh=>{ sh.uniforms.uT=waterU;
   m.customProgramCacheKey=()=>'urbs-flow'+WARP.key; }
 // bruk: wąskie ulice – kostka w rzędach w poprzek ulicy; via – nieregularne płyty bazaltu (polygonal paving jak na Via Appia)
 function paveify(m,kind){ m.onBeforeCompile=sh=>{
-    sh.vertexShader='varying vec3 vPw; varying vec2 vPx; varying float vPy;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n { vec4 pw=vec4(position,1.0); vec2 ax=vec2(1.0,0.0);\n#ifdef USE_INSTANCING\n pw=instanceMatrix*pw; ax=normalize((instanceMatrix*vec4(1.0,0.0,0.0,0.0)).xz);\n#endif\n vPw=(modelMatrix*pw).xyz; vPx=ax; vPy=position.y; }');
+    sh.vertexShader='varying vec3 vPw; varying vec2 vPx; varying float vPy;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n { vec4 pw=vec4(position,1.0); vec2 ax=vec2(1.0,0.0);\n#ifdef USE_INSTANCING\n pw=instanceMatrix*pw; ax=normalize((instanceMatrix*vec4(1.0,0.0,0.0,0.0)).xz); if(ax.x<-0.01||(abs(ax.x)<=0.01&&ax.y<0.0)) ax=-ax;\n#endif\n vPw=(modelMatrix*pw).xyz; vPx=ax; vPy=position.y; }');
     sh.fragmentShader='varying vec3 vPw; varying vec2 vPx; varying float vPy;\nfloat pvH(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }\nvec2 pvH2(vec2 p){ return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*43758.5453); }\n'+sh.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n if(vPy>0.49){ '+(kind===0?
       // kostka: rzędy (kursy) w poprzek osi ulicy, co drugi przesunięty o pół kostki
       `vec2 p=vec2(dot(vPw.xz,vPx),dot(vPw.xz,vec2(-vPx.y,vPx.x))); float s=1.0/6.0; float row=floor(p.x/s); vec2 q=vec2(p.x/s, p.y/(s*0.95)+pvH(vec2(row,3.1))); vec2 c=floor(q), f=fract(q);
@@ -2587,7 +2653,9 @@ function rebuildGrass(){ grassT=12; if(!grassOn){ grassM.count=0; flowerM.count=
   const per=IS_MOBILE?4:12, nearW=(i,j)=>{ for(let dj=-1;dj<=1;dj++) for(let di=-1;di<=1;di++){ const ni=i+di, nj=j+dj; if(inb(ni,nj)&&terrain[I(ni,nj)]===2) return true; } return false; };
   outer: for(let j=0;j<N;j++) for(let i=0;i<N;i++){ const id=I(i,j), t=terrain[id]; if(t===1||t===2||t===4||t===5||bld[id]||road[id]||line[id]) continue; if(nearW(i,j)) continue; if(tw&&tw[id]>0.25) continue;
     const B=BIO(), dry=Math.min(1,vnoise(i/7,j/7,511)+B.dry*0.6); const n=Math.round(per*B.gd*(t===3?0.6:1)*(0.6+0.8*vnoise(i/3.5,j/3.5,512)));
+    const dg=[]; for(const [sx,sz] of DIAG) if(inb(i+sx,j)&&inb(i,j+sz)&&diagLink(i+sx,j,-sx,sz)) dg.push([sx,sz,road[I(i+sx,j)]===1?0.37:0.5]);
     for(let q=0;q<n;q++){ if(k>=GRASS_MAX) break outer; const x=wx(i)+(hash2(i*8+q,j,521)-0.5)*0.96, z=wx(j)+(hash2(i,j*8+q,522)-0.5)*0.96, sc=0.7+hash2(i+q,j,523)*0.75;
+      if(dg.length&&dg.some(([sx,sz,w])=>Math.abs((x-wx(i)-sx*0.5)*sz-(z-wx(j)-sz*0.5)*(-sx))*0.7071<w)) continue;
       setInst(grassM,k,x,hY(x,z)-0.004,z,sc,sc*(0.8+hash2(i,j+q,524)*0.6),sc,hash2(q,i+j,525)*6.28); C.set(G[(i+j+q)%4]); if(dry>0.62) C.lerp(new THREE.Color('#e8d08a'),Math.min(1,(dry-0.62)*2.2)); if(B.grass!=='#9ccb68') C.multiply(new THREE.Color(B.grass).multiplyScalar(1/0.8)); grassM.setColorAt(k,C); k++;
       if(hash2(i*3+q,j*5,526)<0.07&&f<flowerM.instanceMatrix.count){ setInst(flowerM,f,x+0.01,hY(x,z)+0.085*sc,z,1,1,1); C.set(FL[(i*7+j*3+q)%FL.length]); flowerM.setColorAt(f,C); f++; } } }
   grassM.count=k; grassM.instanceMatrix.needsUpdate=true; grassM.instanceColor.needsUpdate=true; flowerM.count=f; flowerM.instanceMatrix.needsUpdate=true; if(flowerM.instanceColor) flowerM.instanceColor.needsUpdate=true; }
@@ -2656,7 +2724,21 @@ function rebuildTerrain(){
     else if(r&&line[id]!==4){
       const br=t===2; const y0=br?-0.06:0, h=br?0.2:(r===2?0.04:0.035);
       const ch=br?0.31:0.075, cy=br?-0.06:0;
-      if(r===1&&!br){ // wąska uliczka: węższy pas kostki z ramionami do sąsiednich dróg i krawężnikami
+      const pd=br?[]:DIAG.filter(([di,dj])=>diagLink(i,j,di,dj));
+      if(pd.length){ // droga skośna: pasy pod 45° do narożników, krawężniki wzdłuż
+        const W=r===1?0.64:0.9, key=r===1?'road1':'road2', nb=(di,dj)=>inb(i+di,j+dj)&&road[I(i+di,j+dj)]>0, ortho=DIRS.filter(([di,dj])=>nb(di,dj));
+        const cw=0.05; let cornerBlocked=(di,dj)=>pd.some(([a,b2])=>(di&&a===di)||(dj&&b2===dj));
+        const straight=!ortho.length&&(pd.length===1||(pd.length===2&&pd[0][0]===-pd[1][0]&&pd[0][1]===-pd[1][1])), s0=straight?0:W*0.55;
+        for(const [di,dj] of pd){ const th=Math.atan2(-dj,di), L=0.7071+(r===1?0.02:0.03); si(T[key],n[key]++,x+di*0.25,h/2,z+dj*0.25,L,h,W,th);
+          const cL=0.7071-s0, cm=(s0+cL/2)*0.7071;
+          for(const sd of [-1,1]){ const ox=-dj*0.7071*sd*(W/2+cw/2), oz=di*0.7071*sd*(W/2+cw/2); si(T.curb,n.curb++,x+di*cm+ox,cy+ch/2,z+dj*cm+oz,cL,ch,cw,th); } }
+        if(!ortho.length){ const [d0,e0]=pd[0]; si(T[key],n[key]++,x,h/2,z,W,h,W,Math.atan2(-e0,d0)); }
+        else { const A=0.5-W/2;
+          si(T[key],n[key]++,x,h/2,z,r===1?W:1,h,r===1?W:1,0);
+          if(r===1) for(const [di,dj] of ortho) si(T.road1,n.road1++,x+di*(W/2+A/2),h/2,z+dj*(W/2+A/2),A,h,W,di?0:Math.PI/2);
+          for(const [di,dj] of DIRS){ if(nb(di,dj)) continue; const pos=r===1?W/2+cw/2:0.47; if(pd.some(([a,b2])=>a===di||b2===dj)) continue;
+            if(di) si(T.curb,n.curb++,x+di*pos,cy+ch/2,z,cw,ch,r===1?W:1); else si(T.curb,n.curb++,x,cy+ch/2,z+dj*pos,r===1?W:1,ch,cw); } }
+      } else if(r===1&&!br){ // wąska uliczka: węższy pas kostki z ramionami do sąsiednich dróg i krawężnikami
         const W=0.64, A=(0.5-W/2), nb=(di,dj)=>inb(i+di,j+dj)&&road[I(i+di,j+dj)]>0;
         const ex=nb(1,0)||nb(-1,0), ez=nb(0,1)||nb(0,-1), rot=(ez&&!ex)?Math.PI/2:0;
         si(T.road1,n.road1++,x,h/2,z,W,h,W,rot);
@@ -2863,16 +2945,25 @@ function houseCtx(b){
   let ln=0;
   if(b.nice&&fl>=2&&!(br&1)){ const e=houseAt(b.x+2,b.z); if(freeRoad(b.x+1,b.z)&&e&&floorsOf(e)>=2) ln|=1; }
   if(b.nice&&fl>=2&&!(br&2)){ const s2=houseAt(b.x,b.z+2); if(freeRoad(b.x,b.z+1)&&s2&&floorsOf(s2)>=2) ln|=2; }
-  return {fl,nf,br,front:FRONT_FACE[b.rot]??0,rd,nice:b.nice?1:0,ln};
+  return {fl,nf,br,front:FRONT_FACE[b.rot]??0,rd,nice:b.nice?1:0,ln,tier:b.tier|0};
 }
 function houseGeomFor(b){
   const c=houseCtx(b), v=(b.seed>>>0)%DEFS.house.v;
-  const key=`H${v}|${c.fl}|${c.nf.join(',')}|${c.br}|${c.front}|${c.rd}|${c.nice}|${c.ln}`;
+  const key=`H${v}|${c.fl}|${c.nf.join(',')}|${c.br}|${c.front}|${c.rd}|${c.nice}|${c.ln}|${c.tier}`;
   if(geomCache.has(key)) return geomCache.get(key);
-  let g; try{ const bb=new B(); buildHouse(bb,mulberry(v*7919+31),c); g=bb.geom(); }
+  let g; try{ const bb=new B(); buildHouse(bb,mulberry(v*7919+31),c); tierDeco(bb,c,v); g=bb.geom(); }
   catch(err){ console.error('kamienica',err); g=getGeom('house',b.seed,c.fl); }
   geomCache.set(key,g); return g;
 }
+// wygląd zależny od klasy mieszkańców: 2 – ekwici (malowany cokół, obramienie drzwi), 3 – patrycjusze (marmur, cyprysy w donicach, posążek)
+function tierDeco(b,c,v){ const t=c.tier|0; if(t<2) return; const s=0.43, [E,W,Nn,S]=c.nf.map(n=>n>0), x0=W?-0.5:-s, x1=E?0.5:s, z0=Nn?-0.5:-s, z1=S?0.5:s, cx=(x0+x1)/2, cz=(z0+z1)/2;
+  const ochre=['#a8432f','#b8613a','#8e3b2e'][v%3]; b.box(x1-x0+0.012,0.13,z1-z0+0.012,cx,0.065,cz,ochre);
+  const k=c.front, door=(along,out,y,wd,ht,dp,col)=>{ if(k===0) b.box(dp,ht,wd,x1+out,y,along,col); else if(k===1) b.box(dp,ht,wd,x0-out,y,along,col); else if(k===2) b.box(wd,ht,dp,along,y,z0-out,col); else b.box(wd,ht,dp,along,y,z1+out,col); };
+  const ac=k<2?cz:cx; if(c.nf[k]) return;
+  door(ac-0.11,0.01,0,0.04,0.32,0.03,t>=3?MARBLE:TRAV); door(ac+0.11,0.01,0,0.04,0.32,0.03,t>=3?MARBLE:TRAV); door(ac,0.01,0.3,0.26,0.05,0.04,t>=3?MARBLE:TRAV);
+  if(t>=3){ door(ac,0.03,0.35,0.18,0.06,0.05,GOLD);
+    const pos=(along,out)=>k===0?[x1+out,along]:k===1?[x0-out,along]:k===2?[along,z0-out]:[along,z1+out];
+    for(const sg of [-1,1]){ const [px,pz]=pos(ac+sg*0.26,0.07); b.cyl(0.04,0.06,px,0,pz,'#b86a3c',6); b.cypress(px,pz,0.3,0.06); } } }
 function buildHouse(b,r,c){
   const wc=pick(WALLS,r), rc=pick(ROOFS,r), R=[]; for(let k=0;k<64;k++) R.push(r());
   const fh=0.4, fl=c.fl, H=fl*fh+0.05, s=0.43;
@@ -2975,7 +3066,7 @@ function setFloors(b,n){
 function bulldoze(i,j){
   const id=I(i,j);
   if(bld[id]){ const b=buildings.get(bld[id]); const st=b&&STACK[b.type];
-    if(st&&floorsOf(b)>st.min){ setFloors(b,floorsOf(b)-1); return true; }
+    if(st&&floorsOf(b)>st.min){ setFloors(b,floorsOf(b)-1); b.cap=floorsOf(b); return true; }
     removeBuilding(bld[id]); return true; }
   if(line[id]){ setLine(i,j,0); return true; }
   if(road[id]){ setRoad(i,j,0); return true; }
@@ -2989,13 +3080,13 @@ function clearCell(i,j){ const id=I(i,j); if(bld[id]) removeBuilding(bld[id]); s
    ========================================================= */
 function rle(a){ const out=[]; let prev=a[0],c=0; for(let k=0;k<a.length;k++){ if(a[k]===prev) c++; else { out.push(prev+'*'+c); prev=a[k]; c=1; } } out.push(prev+'*'+c); return out.join(','); }
 function unrle(s,n){ const a=new Uint8Array(n); let p=0; for(const part of s.split(',')){ const [v,c]=part.split('*').map(Number); a.fill(v,p,p+c); p+=c; } return a; }
-function serialize(){ const bl=[]; for(const b of buildings.values()) bl.push(b.u||b.fl?[b.type,b.x,b.z,b.rot,b.seed,b.lm||0,b.fl||0,b.u?1:0]:b.lm?[b.type,b.x,b.z,b.rot,b.seed,b.lm]:[b.type,b.x,b.z,b.rot,b.seed]); const o={v:2,N,t:rle(terrain),r:rle(road),l:rle(line),b:bl}; if(biome!=='italia') o.bm=biome; if(hillMax) o.h=rle(hgt); if(sharp.some(v=>v)) o.sh=rle(sharp); if(romeYear!==null) o.ry=romeYear; if(rebuild) o.rb=rebuild.targets.map(t=>[t.type,t.x,t.z,t.rot,t.lm,t.done?1:0]); if(scenery) o.sc=scenery; return JSON.stringify(o); }
+function serialize(){ const bl=[]; for(const b of buildings.values()) bl.push(b.u||b.fl?[b.type,b.x,b.z,b.rot,b.seed,b.lm||0,b.fl||0,b.u?1:0]:b.lm?[b.type,b.x,b.z,b.rot,b.seed,b.lm]:[b.type,b.x,b.z,b.rot,b.seed]); const o={v:2,N,t:rle(terrain),r:rle(road),l:rle(line),b:bl}; if(biome!=='italia') o.bm=biome; if(hillMax) o.h=rle(hgt); if(sharp.some(v=>v)) o.sh=rle(sharp); if(romeYear!==null) o.ry=romeYear; if(rebuild) o.rb=rebuild.targets.map(t=>[t.type,t.x,t.z,t.rot,t.lm,t.done?1:0]); if(scenery) o.sc=scenery; if(typeof fleet!=='undefined'&&fleet.length) o.fs=fleet.map(f=>[f.h,f.s,f.c]); return JSON.stringify(o); }
 function clearWorld(){ try{ units.length=0; selectUnit(null); extraFires.length=0; }catch(_){} romeYear=null; aqLvlDirty=true; arcusDirty=true; brDirty=true; if(typeof arcBridgeGroup!=='undefined') arcBridgeGroup.clear();
   if(typeof setScenery!=='undefined') setScenery(null);
   if(typeof clearRebuildMarkers!=='undefined'){ clearRebuildMarkers(); rebuild=null; triumph=null; race=null; games=null; follow=null; cortege=null; }
   if(typeof builds!=='undefined') while(builds.length) endConstruction(builds[0],true);
   waterInit=true; waterNetDirty=true;
-  if(typeof ships!=='undefined') ships.length=0;
+  if(typeof ships!=='undefined') ships.length=0; try{ clearFleet(); }catch(_){}
   if(typeof drawbridges!=='undefined') for(const id of [...drawbridges.keys()]) removeDraw(id);
   if(typeof wallGuards!=='undefined') wallGuards.length=0; dirtyWalls=true;
   for(const b of buildings.values()) buildGroup.remove(b.mesh); buildings.clear();
@@ -3012,6 +3103,7 @@ function deserialize(str){
   if(o.rb){ rebuild={targets:o.rb.map(([type,x,z,rot,lm,done])=>({type,x,z,rot,lm,done:!!done}))}; buildRebuildMarkers(); }
   if(todayMode) for(let id=0;id<N*N;id++) if(line[id]) dirtyLines.add(id);
   for(let id=0;id<N*N;id++) if(line[id]) dirtyLines.add(id);
+  try{ clearFleet(); for(const [h,s2,c] of (o.fs||[])) fleet.push({h,s:s2,c,cell:0,path:null,pi:0,wait:0,rx:0,rz:0,ry:0,ph:Math.random()*6,gone:1+Math.random()*12}); }catch(_){}
   dirtyTerrain=true; dirtyRoads=true; dirtySave=true;
 }
 const undoStack=[];
@@ -3022,6 +3114,9 @@ function autosave(){ if(!dirtySave) return; saveCurrent(false); }
 /* =========================================================
    Generatory: castrum i krajobraz
    ========================================================= */
+function octPath(a,b){ a={i:clamp(a.i,0,N-1),j:clamp(a.j,0,N-1)}; b={i:clamp(b.i,0,N-1),j:clamp(b.j,0,N-1)}; const out=[[a.i,a.j]]; let i=a.i, j=a.j; const di=Math.sign(b.i-a.i), dj=Math.sign(b.j-a.j);
+  while(i!==b.i&&j!==b.j){ i+=di; j+=dj; out.push([i,j]); } while(i!==b.i){ i+=di; out.push([i,j]); } while(j!==b.j){ j+=dj; out.push([i,j]); } return out; }
+const toolPath=(a,b)=>tool.diag?octPath(a,b):lPath(a,b);
 function lPath(a,b){
   a={i:clamp(a.i,0,N-1),j:clamp(a.j,0,N-1)}; b={i:clamp(b.i,0,N-1),j:clamp(b.j,0,N-1)};
   const out=[]; const di=Math.sign(b.i-a.i), dj=Math.sign(b.j-a.j); let i=a.i, j=a.j; out.push([i,j]);
@@ -3282,7 +3377,7 @@ function groundY(i,j){ if(!inb(i,j)) return 0.035; const id=I(i,j); return road[
 function adjBuilding(i,j){ for(const [di,dj] of DIRS){ const ni=i+di,nj=j+dj; if(inb(ni,nj)&&bld[I(ni,nj)]) return true; } return false; }
 function nextCell(a){
   const opts=[]; const sx=a.bx-a.ax, sz=a.bz-a.az;
-  for(const [di,dj] of DIRS){ const ni=a.bx+di, nj=a.bz+dj; if(!inb(ni,nj)) continue; const r=road[I(ni,nj)]; if(!r) continue; if(isDrawUp(ni,nj)||isGateShut(ni,nj)) continue; if(a.kind==='cart'&&r!==2) continue; if(Math.abs(hgt[I(ni,nj)]-hgt[I(a.bx,a.bz)])>1) continue; if(ni===a.ax&&nj===a.az) continue; opts.push({i:ni,j:nj,st:di===sx&&dj===sz}); }
+  for(const [di,dj] of DIRS8){ const ni=a.bx+di, nj=a.bz+dj; if(!inb(ni,nj)) continue; const r=road[I(ni,nj)]; if(!r) continue; if(di&&dj&&!diagLink(a.bx,a.bz,di,dj)) continue; if(isDrawUp(ni,nj)||isGateShut(ni,nj)) continue; if(a.kind==='cart'&&r!==2) continue; if(Math.abs(hgt[I(ni,nj)]-hgt[I(a.bx,a.bz)])>1) continue; if(ni===a.ax&&nj===a.az) continue; opts.push({i:ni,j:nj,st:di===sx&&dj===sz}); }
   if(!opts.length){ if(isRoad(a.ax,a.az)&&(a.kind!=='cart'||road[I(a.ax,a.az)]===2)) return {i:a.ax,j:a.az}; return {i:a.bx,j:a.bz}; }
   const st=opts.find(o=>o.st); const ps=a.kind==='ped'?0.55:0.82;
   if(st && rnd()<ps) return st; return pickArr(opts);
@@ -3291,7 +3386,7 @@ const TUNICS=['#efe8d8','#efe8d8','#c9a36b','#8a6d4b','#b85c3c','#6e8fae','#a7b3
 const SKINS=['#e9c19c','#d9a97c','#c58c62','#f0cfae','#b07a52'];
 function roadPath(si,sj,ti,tj){ if(si===ti&&sj===tj) return []; const S=I(si,sj), T=I(ti,tj), from=new Int32Array(N*N).fill(-1); from[S]=S; const q=[S];
   for(let h=0;h<q.length&&h<6000;h++){ const u=q[h]; if(u===T) break; const ui=u%N, uj=(u/N)|0;
-    for(const [di,dj] of DIRS){ const ni=ui+di, nj=uj+dj; if(!inb(ni,nj)) continue; const v=I(ni,nj); if(from[v]>=0||!road[v]||isDrawUp(ni,nj)||isGateShut(ni,nj)||Math.abs(hgt[v]-hgt[u])>1) continue; from[v]=u; q.push(v); } }
+    for(const [di,dj] of DIRS8){ const ni=ui+di, nj=uj+dj; if(!inb(ni,nj)) continue; const v=I(ni,nj); if(di&&dj&&!diagLink(ui,uj,di,dj)) continue; if(from[v]>=0||!road[v]||isDrawUp(ni,nj)||isGateShut(ni,nj)||Math.abs(hgt[v]-hgt[u])>1) continue; from[v]=u; q.push(v); } }
   if(from[T]<0) return null; const out=[]; for(let v=T;v!==S;v=from[v]) out.push({i:v%N,j:(v/N)|0}); return out.reverse(); }
 function pickGoal(a){ if(trails.length&&rnd()<0.25){ const t=trails[Math.floor(rnd()*trails.length)], ri=t.road%N, rj=(t.road/N)|0; if(Math.abs(ri-a.bx)+Math.abs(rj-a.bz)<=34){ const p=roadPath(a.bx,a.bz,ri,rj); if(p){ a.path=p; a.pi=0; a.goal={i:ri,j:rj,kind:'home',tr:t}; return true; } } }
   if(!destDoors.length) return false;
@@ -3314,6 +3409,68 @@ function spawnCart(){
 /* ---- statki kupieckie pływające po wodzie (gdy w mieście jest port) ---- */
 let shipMesh=null; const ships=[]; let waterList=[], dirtyWater=true;
 function shipOk(i,j){ if(!inb(i,j)) return false; const id=I(i,j); return terrain[id]===2&&!bld[id]&&(line[id]===4||(!road[id]&&!line[id])); }
+/* =========================================================
+   Flota handlowa: statek składany z modułów (kadłub, żagiel, ładunek) pływa między portami
+   albo wypływa za krawędź mapy (do Ostii, Aleksandrii…) i wraca z towarem
+   ========================================================= */
+const HULLS=[{n:'Łódź rzeczna',lat:'linter',e:'🛶',len:0.8,sp:0.5},{n:'Statek kupiecki',lat:'corbita',e:'⛵',len:1.1,sp:0.4},{n:'Liburna',lat:'liburna',e:'🚣',len:1.35,sp:0.6}];
+const SAILS=[{n:'lniany',c:'#f1e6cf'},{n:'ochrowy',c:'#d9a05a'},{n:'czerwony w pasy',c:'#b8382e',st:'#f1e6cf'},{n:'purpurowy',c:'#6e2f5e',st:GOLD}];
+const CARGO=[{n:'wino w amforach',e:'🏺'},{n:'zboże z Egiptu',e:'🌾'},{n:'marmur z Kararry',e:'🪨'},{n:'drewno na budowy',e:'🪵'}];
+const FAR=['z Ostii','z Aleksandrii','z Kartaginy','z Massalii','z Gadesu','z Pireusu','z Rodos'];
+let fleet=[], fleetCfg={h:1,s:0,c:0}, fleetToastT=0, fleetPort=null; const fleetGeo=new Map();
+function shipGeo(h,sI,cI){ const key=h+'|'+sI+'|'+cI; if(fleetGeo.has(key)) return fleetGeo.get(key); const b=new B(), H=HULLS[h], L=H.len, sl=SAILS[sI], hw=h===2?0.32:h===0?0.3:0.44, hc=h===2?'#6b4a32':'#7a5234';
+  b.box(hw,0.13,L,0,0,0,hc); b.box(hw-0.02,0.012,L-0.04,0,0.13,0,'#b48a5a'); for(const sx of [-1,1]) b.box(0.03,0.07,L+0.02,sx*(hw/2+0.005),0.1,0,'#5e3f27'); for(let k=0;k<Math.round(L/0.1);k++) b.box(hw-0.03,0.003,0.006,0,0.142,-L/2+0.05+k*0.1,'#9c754b');
+  b.add(G.prism,hc,0,0,L/2+0.08,0,Math.PI/2,0,0.26,0.16,hw); b.add(G.prism,hc,0,0,-L/2-0.06,0,-Math.PI/2,0,0.22,0.2,hw);
+  if(h===1){ b.cyl(0.02,0.28,0,0.18,-L/2-0.06,'#5e3f27',5,0.01); b.sph(0.045,0,0.48,-L/2-0.02,GOLD); b.box(0.24,0.14,0.22,0,0.16,-L/2+0.18,'#a8784e'); b.roofX(0.28,0.08,0.26,0,0.3,-L/2+0.18,ROOF);
+    b.add(G.box,WOOD,0,0.34,L/2+0.1,-0.9,0,0,0.02,0.4,0.02); b.add(G.box,sl.c,0,0.4,L/2+0.2,-0.9,0,0,0.22,0.02,0.16); } // artemon – mały żagiel na dziobie
+  if(h===2){ b.add(G.box,'#a8a8a0',0,0.03,L/2+0.2,0,0,0,0.06,0.06,0.2); for(const sx of [-1,1]){ b.sph(0.03,sx*(hw/2+0.005),0.1,L/2-0.02,'#f1e6cf'); b.sph(0.016,sx*(hw/2+0.012),0.1,L/2-0.02,'#2a2a2a');
+      for(let k=0;k<7;k++) b.add(G.box,WOOD,sx*(hw/2+0.14),0.06,-L/2+0.25+k*0.13,0,0,sx*0.35,0.3,0.015,0.02); for(let k=0;k<4;k++) b.cyl(0.04,0.04,sx*(hw/2-0.02),0.14,-L/2+0.3+k*0.22,'#b8382e',8); } }
+  const mh=h===0?0.6:0.95, mz=h===0?0.05:0.08, sw=h===0?0.42:h===2?0.6:0.66; b.cyl(0.025,mh,0,0.16,mz,WOOD,6); b.box(sw+0.08,0.03,0.03,0,mh+0.03,mz,WOOD);
+  b.box(sw,mh*0.55,0.02,0,mh*0.42,mz+0.02,sl.c); if(sl.st) for(const yy of [0.25,0.55]) b.box(sw+0.002,0.05,0.024,0,mh*(0.42+yy*0.55*0.9),mz+0.02,sl.st);
+  if(sI===3) b.sph(0.06,0,mh*0.69,mz+0.035,GOLD,0.2);
+  const cz0=-L/2+0.3, cz1=L/2-0.2;
+  if(cI===0) for(let z=cz0;z<cz1;z+=0.09) for(const x of [-0.08,0,0.08]) if(Math.abs(z-mz)>0.06) b.cyl(0.03,0.1,x,0.15,z,'#b86a3c',6,0.015);
+  if(cI===1) for(let z=cz0;z<cz1;z+=0.11) for(const x of [-0.08,0.08]) if(Math.abs(z-mz)>0.07) b.sph(0.055,x,0.19,z,'#d8c49a',0.8);
+  if(cI===2) for(let z=cz0;z<cz1;z+=0.2) if(Math.abs(z-mz)>0.1) b.box(0.2,0.1,0.14,0,0.15,z,MARBLE);
+  if(cI===3) for(let k=0;k<3;k++) for(const zz of [cz0+0.12,cz1-0.12]) b.add(G.cyl(7),'#9a6a44',-0.07+k*0.07,0.18,zz,Math.PI/2,0,0,0.03,0.24,0.03);
+  const g=b.geom(); fleetGeo.set(key,g); return g; }
+function dockCells(p){ const [fw,fd]=fpSize(DEFS[p.type],p.rot), out=[]; for(let j=p.z-1;j<=p.z+fd;j++) for(let i=p.x-1;i<=p.x+fw;i++){ if(i>=p.x&&i<p.x+fw&&j>=p.z&&j<p.z+fd) continue; if(shipOk(i,j)) out.push(I(i,j)); } return out; }
+function exitCells(){ const out=[]; for(let k=0;k<N;k++) for(const [i,j] of [[k,0],[k,N-1],[0,k],[N-1,k]]) if(shipOk(i,j)) out.push(I(i,j)); return out; }
+function seaPath(from,targets){ if(!targets.length) return null; const T=new Set(targets), prev=new Int32Array(N*N).fill(-1); prev[from]=from; const q=[from];
+  for(let h=0;h<q.length;h++){ const u=q[h]; if(T.has(u)&&u!==from){ const out=[]; for(let v=u;v!==from;v=prev[v]) out.push(v); out.push(from); return out.reverse(); }
+    const i=u%N, j=(u/N)|0; for(const [di,dj] of DIRS){ const ni=i+di, nj=j+dj; if(!shipOk(ni,nj)) continue; const v=I(ni,nj); if(prev[v]<0){ prev[v]=u; q.push(v); } } } return null; }
+const portsList=()=>[...buildings.values()].filter(b=>b.type==='port');
+function launchShip(){ const ps=portsList(); if(!ps.length){ toast('⚓ Najpierw postaw port nad wodą'); return; } if(fleet.length>=10){ toast('Flota liczy już 10 statków – to dużo jak na jeden port 🙂'); return; }
+  const p=fleetPort&&buildings.has(fleetPort.id)?fleetPort:ps[0], dc=dockCells(p); if(!dc.length){ toast('Port nie ma dostępu do wody'); return; }
+  const f={h:fleetCfg.h,s:fleetCfg.s,c:fleetCfg.c,cell:dc[0],path:null,pi:0,wait:2,rx:wx(dc[0]%N),rz:wx((dc[0]/N)|0),ry:0,ph:Math.random()*6,gone:0,home:p.id}; fleet.push(f); dirtySave=true;
+  sfx('done'); toast(`${HULLS[f.h].e} ${HULLS[f.h].n} (${HULLS[f.h].lat}) zwodowany – wiezie ${CARGO[f.c].n}`,3200); renderItems(); }
+function fleetStep(dt,time){
+  for(let k=fleet.length-1;k>=0;k--){ const f=fleet[k];
+    if(!f.mesh){ f.mesh=new THREE.Mesh(shipGeo(f.h,f.s,f.c),bMat); f.mesh.castShadow=true; scene.add(f.mesh); }
+    if(f.gone>0){ f.gone-=dt; f.mesh.visible=false; if(f.gone<=0){ const ex=exitCells(), ps=portsList(); const st=ex.length?ex[Math.floor(Math.random()*ex.length)]:null; if(!st||!ps.length){ f.gone=5; continue; }
+        const tp=ps[Math.floor(Math.random()*ps.length)], path=seaPath(st,dockCells(tp)); if(!path){ f.gone=8; continue; } f.cell=st; f.rx=wx(st%N); f.rz=wx((st/N)|0); f.path=path; f.pi=1; f.dest=tp.id; f.from=FAR[Math.floor(Math.random()*FAR.length)]; } continue; }
+    f.mesh.visible=!todayMode;
+    if(!shipOk(f.cell%N,(f.cell/N)|0)){ scene.remove(f.mesh); fleet.splice(k,1); continue; }
+    if(!f.path){ f.wait-=dt; if(f.wait<=0){ // wybór celu: inny port albo krawędź mapy (daleki port)
+        const ps=portsList().filter(p=>p.id!==f.dest), toPort=ps.length&&Math.random()<0.55, tg=toPort?dockCells(ps[Math.floor(Math.random()*ps.length)]):exitCells();
+        const path=seaPath(f.cell,tg); if(path){ f.path=path; f.pi=1; if(toPort){ const pp=ps.find(p=>dockCells(p).includes(path[path.length-1])); f.dest=pp?pp.id:null; } else f.dest=null; f.from=null; } else f.wait=6; } }
+    else { const tgt=f.path[f.pi], tx=wx(tgt%N), tz=wx((tgt/N)|0), dx=tx-f.rx, dz=tz-f.rz, d=Math.hypot(dx,dz), sp=HULLS[f.h].sp*(0.8+0.2*Math.sin(time*0.3+f.ph));
+      if(d<0.08){ f.cell=tgt; f.pi++; if(f.pi>=f.path.length){ f.path=null;
+          if(f.dest){ f.wait=9+Math.random()*6; const now=performance.now(); if(now-fleetToastT>40000){ fleetToastT=now; toast(`⚓ ${HULLS[f.h].n} zawinął do portu${f.from?' '+f.from:''} – ${CARGO[f.c].e} ${CARGO[f.c].n}`,3400); } }
+          else { f.gone=14+Math.random()*16; } } }
+      else { let slow=1; for(const o of fleet) if(o!==f&&!o.gone){ const ox=o.rx-f.rx, oz=o.rz-f.rz, od=Math.hypot(ox,oz); if(od<0.85&&(ox*dx+oz*dz)>0) slow=Math.min(slow,Math.max(0,(od-0.45)/0.4)); }
+        const st=Math.min(d,sp*dt*slow); f.rx+=dx/d*st; f.rz+=dz/d*st; let dr=Math.atan2(dx,dz)-f.ry; dr=Math.atan2(Math.sin(dr),Math.cos(dr)); f.ry+=dr*Math.min(1,dt*2.2); } }
+    f.mesh.position.set(f.rx,WL+Math.sin(time*1.7+f.ph)*0.012-0.02,f.rz); f.mesh.rotation.set(Math.sin(time*1.3+f.ph)*0.04,f.ry,Math.sin(time*1.1+f.ph)*0.05,'YXZ'); f.mesh.scale.setScalar(0.62); }
+}
+function clearFleet(){ for(const f of fleet) if(f.mesh) scene.remove(f.mesh); fleet=[]; }
+function renderShipItems(){ const ps=portsList();
+  const grp=(title)=>{ const d=document.createElement('div'); d.style.cssText='flex:0 0 auto;display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;padding:0 4px'; const t=document.createElement('span'); t.style.cssText='font-size:11px;font-weight:800;color:#6b5236;letter-spacing:.04em'; t.textContent=title; d.appendChild(t); const row=document.createElement('div'); row.style.cssText='display:flex;gap:5px'; d.appendChild(row); itemsEl.appendChild(d); return row; };
+  const chip=(row,label,on,fn,bg)=>{ const b=document.createElement('button'); b.className='item'+(on?' on':''); b.style.cssText='width:auto;min-width:62px;padding:6px 8px;font-size:11px'+(bg?`;background:${bg};color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4)`:''); b.innerHTML=label; b.onclick=()=>{ if(performance.now()<ignoreClickUntil) return; fn(); renderItems(); }; row.appendChild(b); };
+  let row=grp('KADŁUB'); HULLS.forEach((h,k)=>chip(row,`<span style="font-size:26px">${h.e}</span><span class="nm">${h.n}</span><span class="meta">${h.lat}</span>`,fleetCfg.h===k,()=>fleetCfg.h=k));
+  row=grp('ŻAGIEL'); SAILS.forEach((x,k)=>chip(row,x.n,fleetCfg.s===k,()=>fleetCfg.s=k,x.c==='#f1e6cf'?null:x.c));
+  row=grp('ŁADUNEK'); CARGO.forEach((x,k)=>chip(row,`<span style="font-size:22px">${x.e}</span><span class="meta">${x.n}</span>`,fleetCfg.c===k,()=>fleetCfg.c=k));
+  const go=document.createElement('button'); go.className='item'+(ps.length?'':' locked'); go.style.cssText='width:auto;padding:8px 14px;align-self:center;background:var(--terra);color:#fff;font-size:13px';
+  go.innerHTML=`<span style="font-size:28px">⚓</span>Zwoduj statek<span class="meta" style="color:#fff">${ps.length?`flota: ${fleet.length}/10`:'postaw port'}</span>`; go.onclick=()=>{ if(performance.now()<ignoreClickUntil) return; launchShip(); }; itemsEl.appendChild(go); }
 function updateShips(dt,time){
   if(!shipMesh){ const bb=new B(); shipParts(bb,0,0,0,0,'#f1e6cf'); shipMesh=new THREE.InstancedMesh(bb.geom(),bMat,24); shipMesh.count=0; shipMesh.frustumCulled=false; shipMesh.castShadow=true; scene.add(shipMesh); }
   if(dirtyWater){ dirtyWater=false; waterList=[]; for(let j=0;j<N;j++) for(let i=0;i<N;i++) if(shipOk(i,j)){ let n=0; for(const [di,dj] of DIRS) if(shipOk(i+di,j+dj)) n++; if(n>=1) waterList.push({i,j}); } }
@@ -3441,7 +3598,7 @@ function stepAgent(a,dt){
   if(a.leaving){ if(a.pause>0){ a.pause-=dt; return true; } return false; }
   if(a.yld>0) a.yld-=dt;
   if(a.pause>0) a.pause-=dt;
-  else { a.t+=dt*a.speed*(a.yld>0?0.25:1);
+  else { a.t+=dt*a.speed*(a.ax!==a.bx&&a.az!==a.bz?0.7071:1)*(a.yld>0?0.25:1)*(a.sl>0.12?0.7:a.sl<-0.12?0.9:1);
     if(a.t>=1){
       if(!isRoad(a.bx,a.bz)) return false;
       if(a.kind==='ped'){
@@ -3462,7 +3619,8 @@ function stepAgent(a,dt){
   const x0=wx(a.ax), z0=wx(a.az), x1=wx(a.bx), z1=wx(a.bz); let dx=x1-x0, dz=z1-z0; const L=Math.hypot(dx,dz);
   if(L>0){ dx/=L; dz/=L; a.hx=dx; a.hz=dz; } else { dx=a.hx; dz=a.hz; }
   let lane=a.lane;
-  if(a.kind==='ped'){ const wide=road[I(a.ax,a.az)]===2||road[I(a.bx,a.bz)]===2; if(wide) lane=Math.sign(a.lane)*(0.3+Math.abs(a.lane)*0.4); lane=clamp(lane+(a.av||0),-0.42,0.42); }
+  if(a.kind==='ped'){ const ia=I(a.ax,a.az), ib=I(a.bx,a.bz), wide=road[ia]===2||road[ib]===2, br=line[ia]===4||line[ib]===4||terrain[ia]===2||terrain[ib]===2, st=stairAt(a.ax,a.az)||stairAt(a.bx,a.bz);
+    if(wide&&!br) lane=Math.sign(a.lane)*(0.3+Math.abs(a.lane)*0.4); const lim=br?0.17:st?0.3:road[ia]===1&&road[ib]===1?0.26:0.42; lane=clamp(lane+(a.av||0),-lim,lim); }
   const tt=Math.min(a.t,1); const tx=x0+(x1-x0)*tt+(-dz)*lane, tz=z0+(z1-z0)*tt+dx*lane;
   const y=tt<0.5?groundY(a.ax,a.az):groundY(a.bx,a.bz);
   if(!a.init){ a.rx=tx; a.rz=tz; a.ry=Math.atan2(dx,dz); a.y=y; a.init=true; }
@@ -3581,7 +3739,8 @@ function updateAgents(dt,time){
   for(const k in PP) cnt[k]=0;
   for(const a of agents){
     if(!a.init||!isFinite(a.rx)||!isFinite(a.y)) continue;
-    if(a.kind==='ped'){ const talk=a.pause>0&&!a.carry; person(a.rx,a.y,a.rz,a.ry+(talk?Math.sin(time*1.3+a.lane*9)*0.5:0),a.sc,todayMode?a.mcol:a.col,a.skin,a.ph,todayMode?null:a.carry,false,a.pause>0?0:1,0,talk?(Math.sin(time*3+a.lane*7)*0.5+0.5)*0.6:0); }
+    if(a.kind==='ped'){ const talk=a.pause>0&&!a.carry; if(hillMax||bridgeCnt){ const fx=Math.sin(a.ry)*0.14, fz=Math.cos(a.ry)*0.14, sl=(hY(a.rx+fx,a.rz+fz)-hY(a.rx-fx,a.rz-fz))/0.28; a.sl=(a.sl||0)+(sl-(a.sl||0))*0.15; } else a.sl=0;
+      const up=a.pause>0?0:clamp(a.sl,-0.8,1.2); person(a.rx,a.y,a.rz,a.ry+(talk?Math.sin(time*1.3+a.lane*9)*0.5:0),a.sc,todayMode?a.mcol:a.col,a.skin,a.ph,todayMode?null:a.carry,false,a.pause>0?0:(up>0.12?0.75:1),up>0?up*0.16:up*0.06,talk?(Math.sin(time*3+a.lane*7)*0.5+0.5)*0.6:0); }
     else { parent(a.rx,a.y,a.rz,a.ry,1); if(cnt.cart>=CCAP) continue; put('cart',WOOD); put('cargo',a.col); put('wheel','#5a4030',offW1); put('wheel','#5a4030',offW2); put('ox',a.animal);
       _LM.copy(_PM).multiply(offCh); _AP.setFromMatrixPosition(_LM); person(_AP.x,_AP.y-0.06,_AP.z,a.ry,0.9,a.driver,a.skin,0,null,false,0); }
   }
@@ -3650,7 +3809,7 @@ function updateAgents(dt,time){
         person(x,0.62,z,th+(Math.cos(time*0.35+k*2+b.id)>0?Math.PI/2:-Math.PI/2)*(k?1:-1),0.95,'#b3332b',SKINS[k+2],time*5,null,true,Math.abs(Math.cos(time*0.35+k*2+b.id))); }
     }
   }
-  updateShips(dt,time);
+  updateShips(dt,time); try{ fleetStep(dt,time); }catch(e){ console.warn(e); }
   triumphStep(dt,time); cortegeStep(dt,time);
   // rydwany w cyrkach
   for(const b of buildings.values()){
@@ -3705,7 +3864,7 @@ function updatePreview(c){
     showTiles(cells,()=>ok?'#7fd36a':'#ff6a5a'); return;
   }
   if(tool.kind==='road'||tool.kind==='line'){
-    const cells=stroke?lPath(stroke.start,c):(pending&&pending.kind==='path')?lPath(pending.start,pending.end):[[c.i,c.j]];
+    const cells=stroke?toolPath(stroke.start,c):(pending&&pending.kind==='path')?toolPath(pending.start,pending.end):[[c.i,c.j]];
     showTiles(cells,(i,j)=>pathValid(i,j)?(tool.kind==='road'?'#ffffff':'#ffe08a'):'#ff6a5a'); return;
   }
   if(tool.kind==='brush'){ showTiles([[c.i,c.j]],(i,j)=>{ if(!inb(i,j)) return '#ff6a5a'; const b=bld[I(i,j)]?buildings.get(bld[I(i,j)]):null; if(b&&STACK[b.type]&&brushStacks(b)) return floorsOf(b)<STACK[b.type].max?'#ffd36a':'#ff6a5a'; return canPlace(tool.type,i,j,0)?'#7fd36a':'#ff6a5a'; }); return; }
@@ -3765,7 +3924,7 @@ function brushStacks(b){ return b.type===tool.type||(tool.type==='house'&&b.type
 function tick(){ const t=performance.now(); if(t-lastTick>70){ lastTick=t; sfx('tick'); } }
 function paintLine(a,b){ const steps=Math.max(Math.abs(b.i-a.i),Math.abs(b.j-a.j)); for(let k=1;k<=steps;k++) paintAt({i:Math.round(a.i+(b.i-a.i)*k/steps),j:Math.round(a.j+(b.j-a.j)*k/steps)}); }
 function commitPath(a,b){
-  const cells=lPath(a,b).filter(([i,j])=>pathValid(i,j)); const snap=serialize(); let ch=false;
+  const cells=toolPath(a,b).filter(([i,j])=>pathValid(i,j)); const snap=serialize(); let ch=false;
   for(const [i,j] of cells){ if(tool.kind==='road') ch=setRoad(i,j,tool.val)||ch; else ch=setLine(i,j,tool.val)||ch; }
   if(ch){ pushUndo(snap); sfx('pop'); } else if(cells.length===0) toast('Tu nie można');
 }
@@ -3889,7 +4048,7 @@ let lastTapB=null, recruitFrom=null;
 function tapInfo(c){
   if(!c||!c.inside){ hideInfo(); return; }
   if(toggleDrawAt(c)) return; toggleBarbican(c); const id=bld[I(c.i,c.j)]; let key=null;
-  lastTapB=null; if(id){ const b=buildings.get(id); lastTapB=b; if(RECRUIT[b.type]&&!todayMode){ recruitFrom=b; curCat='woj'; curSub.woj='units'; itemsOpen=true; renderCats(); renderItems(); } key=b.lm&&INFO[b.lm]?b.lm:b.type; pulses.push({m:b.mesh,t:0}); }
+  lastTapB=null; if(id){ const b=buildings.get(id); lastTapB=b; if(RECRUIT[b.type]&&!todayMode){ recruitFrom=b; curCat='woj'; curSub.woj='units'; itemsOpen=true; renderCats(); renderItems(); } if(b.type==='port'&&!todayMode){ fleetPort=b; curCat='drogi'; curSub.drogi='fleet'; itemsOpen=true; renderCats(); renderItems(); } key=b.lm&&INFO[b.lm]?b.lm:b.type; pulses.push({m:b.mesh,t:0}); }
   else if(line[I(c.i,c.j)]){ key=['','l-wall','l-aq','l-moat','l-pons'][line[I(c.i,c.j)]]; if((lineMeshes.get(I(c.i,c.j))?.userData.key||'').startsWith('aqe')) key='aqEnd'; }
   else if(road[I(c.i,c.j)]) key=road[I(c.i,c.j)]===2?'r-wide':'r-narrow';
   if(key&&INFO[key]){ showInfo(key); sfx('tick'); } else hideInfo();
@@ -3905,7 +4064,7 @@ function showAct(){
   if(!pending){ actEl.classList.remove('show'); return; }
   let ok=true, label='✓ Postaw';
   if(pending.kind==='build'){ const {rot,f}=placementFor(tool.type,pending.c); ok=canPlace(tool.type,f.x,f.z,rot); }
-  else { const n=lPath(pending.start,pending.end).filter(([i,j])=>pathValid(i,j)).length; ok=n>0; label=`✓ Zbuduj (${n} ${n===1?'pole':n<5?'pola':'pól'})`; }
+  else { const n=toolPath(pending.start,pending.end).filter(([i,j])=>pathValid(i,j)).length; ok=n>0; label=`✓ Zbuduj (${n} ${n===1?'pole':n<5?'pola':'pól'})`; }
   actEl.innerHTML=`<button class="ok" ${ok?'':'disabled'}>${ok?label:'Tu nie można'}</button>${pending.kind==='build'?'<button class="rot">↻</button>':''}<button class="no">✕</button>`;
   actEl.querySelector('.ok').onclick=confirmPending; actEl.querySelector('.no').onclick=cancelPending;
   const r=actEl.querySelector('.rot'); if(r) r.onclick=()=>{ rotateBuilding(); };
@@ -4027,7 +4186,7 @@ timeInput.addEventListener('input',applyTime);
 const CATS=[{id:'teren',ic:'🌿',n:'Teren',l:'🌿 Teren'},{id:'drogi',ic:'🛣️',n:'Drogi i port',l:'🛣️ Drogi i port'},{id:'domy',ic:'🏠',n:'Domy',l:'🏠 Domy'},{id:'ogr',ic:'🌸',n:'Ogrody',l:'🌸 Ogrody'},{id:'publ',ic:'🏛️',n:'Forum i władza',l:'🏛️ Forum i świątynie'},{id:'rozr',ic:'🏟️',n:'Rozrywka',l:'🏟️ Rozrywka'},{id:'woj',ic:'🛡️',n:'Wojsko i mury',l:'🛡️ Wojsko i mury'},{id:'ozd',ic:'🌲',n:'Ozdoby',l:'🌲 Ozdoby'}];
 // podkategorie (jak w SimCity): kategoria → [id, nazwa, lista narzędzi]
 const SUBS={teren:[['paint','🎨 Pokrycie',['t-grass','t-plot','t-water','t-forest','t-field','t-sand']],['hgt','⛰️ Ukształtowanie',['t-up','t-cliff','t-down']]],
-  drogi:[['road','🛤️ Ulice',['r-narrow','r-wide']],['water','🌉 Mosty i akwedukty',['l-pons','l-aq']],['port','⚓ Port i handel',['b-port','b-pharos','b-horreum']]],
+  drogi:[['road','🛤️ Ulice',['r-narrow','r-wide','r-narrowd','r-wided']],['water','🌉 Mosty i akwedukty',['l-pons','l-aq']],['port','⚓ Port i handel',['b-port','b-pharos','b-horreum']]],
   domy:[['plebs','🏘️ Domy ludu',['b-house','b-insula','b-taberna','b-hut']],['mod','🧱 Modułowe',['b-insblock','b-tabrow','b-villa','b-arcus']],['rich','🏡 Domy zamożnych',['b-domus']]],
   ogr:[['small','🌷 Ogródki',['b-gardenS','b-garden','b-topiary']],['big','🌳 Parki i tarasy',['b-vineyard','b-peristyle','b-terrace','b-park','b-tier']]],
   publ:[['forum','🏛️ Fora i targi',['b-forum','b-forumromanum','b-market','b-trajanmarkets','b-porticus']],['gov','⚖️ Władza',['b-basilica','b-curia','b-palace']],['rel','🔥 Świątynie',['b-temple','b-pantheon']],['bath','♨️ Termy i woda',['b-baths','b-trajanbaths','b-caracalla','b-diocletian','b-nymphaeum']]],
@@ -4049,6 +4208,8 @@ const TOOLS=[
   {id:'r-narrow',cat:'drogi',kind:'road',val:1,name:'Ulica',hint:'Przeciągnij od punktu do punktu — ulica biegnie prosto, z jednym zakrętem pod kątem prostym'},
   {id:'l-pons',cat:'drogi',kind:'line',val:4,name:'Wielki most',hint:'Przeciągnij przez rzekę od brzegu do brzegu – wysokie łuki, pod którymi przepłyną statki, i posągi na balustradach'},
   {id:'r-wide',cat:'drogi',kind:'road',val:2,name:'Via (szeroka)',hint:'Szeroka droga — jeżdżą nią wozy, piesi idą poboczem'},
+  {id:'r-narrowd',cat:'drogi',kind:'road',val:1,diag:true,name:'Ulica skośna',hint:'Przeciągnij – ulica biegnie pod kątem 45°, a resztę drogi dokończy prosto'},
+  {id:'r-wided',cat:'drogi',kind:'road',val:2,diag:true,name:'Via skośna',hint:'Szeroka droga pod kątem 45° – dobra na trakt wjazdowy do miasta albo wzdłuż rzeki'},
   {id:'b-port',cat:'drogi',kind:'build',type:'port'},
   {id:'b-pharos',cat:'drogi',kind:'build',type:'pharos'},
   {id:'l-aq',cat:'drogi',kind:'line',val:2,name:'Akwedukt',hint:'Przeciągnij, aby poprowadzić akwedukt (może iść nad drogą i wodą)'},
@@ -4102,10 +4263,10 @@ function itemBtn(t){
 }
 function renderItems(){
   itemsEl.innerHTML=''; itemsEl.classList.toggle('closed',!itemsOpen); subsEl.innerHTML=''; subsEl.classList.toggle('closed',!itemsOpen);
-  const subs=subsOf(curCat); if(curCat==='woj') subs.push({id:'units',n:'⚔️ Oddziały',tools:Object.keys(UNIT_T),units:true}); let cs=subs.find(x=>x.id===curSub[curCat]); const owner=subs.find(x=>x.tools.some(t=>t.id===tool.id)); if(!cs) cs=owner||subs[0];
+  const subs=subsOf(curCat); if(curCat==='woj') subs.push({id:'units',n:'⚔️ Oddziały',tools:Object.keys(UNIT_T),units:true}); if(curCat==='drogi') subs.push({id:'fleet',n:'⛵ Statki',tools:HULLS,fleet:true}); let cs=subs.find(x=>x.id===curSub[curCat]); const owner=subs.find(x=>x.tools.some(t=>t.id===tool.id)); if(!cs) cs=owner||subs[0];
   if(cs) curSub[curCat]=cs.id;
   if(subs.length>1) for(const x of subs){ const b=document.createElement('button'); b.className='sub'+(x===cs?' on':''); b.innerHTML=`${x.n}<em>${x.tools.length}</em>`; b.onclick=()=>{ curSub[curCat]=x.id; renderItems(); }; subsEl.appendChild(b); }
-  if(cs&&cs.units) renderUnitItems(); else if(cs) for(const t of cs.tools) itemsEl.appendChild(itemBtn(t));
+  if(cs&&cs.units) renderUnitItems(); else if(cs&&cs.fleet) renderShipItems(); else if(cs) for(const t of cs.tools) itemsEl.appendChild(itemBtn(t));
   requestAnimationFrame(()=>document.documentElement.style.setProperty('--dockh',document.getElementById('dock').offsetHeight+'px'));
 }
 let seenInfo=new Set(); try{ seenInfo=new Set(JSON.parse(localStorage.getItem('urbs-seen')||'[]')); }catch(e){}
@@ -4252,7 +4413,7 @@ INFO.watchtower={name:'Wieża strażnicza',era:'na granicach imperium – od I w
   today:'Na dawnym limesie zachowały się fundamenty wielu wież; kilka zrekonstruowano, a odcinek limesu jest na liście UNESCO.'};
 let infoAuto=true, infoKey=null;
 const infoEl=document.getElementById('info');
-function infoKeyFor(t){ if(!t) return null; if(t.type&&INFO[t.type]) return t.type; if(INFO[t.id]) return t.id; return null; }
+function infoKeyFor(t){ if(!t) return null; if(t.id==='r-narrowd') return 'r-narrow'; if(t.id==='r-wided') return 'r-wide'; if(t.type&&INFO[t.type]) return t.type; if(INFO[t.id]) return t.id; return null; }
 function showInfo(key){
   const d=INFO[key]; if(!d){ hideInfo(); return; }
   infoKey=key;
@@ -4261,6 +4422,8 @@ function showInfo(key){
   const acts={circus:['🏁 Urządź wyścig rydwanów',()=>startRace()],circusMax:['🏁 Urządź wyścig rydwanów',()=>startRace()],colosseum:['⚔️ Rozpocznij igrzyska',()=>startGames()],
     arch:['🎺 Zorganizuj triumf',()=>startTriumph()],pompeii:['🌋 Pokaż erupcję Wezuwiusza',()=>startEruption()],vesuvius:['🌋 Jeszcze raz od początku',()=>startEruption()],archTitus:['🎺 Zorganizuj triumf',()=>startTriumph()],palace:['👑 Wyjście cesarza',()=>startCortege(true)],palatium:['👑 Wyjście cesarza',()=>startCortege(true)],domusAurea:['👑 Wyjście cesarza',()=>startCortege(true)],castraPraetoria:['👑 Wyjście cesarza',()=>startCortege(true)],praetoria:['👑 Wyjście cesarza',()=>startCortege(true)],triumph:['🎺 Zorganizuj kolejny triumf',()=>startTriumph()],forumRomanum:['🎺 Zorganizuj triumf',()=>startTriumph()],capitolium:['🎺 Zorganizuj triumf',()=>startTriumph()]};
   const a=acts[key]; if(a){ const bt=document.createElement('button'); bt.className='act'; bt.textContent=a[0]; bt.onclick=a[1]; infoEl.appendChild(bt); }
+  { const hb=lastTapB&&buildings.has(lastTapB.id)?lastTapB:null; if(hb&&GROW_T.includes(hb.type)&&!todayMode){ const nd=needsOf(hb), h=document.createElement('div'); h.className='dyk'; h.textContent='Mieszkańcy'; infoEl.appendChild(h);
+    const p=document.createElement('p'); p.innerHTML=`Mieszkają tu <b>${TIER_N[Math.max(hb.tier|0,nd.t)]}</b>.`+(nd.miss.length?` Aby dom awansował, w pobliżu brakuje: ${nd.miss.join(', ')}.`:(nd.t>=3?' To najzamożniejsi mieszkańcy miasta.':'')); infoEl.appendChild(p); } }
   infoEl.querySelector('.x').onclick=hideInfo;
   infoEl.classList.add('show'); infoEl.scrollTop=0;
 }
@@ -4473,7 +4636,7 @@ function renderMenu(){
       ${swrow('sNight','🌙','Noc',ENV.night)}${swrow('sCycle','⏱️','Upływ czasu (dzień i noc)',ENV.cycle)}
       <div class="ri static"><span class="ic">🌦️</span><span class="tx">Pogoda</span><div class="seg mini" id="sWeather">${[['clear','☀️'],['fog','🌫️'],['rain','🌧️']].map(([v,l])=>`<button data-w="${v}" class="${ENV.weather===v?'on':''}">${l}</button>`).join('')}</div></div>
       ${row('mPhoto','📷','Tryb fotograficzny','efekt makiety i zapis zdjęcia')}
-      ${swrow('sLabels','🏷️','Podpisy budowli',labelsOn)}${swrow('sPeople','🚶','Ludzie na ulicach',peopleOn)}${swrow('sGrass','🌾','Trawa i kwiaty na łąkach',grassOn)}${swrow('sGrid','▦','Siatka',gridOn)}${swrow('sWarp','〰️','Nieregularna siatka (jak w Townscaperze)',WARP.on)}${swrow('sSound','🔊','Dźwięki',!muted)}${swrow('sAmb','🐦','Odgłosy miasta i przyrody',AUD.amb)}${swrow('sMusic','🎹','Muzyka – nokturny Chopina',AUD.music)}<div class="chopinRow"><span id="chNow">${chopinTitle()}</span><button class="chNext" id="chNext" title="Następny utwór">⏭</button></div><div class="chCredit">Wykonanie: Patrizia Prati, nagrania z Wikimedia Commons (CC BY-SA)</div>
+      ${swrow('sLabels','🏷️','Podpisy budowli',labelsOn)}${swrow('sPeople','🚶','Ludzie na ulicach',peopleOn)}${swrow('sGrass','🌾','Trawa i kwiaty na łąkach',grassOn)}${swrow('sGrid','▦','Siatka',gridOn)}${swrow('sGrow','🏘️','Miasto rośnie samo (domy awansują)',growOn)}${swrow('sWarp','〰️','Nieregularna siatka (jak w Townscaperze)',WARP.on)}${swrow('sSound','🔊','Dźwięki',!muted)}${swrow('sAmb','🐦','Odgłosy miasta i przyrody',AUD.amb)}${swrow('sMusic','🎹','Muzyka – nokturny Chopina',AUD.music)}<div class="chopinRow"><span id="chNow">${chopinTitle()}</span><button class="chNext" id="chNext" title="Następny utwór">⏭</button></div><div class="chCredit">Wykonanie: Patrizia Prati, nagrania z Wikimedia Commons (CC BY-SA)</div>
     </div>
     <div class="st">Cesarz i wydarzenia</div>
     <div class="list">${row('mQuests','🏆','Zadania od cesarza',`zdobyte wieńce: ${laurels.size}/${QUESTS.length}`)}
@@ -4519,6 +4682,7 @@ function renderMenu(){
   on('sPeople','onchange',()=>document.getElementById('bPeople').click());
   on('sGrass','onchange',e=>{ grassOn=e.target.checked; try{ localStorage.setItem('urbs-grass',grassOn?'1':'0'); }catch(_){} rebuildGrass(); });
   on('sGrid','onchange',()=>document.getElementById('bGrid').click());
+  on('sGrow','onchange',e=>{ growOn=e.target.checked; try{ localStorage.setItem('urbs-grow',growOn?'1':'0'); }catch(_){} });
   on('sWarp','onchange',e=>{ WARP.on=e.target.checked; try{ localStorage.setItem('urbs-warp',WARP.on?'1':'0'); }catch(_){} try{ dirtySave=true; saveCurrent(false); }catch(_){} toast('Przebudowuję widok…'); setTimeout(()=>location.reload(),350); });
   on('sSound','onchange',()=>document.getElementById('bSound').click());
   on('mAbout','onclick',()=>{ closeModal(); showInfo(scenery==='vesuvius'?'pompeii':'rome'); });
@@ -4596,6 +4760,9 @@ function swatch(kind,val){
     fill('#a9d17b'); g.fillStyle='#c4b391'; g.fillRect(0,24,96,48); g.fillStyle=WATERC; g.fillRect(0,32,96,32); g.fillStyle='#e6d6b4'; g.fillRect(0,22,96,6); g.fillRect(0,68,96,6);
     g.strokeStyle='#bfe8f2'; g.lineWidth=3; g.beginPath(); for(let x=0;x<=96;x+=4) g.lineTo(x,48+Math.sin(x/8)*3); g.stroke();
     g.fillStyle='#8f6040'; for(let x=8;x<96;x+=16){ g.beginPath(); g.moveTo(x,20); g.lineTo(x+4,8); g.lineTo(x+7,20); g.fill(); }
+  } else if(kind==='roadd'){
+    fill('#a9d17b'); const w=val===2?40:28; g.save(); g.translate(48,48); g.rotate(-Math.PI/4); g.fillStyle=val===2?'#aaa398':'#d4c9b6'; g.fillRect(-80,-w/2,160,w); g.fillStyle='#efe7d8'; g.fillRect(-80,-w/2-3,160,3); g.fillRect(-80,w/2,160,3);
+    g.fillStyle='rgba(255,255,255,.2)'; for(let x=-72;x<72;x+=12) for(let y=-w/2+4;y<w/2-4;y+=9) g.fillRect(x+((y+40)%18?6:0),y,8,6); g.restore();
   } else {
     fill('#a9d17b'); const w=val===2?44:30; g.fillStyle=val===2?'#aaa398':'#d4c9b6'; g.fillRect(48-w/2,0,w,96); g.fillRect(0,48-w/2,96,w);
     g.fillStyle='#efe7d8'; for(const o of [-w/2-3,w/2]){ g.fillRect(48+o,0,3,48-w/2); g.fillRect(48+o,48+w/2,3,48-w/2); g.fillRect(0,48+o,48-w/2,3); g.fillRect(48+w/2,48+o,48-w/2,3); }
@@ -4616,7 +4783,7 @@ function renderIcons(){
   const M=(g,x=0,z=0)=>{ const m=new THREE.Mesh(g,bMat); m.position.set(x,0,z); return m; };
   for(const t of TOOLS){
     try{
-      if(t.kind==='terrain'||t.kind==='road') t.icon=swatch(t.kind,t.val);
+      if(t.kind==='terrain'||t.kind==='road') t.icon=swatch(t.diag?'roadd':t.kind,t.val);
       else if(t.kind==='height') t.icon=swatch('height',t.sharp?'s':t.val);
       else if(t.kind==='brush'&&isMod(t.type)) t.icon=shot(modIconMeshes(t.type,M));
       else if(t.kind==='brush'&&t.type==='arcus') t.icon=shot([M(getGeom('arcus',0,2),-0.5,0),M(getGeom('arcus',4,3),0.5,0)]);
@@ -5128,6 +5295,36 @@ function computeBeauty(){
   cityNice=nice; decoDirty=true;
 }
 let cityNice=0;
+/* =========================================================
+   Miasto żyje samo: domy awansują, gdy mieszkańcy mają w pobliżu to, czego potrzebują
+   0 – wyzwoleńcy (liberti): dom przy drodze
+   1 – plebejusze: woda (fontanna, nimfeum, akwedukt, termy) albo targ
+   2 – ekwici: woda i targ, a do tego termy albo świątynia
+   3 – patrycjusze: wszystko powyżej, rozrywka (teatr, amfiteatr, cyrk) i piękna okolica
+   ========================================================= */
+const TIER_N=['wyzwoleńcy (liberti)','plebejusze','ekwici','patrycjusze'];
+const NEED={water:{t:['fountain','nymphaeum','baths','trajanbaths','caracalla','diocletian'],r:5,n:'wody (fontanna, nimfeum)'},market:{t:['market','forum','forumromanum','trajanmarkets','taberna','tabrow','horreum'],r:6,n:'targu lub sklepów'},
+  baths:{t:['baths','trajanbaths','caracalla','diocletian'],r:8,n:'term'},temple:{t:['temple','pantheon','ara'],r:8,n:'świątyni'},fun:{t:['theatre','colosseum','circus'],r:12,n:'rozrywki (teatr, amfiteatr, cyrk)'}};
+let growOn=(()=>{ try{ return localStorage.getItem('urbs-grow')!=='0'; }catch(_){ return true; } })(), growT=0, growIdx=0, growToastT=0;
+function needsOf(b){ const [fw,fd]=fpSize(DEFS[b.type],b.rot), cx=b.x+fw/2, cz=b.z+fd/2, has={};
+  for(const o of buildings.values()){ if(o===b) continue; const [ow,od]=fpSize(DEFS[o.type],o.rot), dx=Math.max(0,Math.abs(o.x+ow/2-cx)-(ow+fw)/2), dz=Math.max(0,Math.abs(o.z+od/2-cz)-(od+fd)/2), d=Math.hypot(dx,dz);
+    for(const k in NEED) if(!has[k]&&NEED[k].t.includes(o.type)&&d<=NEED[k].r) has[k]=true; }
+  if(!has.water){ for(let j=b.z-4;j<b.z+fd+4&&!has.water;j++) for(let i=b.x-4;i<b.x+fw+4;i++) if(inb(i,j)&&line[I(i,j)]===2){ has.water=true; break; } }
+  let road=false; for(let j=b.z-2;j<=b.z+fd+1&&!road;j++) for(let i=b.x-2;i<=b.x+fw+1;i++) if(isRoad(i,j)){ road=true; break; }
+  let v=0; for(let j=b.z;j<b.z+fd;j++) for(let i=b.x;i<b.x+fw;i++) if(inb(i,j)) v=Math.max(v,beauty[I(i,j)]||0);
+  let t=road?0:-1; if(road&&(has.water||has.market)) t=1; if(t>=1&&has.water&&has.market&&(has.baths||has.temple)) t=2; if(t>=2&&has.fun&&has.baths&&has.temple&&v>=1.6) t=3;
+  const miss=[]; if(!road) miss.push('drogi'); else { const want=t<1?['water','market']:t<2?(has.water?['market']:['water']).concat(has.baths||has.temple?[]:['baths']):t<3?['baths','temple','fun'].filter(k=>!has[k]):[]; for(const k of want) if(!has[k]) miss.push(NEED[k].n); if(t===2&&!miss.length&&v<1.6) miss.push('ogrodów i fontann w okolicy'); }
+  return {t:Math.max(0,t),road,miss:[...new Set(miss)],has}; }
+const GROW_T=['house','insula','hut'];
+function growStep(dt){ if(!growOn||todayMode||photo||romeYear!==null||scenery) return; // makiety historyczne zostają takie, jak były growT+=dt; if(growT<3.2) return; growT=0;
+  const list=[...buildings.values()].filter(b=>GROW_T.includes(b.type)); if(!list.length) return;
+  for(const b of list) if(b.tier===undefined){ b.tier=needsOf(b).t; if(b.type==='house') dirtyHouses.add(b.id); }
+  for(let n=0;n<Math.min(8,list.length);n++){ const b=list[(growIdx++)%list.length]; if(builds.some(q=>q.b===b)) continue; const nd=needsOf(b);
+    if(b.type==='hut'){ if(nd.t>=1&&nd.road&&hash2(b.x,b.z,707)<0.7){ const {x,z,rot,seed}=b; removeBuilding(b.id); addBuilding('house',x,z,rot,seed,true,null,2); growNote('🏠 Chata zamieniła się w murowany dom – mieszkańcy mają wodę i targ'); return; } continue; }
+    if((b.tier|0)!==nd.t&&nd.t>(b.tier|0)){ b.tier=nd.t; if(b.type==='house'){ dirtyHouses.add(b.id); markHouses(b.x,b.z); } if(nd.t>=2) growNote(`✨ Ród przy ${b.type==='insula'?'insuli':'kamienicy'} awansował: teraz mieszkają tu ${TIER_N[nd.t]}`); }
+    const st=STACK[b.type], want=Math.min(b.cap||99,b.type==='insula'?Math.min(st.max,3+nd.t):Math.min(st.max,1+nd.t+(nd.t>=2?1:0))), f=floorsOf(b);
+    if(f<want){ setFloors(b,f+1); dirtySave=true; if(f+1===want&&nd.t>=1) growNote(`🏗️ Dom rośnie o piętro – mieszkają tu ${TIER_N[nd.t]}`); return; } } }
+function growNote(t){ const now=performance.now(); if(now-growToastT<45000) return; growToastT=now; toast(t,3200); }
 // ozdoby na wolnych polach: rabaty, ławki, stragany
 const decoGeo={};
 (()=>{ let b=new B(); b.box(0.62,0.06,0.62,0,0,0,'#d9c39a'); b.box(0.54,0.05,0.54,0,0.02,0,'#6f9d4a');
@@ -5714,6 +5911,7 @@ function loop(now){
   adaptQuality(Math.min(100,now-last)); const dt=clamp((now-last)/1000,0,0.05); last=now;
   if(waterNetDirty) computeWater();
   if(beautyDirty) computeBeauty();
+  try{ growStep(dt); }catch(e){ console.warn(e); }
   if(decoDirty) rebuildDeco();
   updateBuilds(dt,now/1000); debrisStep(Math.min(dt,0.05)); fireStep(Math.min(dt,0.05),now/1000); grassStep(dt); unitsStep(Math.min(dt,0.05),now/1000); camFlyStep(dt); sceneryStep(dt,now/1000); petalsStep(now/1000); eventsTick();
   questT+=dt; if(questT>1.5){ questT=0; checkQuests(); }
